@@ -47,7 +47,7 @@ export default function Home() {
           {/* Top Navigation */}
           <nav className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <span className="font-ppneue text-gray-900">Browserbase</span>
+              <span className="font-ppneue text-gray-900">Open Operator</span>
             </div>
           </nav>
 
@@ -65,10 +65,10 @@ export default function Home() {
               <div className="p-8 flex flex-col items-center gap-8">
                 <div className="flex flex-col items-center gap-3">
                   <h1 className="text-2xl font-ppneue text-gray-900 text-center">
-                    Browse
+                    Open Operator
                   </h1>
                   <p className="text-base font-ppsupply text-gray-500">
-                    Hit run to browse the web
+                    Hit run to watch AI browse the web
                   </p>
                 </div>
 

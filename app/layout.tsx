@@ -19,8 +19,11 @@ const ppSupply = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Browserbase",
-  description: "A web browser for your AI",
+  title: "Open Operator",
+  description: "Watch AI browse the web, for free",
+  openGraph: {
+    images: ['/og.png'],
+  },
 };
 
 export default function RootLayout({
