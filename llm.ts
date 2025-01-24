@@ -91,13 +91,21 @@ If the goal has been achieved, return "close".`,
         .describe(
           "The reasoning behind the tool call. If the tool is 'CLOSE', this should explain how and why the goal has been achieved."
         ),
-      tool: z.enum(["GOTO", "ACT", "EXTRACT", "OBSERVE", "CLOSE", "WAIT"])
-        .describe(`Tool guidelines:
+      tool: z.enum([
+        "GOTO",
+        "ACT",
+        "EXTRACT",
+        "OBSERVE",
+        "CLOSE",
+        "WAIT",
+        "NAVBACK",
+      ]).describe(`Tool guidelines:
 GOTO: Navigate to a new URL only if not accessible from current page or if you need to navigate to a page to start off
 ACT: Perform a single action on the page
 EXTRACT: Extract data from the page (don't rely on screenshots for text, use the EXTRACT tool and you'll be provided with the result)
 OBSERVE: List available actions when unsure what to do next
 WAIT: Wait for a number of milliseconds
+NAVBACK: Navigate to the previously visited URL
 CLOSE: Close browser when goal is achieved`),
       instruction: z
         .string()
