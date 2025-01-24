@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import ChatFeed from "./components/ChatFeed";
 import AnimatedButton from "./components/AnimatedButton";
+import Image from "next/image";
 
 export default function Home() {
   const [isChatVisible, setIsChatVisible] = useState(false);
@@ -57,6 +58,13 @@ export default function Home() {
           {/* Top Navigation */}
           <nav className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200">
             <div className="flex items-center gap-2">
+              <Image
+                src="/favicon.svg"
+                alt="Open Operator"
+                className="w-8 h-8"
+                width={32}
+                height={32}
+              />
               <span className="font-ppneue text-gray-900">Open Operator</span>
             </div>
           </nav>
@@ -78,7 +86,24 @@ export default function Home() {
                     Open Operator
                   </h1>
                   <p className="text-base font-ppsupply text-gray-500">
-                    Hit run to watch AI browse the web
+                    Hit run to watch AI browse the web.
+                  </p>
+                  <p className="text-base font-ppsupply">
+                    Powered by{" "}
+                    <a
+                      href="https://stagehand.dev"
+                      className="text-yellow-600 hover:underline"
+                    >
+                      Stagehand
+                    </a>{" "}
+                    on{" "}
+                    <a
+                      href="https://browserbase.com"
+                      className="text-[#FF3B00] hover:underline"
+                    >
+                      Browserbase
+                    </a>
+                    .
                   </p>
                 </div>
 
