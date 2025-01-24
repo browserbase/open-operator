@@ -2,7 +2,7 @@
 
 > [!WARNING]
 > This is simply a proof of concept.
-> Browserbase provides the tools for you to build your own web agent.
+> Browserbase aims NOT to compete with web agents, but rather to provide all the necessary tools for anybody to build their own web agent.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator&env=OPENAI_API_KEY,BROWSERBASE_API_KEY,BROWSERBASE_PROJECT_ID&envDescription=API%20keys%20needed%20to%20run%20Open%20Operator&envLink=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator%23environment-variables)
 
