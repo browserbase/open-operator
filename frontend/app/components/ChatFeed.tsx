@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useWindowSize } from "usehooks-ts";
 
 interface ChatFeedProps {
@@ -21,66 +21,133 @@ export interface BrowserStep {
 interface AgentState {
   sessionId: string | null;
   sessionUrl: string | null;
-  steps: {
-    text: string;
-    reasoning: string;
-    tool: string;
-    instruction: string;
-    stepNumber: number;
-  }[];
+  steps: BrowserStep[];
   isLoading: boolean;
 }
 
-export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps) {
-  const [messages, setMessages] = useState<string[]>(initialMessage ? [initialMessage] : []);
-  const [steps, setSteps] = useState<BrowserStep[]>([]);
-  const [sessionUrl, setSessionUrl] = useState<string | null>(null);
+export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { width } = useWindowSize();
   const isMobile = width ? width < 768 : false;
-
-  const [agentState, setAgentState] = useState<AgentState>({
+  const initializationRef = useRef(false);
+  
+  const agentStateRef = useRef<AgentState>({
     sessionId: null,
     sessionUrl: null,
     steps: [],
     isLoading: false
   });
 
+  const [uiState, setUiState] = useState<{
+    sessionId: string | null;
+    sessionUrl: string | null;
+    steps: BrowserStep[];
+  }>({
+    sessionId: null,
+    sessionUrl: null,
+    steps: []
+  });
+
   const startAgentLoop = useCallback(async (goal: string) => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/agent', {
+      // Start the agent loop with initial URL selection
+      const startResponse = await fetch('/api/agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           goal,
-          previousSteps: agentState.steps,
-          sessionId: agentState.sessionId
+          sessionId: agentStateRef.current.sessionId,
+          action: 'START'
         }),
       });
 
-      const data = await response.json();
+      const startData = await startResponse.json();
       
-      if (data.success) {
-        setAgentState(prev => ({
-          ...prev,
-          sessionId: data.sessionId,
-          sessionUrl: data.sessionUrl,
-          steps: [...prev.steps, {
-            text: data.result.text,
-            reasoning: data.result.reasoning,
-            tool: data.result.tool,
-            instruction: data.result.instruction,
-            stepNumber: prev.steps.length + 1
-          }]
-        }));
+      if (startData.success) {
+        const newStep = {
+          ...startData.result,
+          stepNumber: agentStateRef.current.steps.length + 1
+        };
 
-        // Continue the loop if the tool isn't CLOSE
-        if (data.result.tool !== 'CLOSE') {
-          await startAgentLoop(goal);
+        agentStateRef.current = {
+          ...agentStateRef.current,
+          steps: [...agentStateRef.current.steps, newStep]
+        };
+
+        setUiState({
+          sessionId: agentStateRef.current.sessionId,
+          sessionUrl: agentStateRef.current.sessionUrl,
+          steps: agentStateRef.current.steps
+        });
+
+        // Continue with subsequent steps
+        while (true) {
+          // Get next step from LLM
+          const nextStepResponse = await fetch('/api/agent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              goal,
+              sessionId: agentStateRef.current.sessionId,
+              previousSteps: agentStateRef.current.steps,
+              action: 'GET_NEXT_STEP'
+            }),
+          });
+
+          const nextStepData = await nextStepResponse.json();
+          
+          if (!nextStepData.success) {
+            throw new Error('Failed to get next step');
+          }
+
+          if (nextStepData.done) {
+            break;
+          }
+
+          // Execute the step
+          const executeResponse = await fetch('/api/agent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sessionId: agentStateRef.current.sessionId,
+              step: nextStepData.result,
+              action: 'EXECUTE_STEP'
+            }),
+          });
+
+          const executeData = await executeResponse.json();
+          
+          if (!executeData.success) {
+            throw new Error('Failed to execute step');
+          }
+
+          const newStep = {
+            ...nextStepData.result,
+            stepNumber: agentStateRef.current.steps.length + 1
+          };
+
+          agentStateRef.current = {
+            ...agentStateRef.current,
+            steps: [...agentStateRef.current.steps, newStep]
+          };
+
+          setUiState({
+            sessionId: agentStateRef.current.sessionId,
+            sessionUrl: agentStateRef.current.sessionUrl,
+            steps: agentStateRef.current.steps
+          });
+
+          if (executeData.done) {
+            break;
+          }
         }
       }
     } catch (error) {
@@ -88,14 +155,17 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
     } finally {
       setIsLoading(false);
     }
-  }, [agentState.steps, agentState.sessionId]);
+  }, []);
 
   useEffect(() => {
+    console.log("useEffect called");
     const initializeSession = async () => {
-      if (initialMessage && !agentState.sessionId) {
+      if (initializationRef.current) return;
+      initializationRef.current = true;
+
+      if (initialMessage && !agentStateRef.current.sessionId) {
         setIsLoading(true);
         try {
-          // Create session
           const sessionResponse = await fetch('/api/session', {
             method: 'POST',
           });
@@ -105,7 +175,24 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
             throw new Error(sessionData.error || 'Failed to create session');
           }
 
-          // Start agent loop with new session
+          agentStateRef.current = {
+            ...agentStateRef.current,
+            sessionId: sessionData.sessionId,
+            sessionUrl: sessionData.sessionUrl.replace(
+              "https://www.browserbase.com/devtools-fullscreen/inspector.html",
+              "https://www.browserbase.com/devtools-internal-compiled/index.html"
+            ),
+          };
+
+          setUiState({
+            sessionId: sessionData.sessionId,
+            sessionUrl: sessionData.sessionUrl.replace(
+              "https://www.browserbase.com/devtools-fullscreen/inspector.html",
+              "https://www.browserbase.com/devtools-internal-compiled/index.html"
+            ),
+            steps: []
+          });
+
           const response = await fetch('/api/agent', {
             method: 'POST',
             headers: {
@@ -121,18 +208,27 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
           const data = await response.json();
           
           if (data.success) {
-            setAgentState(prev => ({
+            const newStep = {
+              text: data.result.text,
+              reasoning: data.result.reasoning,
+              tool: data.result.tool,
+              instruction: data.result.instruction,
+              stepNumber: 1
+            };
+
+            agentStateRef.current = {
+              ...agentStateRef.current,
+              steps: [newStep]
+            };
+
+            setUiState(prev => ({
               ...prev,
-              sessionId: data.sessionId,
-              sessionUrl: data.sessionUrl,
-              steps: [...prev.steps, {
-                text: data.result.text,
-                reasoning: data.result.reasoning,
-                tool: data.result.tool,
-                instruction: data.result.instruction,
-                stepNumber: prev.steps.length + 1
-              }]
+              steps: [newStep]
             }));
+
+            if (data.result.tool !== 'CLOSE') {
+              await startAgentLoop(initialMessage);
+            }
           }
         } catch (error) {
           console.error('Session initialization error:', error);
@@ -143,7 +239,7 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
     };
 
     initializeSession();
-  }, [initialMessage, agentState.sessionId]);
+  }, [initialMessage, startAgentLoop]);
 
   // Spring configuration for smoother animations
   const springConfig = {
@@ -219,7 +315,13 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
             </div>
           </div>
 
-          {url && (
+          {(() => {
+            console.log('Session URL:', uiState.sessionUrl);
+            return null;
+          })()}
+          
+          {uiState.sessionUrl && (
+            <div className="p-6 space-y-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -227,12 +329,15 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
               className="w-full aspect-video border-b border-gray-200"
             >
               <iframe
-                src={url}
+                src={uiState.sessionUrl}
                 className="w-full h-full"
-                sandbox="allow-same-origin allow-scripts"
+                sandbox="allow-same-origin allow-scripts allow-forms"
                 loading="lazy"
+                referrerPolicy="no-referrer"
+                title="Browser Session"
               />
             </motion.div>
+            </div>
           )}
 
           <div className="p-6 space-y-4">
@@ -245,24 +350,24 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
                 <p>{initialMessage}</p>
               </motion.div>
             )}
-            {sessionUrl && (
+            {uiState.sessionId && (
               <motion.div
                 variants={messageVariants}
                 className="p-4 bg-gray-50 rounded-lg font-ppsupply"
               >
                 <p className="font-semibold">View session:</p>
                 <a 
-                  href={sessionUrl} 
+                  href={`https://www.browserbase.com/sessions/${uiState.sessionId}`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"
                 >
-                  {sessionUrl}
+                  {`https://www.browserbase.com/sessions/${uiState.sessionId}`}
                 </a>
               </motion.div>
             )}
 
-            {agentState.steps.map((step, index) => (
+            {uiState.steps.map((step, index) => (
               <motion.div
                 key={index}
                 variants={messageVariants}
@@ -279,7 +384,7 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
                 </p>
               </motion.div>
             ))}
-            {agentState.isLoading && (
+            {isLoading && (
               <motion.div
                 variants={messageVariants}
                 className="p-4 bg-gray-50 rounded-lg font-ppsupply animate-pulse"
