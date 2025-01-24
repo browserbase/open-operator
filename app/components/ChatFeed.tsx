@@ -30,6 +30,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   const { width } = useWindowSize();
   const isMobile = width ? width < 768 : false;
   const initializationRef = useRef(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   const agentStateRef = useRef<AgentState>({
     sessionId: null,
@@ -47,6 +48,16 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     sessionUrl: null,
     steps: []
   });
+
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [uiState.steps, scrollToBottom]);
 
   const startAgentLoop = useCallback(async (goal: string) => {
     setIsLoading(true);
@@ -110,6 +121,22 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             break;
           }
 
+          // Add the next step to UI immediately after receiving it
+          const nextStep = {
+            ...nextStepData.result,
+            stepNumber: agentStateRef.current.steps.length + 1
+          };
+
+          agentStateRef.current = {
+            ...agentStateRef.current,
+            steps: [...agentStateRef.current.steps, nextStep]
+          };
+
+          setUiState(prev => ({
+            ...prev,
+            steps: agentStateRef.current.steps
+          }));
+
           // Execute the step
           const executeResponse = await fetch('/api/agent', {
             method: 'POST',
@@ -128,22 +155,6 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
           if (!executeData.success) {
             throw new Error('Failed to execute step');
           }
-
-          const newStep = {
-            ...nextStepData.result,
-            stepNumber: agentStateRef.current.steps.length + 1
-          };
-
-          agentStateRef.current = {
-            ...agentStateRef.current,
-            steps: [...agentStateRef.current.steps, newStep]
-          };
-
-          setUiState({
-            sessionId: agentStateRef.current.sessionId,
-            sessionUrl: agentStateRef.current.sessionUrl,
-            steps: agentStateRef.current.steps
-          });
 
           if (executeData.done) {
             break;
@@ -201,7 +212,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             body: JSON.stringify({
               goal: initialMessage,
               sessionId: sessionData.sessionId,
-              previousSteps: [],
+              action: 'START'
             }),
           });
 
@@ -226,8 +237,70 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
               steps: [newStep]
             }));
 
-            if (data.result.tool !== 'CLOSE') {
-              await startAgentLoop(initialMessage);
+            // Continue with subsequent steps
+            while (true) {
+              // Get next step from LLM
+              const nextStepResponse = await fetch('/api/agent', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  goal: initialMessage,
+                  sessionId: sessionData.sessionId,
+                  previousSteps: agentStateRef.current.steps,
+                  action: 'GET_NEXT_STEP'
+                }),
+              });
+
+              const nextStepData = await nextStepResponse.json();
+              
+              if (!nextStepData.success) {
+                throw new Error('Failed to get next step');
+              }
+
+              if (nextStepData.done) {
+                break;
+              }
+
+              // Add the next step to UI immediately after receiving it
+              const nextStep = {
+                ...nextStepData.result,
+                stepNumber: agentStateRef.current.steps.length + 1
+              };
+
+              agentStateRef.current = {
+                ...agentStateRef.current,
+                steps: [...agentStateRef.current.steps, nextStep]
+              };
+
+              setUiState(prev => ({
+                ...prev,
+                steps: agentStateRef.current.steps
+              }));
+
+              // Execute the step
+              const executeResponse = await fetch('/api/agent', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  sessionId: sessionData.sessionId,
+                  step: nextStepData.result,
+                  action: 'EXECUTE_STEP'
+                }),
+              });
+
+              const executeData = await executeResponse.json();
+              
+              if (!executeData.success) {
+                throw new Error('Failed to execute step');
+              }
+
+              if (executeData.done) {
+                break;
+              }
             }
           }
         } catch (error) {
@@ -239,7 +312,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     };
 
     initializeSession();
-  }, [initialMessage, startAgentLoop]);
+  }, [initialMessage]);
 
   // Spring configuration for smoother animations
   const springConfig = {
@@ -302,7 +375,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
       </motion.nav>
       <main className="flex-1 flex flex-col items-center p-6">
         <motion.div 
-          className="w-full max-w-[640px] bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden"
+          className="w-full max-w-[1280px] bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -320,78 +393,66 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             return null;
           })()}
           
-          {uiState.sessionUrl && (
-            <div className="p-6 space-y-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="w-full aspect-video border-b border-gray-200"
-            >
-              <iframe
-                src={uiState.sessionUrl}
-                className="w-full h-full"
-                sandbox="allow-same-origin allow-scripts allow-forms"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                title="Browser Session"
-              />
-            </motion.div>
-            </div>
-          )}
-
-          <div className="p-6 space-y-4">
-            {initialMessage && (
-              <motion.div
-                variants={messageVariants}
-                className="p-4 bg-blue-50 rounded-lg font-ppsupply"
-              >
-                <p className="font-semibold">Goal:</p>
-                <p>{initialMessage}</p>
-              </motion.div>
-            )}
-            {uiState.sessionId && (
-              <motion.div
-                variants={messageVariants}
-                className="p-4 bg-gray-50 rounded-lg font-ppsupply"
-              >
-                <p className="font-semibold">View session:</p>
-                <a 
-                  href={`https://www.browserbase.com/sessions/${uiState.sessionId}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+          <div className="flex flex-col md:flex-row">
+            {uiState.sessionUrl && (
+              <div className="flex-1 p-6 border-b md:border-b-0 md:border-l border-gray-200 order-first md:order-last">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="w-full aspect-video"
                 >
-                  {`https://www.browserbase.com/sessions/${uiState.sessionId}`}
-                </a>
-              </motion.div>
+                  <iframe
+                    src={uiState.sessionUrl}
+                    className="w-full h-full"
+                    sandbox="allow-same-origin allow-scripts allow-forms"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    title="Browser Session"
+                  />
+                </motion.div>
+              </div>
             )}
 
-            {uiState.steps.map((step, index) => (
-              <motion.div
-                key={index}
-                variants={messageVariants}
-                className="p-4 bg-white border border-gray-200 rounded-lg font-ppsupply space-y-2"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Step {step.stepNumber}</span>
-                  <span className="px-2 py-1 bg-gray-100 rounded text-xs">{step.tool}</span>
-                </div>
-                <p className="font-medium">{step.text}</p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold">Reasoning: </span>
-                  {step.reasoning}
-                </p>
-              </motion.div>
-            ))}
-            {isLoading && (
-              <motion.div
-                variants={messageVariants}
-                className="p-4 bg-gray-50 rounded-lg font-ppsupply animate-pulse"
-              >
-                Processing...
-              </motion.div>
-            )}
+            <div className="md:w-[400px] p-6 min-w-0 md:h-[calc(56.25vw-3rem)] md:max-h-[calc(100vh-12rem)]">
+              <div ref={chatContainerRef} className="h-full overflow-y-auto space-y-4">
+                {initialMessage && (
+                  <motion.div
+                    variants={messageVariants}
+                    className="p-4 bg-blue-50 rounded-lg font-ppsupply"
+                  >
+                    <p className="font-semibold">Goal:</p>
+                    <p>{initialMessage}</p>
+                  </motion.div>
+                )}
+                
+                {uiState.steps.map((step, index) => (
+                  <motion.div
+                    key={index}
+                    variants={messageVariants}
+                    className="p-4 bg-white border border-gray-200 rounded-lg font-ppsupply space-y-2"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Step {step.stepNumber}</span>
+                      <span className="px-2 py-1 bg-gray-100 rounded text-xs">{step.tool}</span>
+                    </div>
+                    <p className="font-medium">{step.text}</p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-semibold">Reasoning: </span>
+                      {step.reasoning}
+                    </p>
+                  </motion.div>
+                ))}
+                {isLoading && (
+                  <motion.div
+                    variants={messageVariants}
+                    className="p-4 bg-gray-50 rounded-lg font-ppsupply animate-pulse"
+                  >
+                    Processing...
+                  </motion.div>
+                )}
+              </div>
+            </div>
           </div>
         </motion.div>
       </main>

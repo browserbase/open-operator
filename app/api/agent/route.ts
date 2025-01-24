@@ -127,6 +127,16 @@ Step ${index + 1}:
     : ""
 }
 Determine the immediate next step to take to achieve the goal. 
+
+Important guidelines:
+1. Break down complex actions into individual atomic steps
+2. For ACT commands, use only one action at a time, such as:
+   - Single click on a specific element
+   - Type into a single input field
+   - Select a single option
+3. Avoid combining multiple actions in one instruction
+4. If multiple actions are needed, they should be separate steps
+
 If the goal has been achieved, return "close".`,
     },
   ];
