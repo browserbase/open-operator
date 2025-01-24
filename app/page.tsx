@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import ChatFeed from "./components/ChatFeed";
 import AnimatedButton from "./components/AnimatedButton";
@@ -14,7 +14,7 @@ export default function Home() {
       // Handle CMD+Enter to submit the form when chat is not visible
       if (!isChatVisible && (e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        const form = document.querySelector('form') as HTMLFormElement;
+        const form = document.querySelector("form") as HTMLFormElement;
         if (form) {
           form.requestSubmit();
         }
@@ -23,7 +23,9 @@ export default function Home() {
       // Handle CMD+K to focus input when chat is not visible
       if (!isChatVisible && (e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        const input = document.querySelector('input[name="message"]') as HTMLInputElement;
+        const input = document.querySelector(
+          'input[name="message"]'
+        ) as HTMLInputElement;
         if (input) {
           input.focus();
         }
@@ -39,6 +41,14 @@ export default function Home() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isChatVisible]);
+
+  const startChat = useCallback(
+    (finalMessage: string) => {
+      setInitialMessage(finalMessage);
+      setIsChatVisible(true);
+    },
+    [setInitialMessage, setIsChatVisible]
+  );
 
   return (
     <AnimatePresence mode="wait">
@@ -76,11 +86,12 @@ export default function Home() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
-                    const input = e.currentTarget.querySelector('input[name="message"]') as HTMLInputElement;
+                    const input = e.currentTarget.querySelector(
+                      'input[name="message"]'
+                    ) as HTMLInputElement;
                     const message = (formData.get("message") as string).trim();
                     const finalMessage = message || input.placeholder;
-                    setInitialMessage(finalMessage);
-                    setIsChatVisible(true);
+                    startChat(finalMessage);
                   }}
                   className="w-full max-w-[720px] flex flex-col items-center gap-3"
                 >
@@ -94,6 +105,40 @@ export default function Home() {
                     <AnimatedButton type="submit">Run</AnimatedButton>
                   </div>
                 </form>
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <button
+                    onClick={() =>
+                      startChat(
+                        "Who is the top GitHub contributor to Stagehand by Browserbase?"
+                      )
+                    }
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                  >
+                    Who is the top contributor to Stagehand?
+                  </button>
+                  <button
+                    onClick={() =>
+                      startChat("How many wins do the 49ers have?")
+                    }
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                  >
+                    How many wins do the 49ers have?
+                  </button>
+                  <button
+                    onClick={() =>
+                      startChat("What is Stephen Curry&apos;s PPG?")
+                    }
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                  >
+                    What is Stephen Curry&apos;s PPG?
+                  </button>
+                  <button
+                    onClick={() => startChat("How much is NVIDIA stock?")}
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                  >
+                    How much is NVIDIA stock?
+                  </button>
+                </div>
               </div>
             </div>
           </main>
