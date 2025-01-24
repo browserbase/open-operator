@@ -31,12 +31,13 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   const isMobile = width ? width < 768 : false;
   const initializationRef = useRef(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
+  const [isAgentFinished, setIsAgentFinished] = useState(false);
+
   const agentStateRef = useRef<AgentState>({
     sessionId: null,
     sessionUrl: null,
     steps: [],
-    isLoading: false
+    isLoading: false,
   });
 
   const [uiState, setUiState] = useState<{
@@ -46,14 +47,24 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   }>({
     sessionId: null,
     sessionUrl: null,
-    steps: []
+    steps: [],
   });
 
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, []);
+
+  useEffect(() => {
+    if (
+      uiState.steps.length > 0 &&
+      uiState.steps[uiState.steps.length - 1].tool === "CLOSE"
+    ) {
+      setIsAgentFinished(true);
+    }
+  }, [uiState.steps]);
 
   useEffect(() => {
     scrollToBottom();
@@ -68,19 +79,19 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
       if (initialMessage && !agentStateRef.current.sessionId) {
         setIsLoading(true);
         try {
-          const sessionResponse = await fetch('/api/session', {
-            method: 'POST',
+          const sessionResponse = await fetch("/api/session", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             }),
           });
           const sessionData = await sessionResponse.json();
-          
+
           if (!sessionData.success) {
-            throw new Error(sessionData.error || 'Failed to create session');
+            throw new Error(sessionData.error || "Failed to create session");
           }
 
           agentStateRef.current = {
@@ -98,102 +109,102 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
               "https://www.browserbase.com/devtools-fullscreen/inspector.html",
               "https://www.browserbase.com/devtools-internal-compiled/index.html"
             ),
-            steps: []
+            steps: [],
           });
 
-          const response = await fetch('/api/agent', {
-            method: 'POST',
+          const response = await fetch("/api/agent", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               goal: initialMessage,
               sessionId: sessionData.sessionId,
-              action: 'START'
+              action: "START",
             }),
           });
 
           const data = await response.json();
-          
+
           if (data.success) {
             const newStep = {
               text: data.result.text,
               reasoning: data.result.reasoning,
               tool: data.result.tool,
               instruction: data.result.instruction,
-              stepNumber: 1
+              stepNumber: 1,
             };
 
             agentStateRef.current = {
               ...agentStateRef.current,
-              steps: [newStep]
+              steps: [newStep],
             };
 
-            setUiState(prev => ({
+            setUiState((prev) => ({
               ...prev,
-              steps: [newStep]
+              steps: [newStep],
             }));
 
             // Continue with subsequent steps
             while (true) {
               // Get next step from LLM
-              const nextStepResponse = await fetch('/api/agent', {
-                method: 'POST',
+              const nextStepResponse = await fetch("/api/agent", {
+                method: "POST",
                 headers: {
-                  'Content-Type': 'application/json',
+                  "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                   goal: initialMessage,
                   sessionId: sessionData.sessionId,
                   previousSteps: agentStateRef.current.steps,
-                  action: 'GET_NEXT_STEP'
+                  action: "GET_NEXT_STEP",
                 }),
               });
 
               const nextStepData = await nextStepResponse.json();
-              
+
               if (!nextStepData.success) {
-                throw new Error('Failed to get next step');
+                throw new Error("Failed to get next step");
               }
 
               // Add the next step to UI immediately after receiving it
               const nextStep = {
                 ...nextStepData.result,
-                stepNumber: agentStateRef.current.steps.length + 1
+                stepNumber: agentStateRef.current.steps.length + 1,
               };
 
               agentStateRef.current = {
                 ...agentStateRef.current,
-                steps: [...agentStateRef.current.steps, nextStep]
+                steps: [...agentStateRef.current.steps, nextStep],
               };
 
-              setUiState(prev => ({
+              setUiState((prev) => ({
                 ...prev,
-                steps: agentStateRef.current.steps
+                steps: agentStateRef.current.steps,
               }));
 
               // Break after adding the CLOSE step to UI
-              if (nextStepData.done || nextStepData.result.tool === 'CLOSE') {
+              if (nextStepData.done || nextStepData.result.tool === "CLOSE") {
                 break;
               }
 
               // Execute the step
-              const executeResponse = await fetch('/api/agent', {
-                method: 'POST',
+              const executeResponse = await fetch("/api/agent", {
+                method: "POST",
                 headers: {
-                  'Content-Type': 'application/json',
+                  "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                   sessionId: sessionData.sessionId,
                   step: nextStepData.result,
-                  action: 'EXECUTE_STEP'
+                  action: "EXECUTE_STEP",
                 }),
               });
 
               const executeData = await executeResponse.json();
-              
+
               if (!executeData.success) {
-                throw new Error('Failed to execute step');
+                throw new Error("Failed to execute step");
               }
 
               if (executeData.done) {
@@ -202,7 +213,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             }
           }
         } catch (error) {
-          console.error('Session initialization error:', error);
+          console.error("Session initialization error:", error);
         } finally {
           setIsLoading(false);
         }
@@ -221,36 +232,36 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
 
   const containerVariants = {
     hidden: { opacity: 0, scale: 0.95 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       scale: 1,
       transition: {
         ...springConfig,
         staggerChildren: 0.1,
-      }
+      },
     },
-    exit: { 
-      opacity: 0, 
+    exit: {
+      opacity: 0,
       scale: 0.95,
-      transition: { duration: 0.2 }
-    }
+      transition: { duration: 0.2 },
+    },
   };
 
   const messageVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 }
+    exit: { opacity: 0, y: -20 },
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen bg-gray-50 flex flex-col"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
     >
-      <motion.nav 
+      <motion.nav
         className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200 shadow-sm"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -272,7 +283,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
         </motion.button>
       </motion.nav>
       <main className="flex-1 flex flex-col items-center p-6">
-        <motion.div 
+        <motion.div
           className="w-full max-w-[1280px] bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -287,12 +298,12 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
           </div>
 
           {(() => {
-            console.log('Session URL:', uiState.sessionUrl);
+            console.log("Session URL:", uiState.sessionUrl);
             return null;
           })()}
-          
+
           <div className="flex flex-col md:flex-row">
-            {uiState.sessionUrl && (
+            {uiState.sessionUrl && !isAgentFinished && (
               <div className="flex-1 p-6 border-b md:border-b-0 md:border-l border-gray-200 order-first md:order-last">
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -312,8 +323,30 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
               </div>
             )}
 
+            {isAgentFinished && (
+              <div className="flex-1 p-6 border-b md:border-b-0 md:border-l border-gray-200 order-first md:order-last">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="w-full aspect-video"
+                >
+                  <div className="w-full h-full border border-gray-200 rounded-lg flex items-center justify-center">
+                    <p className="text-gray-500 text-center">
+                      The agent has completed the task
+                      <br />
+                      &quot;{initialMessage}&quot;
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+
             <div className="md:w-[400px] p-6 min-w-0 md:h-[calc(56.25vw-3rem)] md:max-h-[calc(100vh-12rem)]">
-              <div ref={chatContainerRef} className="h-full overflow-y-auto space-y-4">
+              <div
+                ref={chatContainerRef}
+                className="h-full overflow-y-auto space-y-4"
+              >
                 {initialMessage && (
                   <motion.div
                     variants={messageVariants}
@@ -323,7 +356,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                     <p>{initialMessage}</p>
                   </motion.div>
                 )}
-                
+
                 {uiState.steps.map((step, index) => (
                   <motion.div
                     key={index}
@@ -331,8 +364,12 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                     className="p-4 bg-white border border-gray-200 rounded-lg font-ppsupply space-y-2"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Step {step.stepNumber}</span>
-                      <span className="px-2 py-1 bg-gray-100 rounded text-xs">{step.tool}</span>
+                      <span className="text-sm text-gray-500">
+                        Step {step.stepNumber}
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                        {step.tool}
+                      </span>
                     </div>
                     <p className="font-medium">{step.text}</p>
                     <p className="text-sm text-gray-600">
