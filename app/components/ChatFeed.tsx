@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWindowSize } from "usehooks-ts";
-
+import Image from "next/image";
 interface ChatFeedProps {
   initialMessage?: string;
   onClose: () => void;
@@ -277,7 +277,14 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
         transition={{ delay: 0.2 }}
       >
         <div className="flex items-center gap-2">
-          <span className="font-ppneue text-xl text-gray-900">Browserbase</span>
+          <Image
+            src="/favicon.svg"
+            alt="Open Operator"
+            className="w-8 h-8"
+            width={32}
+            height={32}
+          />
+          <span className="font-ppneue text-gray-900">Open Operator</span>
         </div>
         <motion.button
           onClick={onClose}
