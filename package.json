@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.1.2",
+    "@ai-sdk/openai": "^1.1.2",
     "@browserbasehq/sdk": "^2.0.0",
     "@browserbasehq/stagehand": "latest",
     "@playwright/test": "^1.49.1",

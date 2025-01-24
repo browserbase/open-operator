@@ -9,39 +9,51 @@
  *
  */
 
+import { ObserveResult } from "@browserbasehq/stagehand";
 import chalk from "chalk";
-import { sendPrompt } from "./llm.js";
-import { announce } from "./utils.js";
 import { createSession } from "./bb.js";
 import { runStagehand } from "./execute.js";
+import { sendPrompt } from "./llm.js";
+import { announce } from "./utils.js";
 
 // ALEX: this is the main loop, which is called by the client
 async function agentLoop(
   sessionID: string,
   goal: string,
-  previousSteps: any[] = []
+  previousSteps: any[] = [],
+  previousExtraction?: string | ObserveResult[]
 ) {
   const { result, previousSteps: newPreviousSteps } = await sendPrompt({
     goal,
     sessionID,
     previousSteps,
+    previousExtraction,
   });
 
   console.log("SHOW IN UI:", {
     TEXT: result.text,
     REASONING: result.reasoning,
     TOOL: result.tool,
-    STEP_NUMBER: previousSteps.length + 1,
+    STEP_NUMBER: newPreviousSteps.length,
   });
 
-  await runStagehand({
+  previousExtraction = await runStagehand({
     sessionID,
     method: result.tool,
     instruction: result.instruction,
   });
 
+  if (previousExtraction) {
+    console.log("EXTRACTION RESULT:", previousExtraction);
+  }
+
   if (result.tool !== "CLOSE") {
-    return await agentLoop(sessionID, goal, newPreviousSteps);
+    return await agentLoop(
+      sessionID,
+      goal,
+      newPreviousSteps,
+      previousExtraction
+    );
   }
   return {
     result,
@@ -68,5 +80,5 @@ async function run(prompt: string) {
 }
 
 run(
-  "find stagehand by browserbase on github and tell me who the top contributor is defined by line of code added"
+  "find the stagehand repo by browserbase using google and tell me who the top contributor is defined by line of code added"
 );
