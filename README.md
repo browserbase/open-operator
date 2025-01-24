@@ -1,6 +1,7 @@
 # Open Operator
 
-Open Operator is an open source project inspired by OpenAI's Operator feature, bringing autonomous web browsing capabilities to everyone. Built with Next.js and powered by Browserbase's web automation technology, it enables AI agents to interact with web interfaces naturally and effectively.
+> [!NOTE]
+> Browserbase is
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator&env=OPENAI_API_KEY,BROWSERBASE_API_KEY,BROWSERBASE_PROJECT_ID&envDescription=API%20keys%20needed%20to%20run%20Open%20Operator&envLink=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator%23environment-variables)
 
@@ -27,15 +28,18 @@ pnpm install
 ```
 
 Next, copy the example environment variables:
+
 ```bash
 cp .env.example .env.local
 ```
 
 You'll need to set up your API keys:
+
 1. Get your OpenAI API key from [OpenAI's dashboard](https://platform.openai.com/api-keys)
 2. Get your Browserbase API key and project ID from [Browserbase](https://www.browserbase.com)
 
 Update `.env.local` with your API keys:
+
 - `OPENAI_API_KEY`: Your OpenAI API key
 - `BROWSERBASE_API_KEY`: Your Browserbase API key
 - `BROWSERBASE_PROJECT_ID`: Your Browserbase project ID
@@ -63,6 +67,7 @@ Open Operator uses a combination of AI models and advanced browser automation to
 5. **Real-time Feedback**: Provides immediate visual and textual feedback
 
 The system combines these technologies to:
+
 - Parse and understand natural language commands
 - Navigate and interact with web interfaces
 - Execute complex sequences of actions
@@ -78,6 +83,7 @@ The system combines these technologies to:
 ## Contributing
 
 We welcome contributions! Whether it's:
+
 - Adding new features
 - Improving documentation
 - Reporting bugs
