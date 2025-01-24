@@ -23,7 +23,13 @@ export const metadata: Metadata = {
   title: "Open Operator",
   description: "Watch AI browse the web, for free",
   openGraph: {
-    images: ['/og.png'],
+    images: ["/og.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
   },
 };
 
@@ -34,6 +40,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        {/* Fallback for browsers that don't support SVG favicons */}
+        <link rel="alternate icon" href="/favicon.ico" />
+      </head>
       <body
         className={`${inter.variable} ${ppNeue.variable} ${ppSupply.variable} font-sans antialiased bg-white text-gray-900`}
       >
