@@ -9,13 +9,12 @@
  *
  */
 
+import { ObserveResult } from "@browserbasehq/stagehand";
 import chalk from "chalk";
-import { sendPrompt } from "./llm.js";
-import { announce } from "./utils.js";
 import { createSession } from "./bb.js";
 import { runStagehand } from "./execute.js";
-import { CoreMessage } from "ai";
-import { ObserveResult } from "@browserbasehq/stagehand";
+import { sendPrompt } from "./llm.js";
+import { announce } from "./utils.js";
 
 // ALEX: this is the main loop, which is called by the client
 async function agentLoop(
@@ -35,7 +34,7 @@ async function agentLoop(
     TEXT: result.text,
     REASONING: result.reasoning,
     TOOL: result.tool,
-    STEP_NUMBER: previousSteps.length + 1,
+    STEP_NUMBER: newPreviousSteps.length,
   });
 
   previousExtraction = await runStagehand({
@@ -49,7 +48,12 @@ async function agentLoop(
   }
 
   if (result.tool !== "CLOSE") {
-    return await agentLoop(sessionID, goal, previousSteps, previousExtraction);
+    return await agentLoop(
+      sessionID,
+      goal,
+      newPreviousSteps,
+      previousExtraction
+    );
   }
   return {
     result,

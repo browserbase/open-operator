@@ -48,14 +48,21 @@ Step ${index + 1}:
 Determine the immediate next step to take to achieve the goal. 
 If the goal has been achieved, return "close".`,
     },
-    {
+  ];
+
+  // only include screenshot if it navigated to a page previously
+  if (
+    previousSteps.length > 0 &&
+    previousSteps.some((step) => step.tool === "GOTO")
+  ) {
+    content.push({
       type: "image",
       image: (await runStagehand({
         sessionID,
         method: "SCREENSHOT",
       })) as string,
-    },
-  ];
+    });
+  }
 
   if (previousExtraction) {
     content.push({
@@ -86,11 +93,11 @@ If the goal has been achieved, return "close".`,
         ),
       tool: z.enum(["GOTO", "ACT", "EXTRACT", "OBSERVE", "CLOSE"])
         .describe(`Use the following guidelines to pick which tool to use:
-          GOTO: Navigate to a URL. Only use this if you need to navigate to a new page that is not accessible from the current one. Do not try to skip a step by navigating directly to a new page, use \`act\` for that. If you are querying a website, do not try to enter the search query into the URL and navigate to it. Use \`act\` instead.
-          ACT: Perform an action on the page. Keep the instruction as precise and granular as possible. Use this to perform a step, not an entire action.
-          EXTRACT: Extract data from the page. Use this when you need to extract information from the page, don't solely rely on a screenshot to read text from a page. If you choose this tool you will be provided with the result of the extraction.
-          OBSERVE: Observe the potential actions on the page. Only use this if you are unsure what to do next. If you choose this tool you will be provided with a list of actions.
-          CLOSE: Close the browser once the goal has been achieved.`),
+GOTO: Navigate to a URL. THIS SHOULD ALWAYS BE YOUR FIRST STEP. Only use this if you need to navigate to a new page that is not accessible from the current one. Do not try to skip a step by navigating directly to a new page, use \`act\` for that. If you are querying a website, do not try to enter the search query into the URL and navigate to it. Use \`act\` instead.
+ACT: Perform an action on the page. Keep the instruction as precise and granular as possible. Use this to perform a step, not an entire action.
+EXTRACT: Extract data from the page. Use this when you need to extract information from the page, don't solely rely on a screenshot to read text from a page. If you choose this tool you will be provided with the result of the extraction.
+OBSERVE: Observe the potential actions on the page. Only use this if you are unsure what to do next. If you choose this tool you will be provided with a list of actions.
+CLOSE: Close the browser once the goal has been achieved.`),
       instruction: z
         .string()
         .describe(
