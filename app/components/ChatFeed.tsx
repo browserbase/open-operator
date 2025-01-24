@@ -59,115 +59,6 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     scrollToBottom();
   }, [uiState.steps, scrollToBottom]);
 
-  const startAgentLoop = useCallback(async (goal: string) => {
-    setIsLoading(true);
-    
-    try {
-      // Start the agent loop with initial URL selection
-      const startResponse = await fetch('/api/agent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          goal,
-          sessionId: agentStateRef.current.sessionId,
-          action: 'START'
-        }),
-      });
-
-      const startData = await startResponse.json();
-      
-      if (startData.success) {
-        const newStep = {
-          ...startData.result,
-          stepNumber: agentStateRef.current.steps.length + 1
-        };
-
-        agentStateRef.current = {
-          ...agentStateRef.current,
-          steps: [...agentStateRef.current.steps, newStep]
-        };
-
-        setUiState({
-          sessionId: agentStateRef.current.sessionId,
-          sessionUrl: agentStateRef.current.sessionUrl,
-          steps: agentStateRef.current.steps
-        });
-
-        // Continue with subsequent steps
-        while (true) {
-          // Get next step from LLM
-          const nextStepResponse = await fetch('/api/agent', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              goal,
-              sessionId: agentStateRef.current.sessionId,
-              previousSteps: agentStateRef.current.steps,
-              action: 'GET_NEXT_STEP'
-            }),
-          });
-
-          const nextStepData = await nextStepResponse.json();
-          
-          if (!nextStepData.success) {
-            throw new Error('Failed to get next step');
-          }
-
-          if (nextStepData.done) {
-            break;
-          }
-
-          // Add the next step to UI immediately after receiving it
-          const nextStep = {
-            ...nextStepData.result,
-            stepNumber: agentStateRef.current.steps.length + 1
-          };
-
-          agentStateRef.current = {
-            ...agentStateRef.current,
-            steps: [...agentStateRef.current.steps, nextStep]
-          };
-
-          setUiState(prev => ({
-            ...prev,
-            steps: agentStateRef.current.steps
-          }));
-
-          // Execute the step
-          const executeResponse = await fetch('/api/agent', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              sessionId: agentStateRef.current.sessionId,
-              step: nextStepData.result,
-              action: 'EXECUTE_STEP'
-            }),
-          });
-
-          const executeData = await executeResponse.json();
-          
-          if (!executeData.success) {
-            throw new Error('Failed to execute step');
-          }
-
-          if (executeData.done) {
-            break;
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Agent error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     console.log("useEffect called");
     const initializeSession = async () => {
@@ -259,10 +150,6 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                 throw new Error('Failed to get next step');
               }
 
-              if (nextStepData.done) {
-                break;
-              }
-
               // Add the next step to UI immediately after receiving it
               const nextStep = {
                 ...nextStepData.result,
@@ -278,6 +165,11 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                 ...prev,
                 steps: agentStateRef.current.steps
               }));
+
+              // Break after adding the CLOSE step to UI
+              if (nextStepData.done || nextStepData.result.tool === 'CLOSE') {
+                break;
+              }
 
               // Execute the step
               const executeResponse = await fetch('/api/agent', {

@@ -8,12 +8,6 @@ import Sidebar from "./Sidebar";
 interface ChatBlockProps {
   isVisible: boolean;
   onClose: () => void;
-  boundingBox: {
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  };
   initialMessage?: string;
 }
 
@@ -27,15 +21,14 @@ export interface Message {
 export default function ChatBlock({
   isVisible,
   onClose,
-  boundingBox,
   initialMessage,
 }: ChatBlockProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { width: windowWidth, height: windowHeight } = useWindowSize();
+  const { width: windowWidth } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
-  const [currentUrl, setCurrentUrl] = useState("");
+  const [currentUrl] = useState("");
 
   // Spring configuration for smoother animations
   const springConfig = {
@@ -44,80 +37,19 @@ export default function ChatBlock({
     damping: 30,
   };
 
-  // Animation variants
-  const overlayVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-    exit: { opacity: 0 },
-  };
-
-  const sidebarVariants = {
-    hidden: { x: -400, opacity: 0 },
-    visible: {
-      x: 0,
-      opacity: 1,
-      transition: {
-        ...springConfig,
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-    exit: {
-      x: -400,
-      opacity: 0,
-      transition: { duration: 0.3 },
-    },
-  };
-
-  const contentVariants = {
-    hidden: {
-      opacity: 0,
-      scale: 0.8,
-      x: boundingBox.left,
-      y: boundingBox.top,
-      height: boundingBox.height,
-      width: boundingBox.width,
-      borderRadius: 8,
-    },
+  // Animation variants for the main container
+  const containerVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
     visible: {
       opacity: 1,
       scale: 1,
-      x: isMobile ? 0 : isSidebarOpen ? 400 : 0,
-      y: 0,
-      height: windowHeight,
-      width: isMobile
-        ? windowWidth
-        : windowWidth
-        ? isSidebarOpen
-          ? windowWidth - 400
-          : windowWidth
-        : "100dvw",
-      borderRadius: 0,
-      transition: {
-        type: "spring",
-        stiffness: 350,
-        damping: 30,
-        duration: 0.5,
-      },
+      transition: springConfig,
     },
     exit: {
       opacity: 0,
       scale: 0.8,
-      x: boundingBox.left,
-      y: boundingBox.top,
-      height: boundingBox.height,
-      width: boundingBox.width,
-      borderRadius: 8,
-      transition: {
-        duration: 0.3,
-      },
+      transition: { duration: 0.2 },
     },
-  };
-
-  const messageVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
   };
 
   const handleSubmit = useCallback(
@@ -199,7 +131,7 @@ export default function ChatBlock({
 
           <motion.div
             className="fixed bg-white h-dvh flex flex-col"
-            variants={contentVariants}
+            variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"

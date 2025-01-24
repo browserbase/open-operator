@@ -5,7 +5,7 @@ async function createSession() {
   const bb = new Browserbase({
     apiKey: process.env.BROWSERBASE_API_KEY!,
   });
-  const browserSettings: any = {};
+  const browserSettings: { context?: { id: string } } = {};
   if (process.env.BROWSERBASE_CONTEXT_ID) {
     browserSettings.context = {
       id: process.env.BROWSERBASE_CONTEXT_ID,

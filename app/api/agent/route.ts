@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { openai } from "@ai-sdk/openai";
 import { CoreMessage, generateObject, UserContent } from "ai";
 import { z } from "zod";
-import Browserbase from "@browserbasehq/sdk";
 import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
 
 const LLMClient = openai("gpt-4o");
@@ -26,7 +25,7 @@ async function runStagehand({
   const stagehand = new Stagehand({
     browserbaseSessionID: sessionID,
     env: "BROWSERBASE",
-    logger: (message: any) => {},
+    logger: () => {},
   });
   await stagehand.init();
 
@@ -216,55 +215,6 @@ Return a URL that would be most effective for achieving this goal.`
   });
 
   return result.object;
-}
-
-async function handleAgentStep(
-  sessionID: string,
-  goal: string,
-  previousSteps: Step[] = []
-) {
-  // Handle first step with URL selection
-  if (previousSteps.length === 0) {
-    const { url, reasoning } = await selectStartingUrl(goal);
-    const firstStep = {
-      text: `Navigating to ${url}`,
-      reasoning,
-      tool: "GOTO" as const,
-      instruction: url
-    };
-    
-    await runStagehand({
-      sessionID,
-      method: "GOTO",
-      instruction: url
-    });
-
-    return {
-      result: firstStep,
-      steps: [firstStep],
-      done: false
-    };
-  }
-
-  // Handle subsequent steps
-  const { result, previousSteps: newPreviousSteps } = await sendPrompt({
-    goal,
-    sessionID,
-    previousSteps,
-  });
-
-  const extraction = await runStagehand({
-    sessionID,
-    method: result.tool,
-    instruction: result.instruction,
-  });
-
-  return {
-    result,
-    steps: newPreviousSteps,
-    extraction,
-    done: result.tool === "CLOSE"
-  };
 }
 
 export async function GET() {
