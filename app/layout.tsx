@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   description: "Watch AI browse the web, for free",
   openGraph: {
     images: ["/og.png"],
+    title: "Open Operator",
+    description: "Watch AI browse the web, for free",
+    url: "https://operator.browserbase.com",
   },
   icons: {
     icon: [
