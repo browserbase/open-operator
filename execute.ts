@@ -7,7 +7,14 @@ export async function runStagehand({
   instruction,
 }: {
   sessionID: string;
-  method: "GOTO" | "ACT" | "EXTRACT" | "CLOSE" | "SCREENSHOT" | "OBSERVE";
+  method:
+    | "GOTO"
+    | "ACT"
+    | "EXTRACT"
+    | "CLOSE"
+    | "SCREENSHOT"
+    | "OBSERVE"
+    | "WAIT";
   instruction?: string;
 }) {
   const stagehand = new Stagehand({
@@ -46,5 +53,9 @@ export async function runStagehand({
     const cdpSession = await page.context().newCDPSession(page);
     const { data } = await cdpSession.send("Page.captureScreenshot");
     return data;
+  }
+
+  if (method === "WAIT") {
+    await new Promise((resolve) => setTimeout(resolve, Number(instruction)));
   }
 }
