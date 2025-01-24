@@ -80,5 +80,5 @@ async function run(prompt: string) {
 }
 
 run(
-  "find stagehand by browserbase on github and tell me who the top contributor is defined by line of code added"
+  "find the stagehand repo by browserbase using google and tell me who the top contributor is defined by line of code added"
 );
