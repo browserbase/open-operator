@@ -70,13 +70,18 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
           sessionId: data.sessionId,
           sessionUrl: data.sessionUrl,
           steps: [...prev.steps, {
-            text: data.result.text,     
+            text: data.result.text,
             reasoning: data.result.reasoning,
             tool: data.result.tool,
             instruction: data.result.instruction,
             stepNumber: prev.steps.length + 1
           }]
         }));
+
+        // Continue the loop if the tool isn't CLOSE
+        if (data.result.tool !== 'CLOSE') {
+          await startAgentLoop(goal);
+        }
       }
     } catch (error) {
       console.error('Agent error:', error);
@@ -84,11 +89,61 @@ export default function ChatFeed({ initialMessage, onClose, url }: ChatFeedProps
       setIsLoading(false);
     }
   }, [agentState.steps, agentState.sessionId]);
+
   useEffect(() => {
-    if (initialMessage && !steps.length) {
-      startAgentLoop(initialMessage);
-    }
-  }, [initialMessage, steps.length, startAgentLoop]);
+    const initializeSession = async () => {
+      if (initialMessage && !agentState.sessionId) {
+        setIsLoading(true);
+        try {
+          // Create session
+          const sessionResponse = await fetch('/api/session', {
+            method: 'POST',
+          });
+          const sessionData = await sessionResponse.json();
+          
+          if (!sessionData.success) {
+            throw new Error(sessionData.error || 'Failed to create session');
+          }
+
+          // Start agent loop with new session
+          const response = await fetch('/api/agent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              goal: initialMessage,
+              sessionId: sessionData.sessionId,
+              previousSteps: [],
+            }),
+          });
+
+          const data = await response.json();
+          
+          if (data.success) {
+            setAgentState(prev => ({
+              ...prev,
+              sessionId: data.sessionId,
+              sessionUrl: data.sessionUrl,
+              steps: [...prev.steps, {
+                text: data.result.text,
+                reasoning: data.result.reasoning,
+                tool: data.result.tool,
+                instruction: data.result.instruction,
+                stepNumber: prev.steps.length + 1
+              }]
+            }));
+          }
+        } catch (error) {
+          console.error('Session initialization error:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeSession();
+  }, [initialMessage, agentState.sessionId]);
 
   // Spring configuration for smoother animations
   const springConfig = {

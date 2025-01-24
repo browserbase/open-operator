@@ -17,7 +17,7 @@ import { sendPrompt } from "./llm.js";
 import { announce } from "./utils.js";
 
 // ALEX: this is the main loop, which is called by the client
-export async function agentLoop(
+async function agentLoop(
   sessionID: string,
   goal: string,
   previousSteps: any[] = [],
@@ -80,6 +80,5 @@ async function run(prompt: string) {
 }
 
 run(
-  // "find the stagehand repo by browserbase using google and tell me who the top contributor is defined by line of code added"
-  "go to browserbase and observe, then tell me what it's about"
+  "find the stagehand repo by browserbase using google and tell me who the top contributor is defined by line of code added"
 );
