@@ -76,8 +76,10 @@ export default function Home() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
-                    const message = formData.get("message") as string;
-                    setInitialMessage(message);
+                    const input = e.currentTarget.querySelector('input[name="message"]') as HTMLInputElement;
+                    const message = (formData.get("message") as string).trim();
+                    const finalMessage = message || input.placeholder;
+                    setInitialMessage(finalMessage);
                     setIsChatVisible(true);
                   }}
                   className="w-full max-w-[720px] flex flex-col items-center gap-3"
@@ -86,7 +88,7 @@ export default function Home() {
                     <input
                       name="message"
                       type="text"
-                      placeholder="Enter a task..."
+                      placeholder="What's the price of NVIDIA stock?"
                       className="w-full px-4 py-3 pr-[100px] border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent font-ppsupply"
                     />
                     <AnimatedButton type="submit">Run</AnimatedButton>
