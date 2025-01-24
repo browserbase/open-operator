@@ -68,7 +68,7 @@ export default function Home() {
                     Browse
                   </h1>
                   <p className="text-base font-ppsupply text-gray-500">
-                    Hit run to launch your headless browser
+                    Hit run to browse the web
                   </p>
                 </div>
 
