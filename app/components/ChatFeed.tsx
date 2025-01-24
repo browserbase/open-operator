@@ -70,6 +70,12 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
         try {
           const sessionResponse = await fetch('/api/session', {
             method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            }),
           });
           const sessionData = await sessionResponse.json();
           
