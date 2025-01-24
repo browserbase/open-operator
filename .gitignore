@@ -77,3 +77,4 @@ target/
 *.bak
 *.tmp
 *.temp
+.env
