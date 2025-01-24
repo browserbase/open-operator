@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import ChatFeed from "./components/ChatFeed";
 import AnimatedButton from "./components/AnimatedButton";
 import Image from "next/image";
+import posthog from "posthog-js";
 
 export default function Home() {
   const [isChatVisible, setIsChatVisible] = useState(false);
@@ -47,6 +48,14 @@ export default function Home() {
     (finalMessage: string) => {
       setInitialMessage(finalMessage);
       setIsChatVisible(true);
+
+      try {
+        posthog.capture("submit_message", {
+          message: finalMessage,
+        });
+      } catch (e) {
+        console.error(e);
+      }
     },
     [setInitialMessage, setIsChatVisible]
   );
