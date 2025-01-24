@@ -2,7 +2,7 @@
 
 > [!WARNING]
 > This is simply a proof of concept.
-> Browserbase aims NOT to compete with web agents, but rather to provide all the necessary tools for anybody to build their own web agent.
+> Browserbase aims NOT to compete with web agents, but rather to provide all the necessary tools for anybody to build their own web agent. We strongly recommend you check out both [Browserbase](https://www.browserbase.com) and our open source project [Stagehand](https://www.stagehand.dev) to build your own web agent.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator&env=OPENAI_API_KEY,BROWSERBASE_API_KEY,BROWSERBASE_PROJECT_ID&envDescription=API%20keys%20needed%20to%20run%20Open%20Operator&envLink=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator%23environment-variables)
 
@@ -59,27 +59,28 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see Ope
 
 ## How It Works
 
-Open Operator uses a combination of AI models and advanced browser automation to enable natural web interactions:
+Building a web agent is a complex task. You need to understand the user's intent, convert it into headless browser operations, and execute actions, each of which can be incredibly complex on their own.
 
-1. **Understanding Intent**: Natural language processing to understand user intentions
-2. **Browser Automation**: Leverages Browserbase's technology for reliable web interaction
-3. **DOM Management**: Uses Stagehand for precise DOM traversal and manipulation
-4. **Action Execution**: Translates intentions into precise browser actions
-5. **Real-time Feedback**: Provides immediate visual and textual feedback
+![public/agent_mess.png](public/agent_mess.png)
 
-The system combines these technologies to:
+Stagehand is a tool that helps you build web agents. It allows you to convert natural language into headless browser operations, execute actions on the browser, and extract results back into structured data.
 
-- Parse and understand natural language commands
-- Navigate and interact with web interfaces
-- Execute complex sequences of actions
-- Provide real-time feedback and results
+![public/stagehand_clean.png](public/stagehand_clean.png)
+
+Under the hood, we have a very simple agent loop that just calls Stagehand to convert the user's intent into headless browser operations, and then calls Browserbase to execute those operations.
+
+![public/agent_loop.png](public/agent_loop.png)
+
+Stagehand uses Browserbase to execute actions on the browser, and OpenAI to understand the user's intent.
+
+For more on this, check out the code at [this commit](https://github.com/browserbase/open-operator/blob/6f2fba55b3d271be61819dc11e64b1ada52646ac/index.ts).
 
 ### Key Technologies
 
-- **Browserbase**: Powers the core browser automation and interaction capabilities
-- **Stagehand**: Handles precise DOM manipulation and state management
-- **Next.js**: Provides the modern web framework foundation
-- **AI Models**: Enable natural language understanding and decision making
+- **[Browserbase](https://www.browserbase.com)**: Powers the core browser automation and interaction capabilities
+- **[Stagehand](https://www.stagehand.dev)**: Handles precise DOM manipulation and state management
+- **[Next.js](https://nextjs.org)**: Provides the modern web framework foundation
+- **[OpenAI](https://openai.com)**: Enable natural language understanding and decision making
 
 ## Contributing
 
