@@ -20,7 +20,10 @@ export async function runStagehand({
   const context = stagehand.context;
 
   if (method === "GOTO") {
-    await page.goto(instruction!, {waitUntil: "domcontentloaded", timeout: 60000});
+    await page.goto(instruction!, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
   }
   if (method === "ACT") {
     await page.act(instruction!);
@@ -30,7 +33,7 @@ export async function runStagehand({
     return extraction;
   }
   if (method === "OBSERVE") {
-    await page.observe({
+    return await page.observe({
       instruction,
       useAccessibilityTree: true,
     });
@@ -41,7 +44,7 @@ export async function runStagehand({
 
   if (method === "SCREENSHOT") {
     const cdpSession = await page.context().newCDPSession(page);
-    const { data } = await cdpSession.send('Page.captureScreenshot');
+    const { data } = await cdpSession.send("Page.captureScreenshot");
     return data;
   }
 }

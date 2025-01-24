@@ -15,13 +15,14 @@ import { announce } from "./utils.js";
 import { createSession } from "./bb.js";
 import { runStagehand } from "./execute.js";
 import { CoreMessage } from "ai";
+import { ObserveResult } from "@browserbasehq/stagehand";
 
 // ALEX: this is the main loop, which is called by the client
 async function agentLoop(
   sessionID: string,
   goal: string,
   previousSteps: any[] = [],
-  previousExtraction?: string
+  previousExtraction?: string | ObserveResult[]
 ) {
   const { result, previousSteps: newPreviousSteps } = await sendPrompt({
     goal,

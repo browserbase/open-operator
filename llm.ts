@@ -2,6 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { CoreMessage, generateObject, UserContent } from "ai";
 import { z } from "zod";
 import { runStagehand } from "./execute.js";
+import { ObserveResult } from "@browserbasehq/stagehand";
 
 const LLMClient = anthropic("claude-3-5-sonnet-latest");
 
@@ -21,7 +22,7 @@ export async function sendPrompt({
   goal: string;
   sessionID: string;
   previousSteps?: Step[];
-  previousExtraction?: string;
+  previousExtraction?: string | ObserveResult[];
 }) {
   const content: UserContent = [
     {
@@ -59,7 +60,9 @@ If the goal has been achieved, return "close".`,
   if (previousExtraction) {
     content.push({
       type: "text",
-      text: `The result of the previous extraction is: ${previousExtraction}.`,
+      text: `The result of the previous ${
+        Array.isArray(previousExtraction) ? "observation" : "extraction"
+      } is: ${previousExtraction}.`,
     });
   }
 
@@ -86,7 +89,7 @@ If the goal has been achieved, return "close".`,
           GOTO: Navigate to a URL.
           ACT: Perform an action on the page.
           EXTRACT: Extract data from the page. Use this when you need to get information from the page, don't solely rely on a screenshot. If you choose this tool you will be provided with the result of the extraction.
-          OBSERVE: Observe the potential actions on the page.
+          OBSERVE: Observe the potential actions on the page. Only use this if you are unsure what to do next. If you choose this tool you will be provided with a list of actions.
           CLOSE: Close the browser once the goal has been achieved.`),
       instruction: z
         .string()
