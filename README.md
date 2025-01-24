@@ -6,16 +6,6 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator&env=OPENAI_API_KEY,BROWSERBASE_API_KEY,BROWSERBASE_PROJECT_ID&envDescription=API%20keys%20needed%20to%20run%20Open%20Operator&envLink=https%3A%2F%2Fgithub.com%2Fbrowserbase%2Fopen-operator%23environment-variables)
 
-## Features
-
-- 🌐 Autonomous web browsing and interaction
-- 🤖 Natural language interface for web navigation
-- 🔄 Real-time browser state synchronization
-- 🛠️ Extensible architecture for custom actions
-- 📱 Responsive design for all devices
-- 🎭 Reliable browser automation with Stagehand
-- 🔍 Precise DOM understanding and manipulation
-
 ## Getting Started
 
 First, install the dependencies:
