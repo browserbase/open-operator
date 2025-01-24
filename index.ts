@@ -12,35 +12,31 @@
 import chalk from "chalk";
 import { sendPrompt } from "./llm.js";
 import { announce } from "./utils.js";
-import { CoreMessage } from "ai";
 import { createSession } from "./bb.js";
 import { runStagehand } from "./execute.js";
+import { CoreMessage } from "ai";
 
 // ALEX: this is the main loop, which is called by the client
 async function agentLoop(
   sessionID: string,
   goal: string,
-  messages: CoreMessage[],
+  previousSteps: any[] = [],
   previousExtraction?: string
 ) {
-  // ALEX: sendPrompt should be run server-side
-  const { result, messages: newMessages } = await sendPrompt({
+  const { result, previousSteps: newPreviousSteps } = await sendPrompt({
     goal,
     sessionID,
-    messages,
+    previousSteps,
     previousExtraction,
   });
-  //   ALEX: save this to react state + display in UI
-  //   IF YOU WANT TO SEE THE THINGS IT'S GOING TO DO BEFORE DOING IT:
-  // remove execute() from tools in llm.ts and use structured data outputs instead: https://sdk.vercel.ai/docs/ai-sdk-core/generating-structured-data#structured-outputs-with-generatetext-and-streamtext
+
   console.log("SHOW IN UI:", {
-    // NEW_MESSAGES: newMessages,
     TEXT: result.text,
     REASONING: result.reasoning,
     TOOL: result.tool,
-    // TOOL_CALLS: result.toolCalls,
-    // TOOL_RESULTS: result.toolResults,
+    STEP_NUMBER: previousSteps.length + 1,
   });
+
   previousExtraction = await runStagehand({
     sessionID,
     method: result.tool,
@@ -52,9 +48,12 @@ async function agentLoop(
   }
 
   if (result.tool !== "CLOSE") {
-    return await agentLoop(sessionID, goal, newMessages, previousExtraction);
+    return await agentLoop(sessionID, goal, previousSteps, previousExtraction);
   }
-  return result;
+  return {
+    result,
+    steps: newPreviousSteps,
+  };
 }
 
 // Make this like entry point for a prompt
@@ -72,9 +71,9 @@ async function run(prompt: string) {
   );
 
   // ALEX: Run agentLoop client-side
-  await agentLoop(session.id, prompt, []);
+  await agentLoop(session.id, prompt);
 }
 
 run(
-  "find stagehand by browserbase on github and tell me who the top contributor is"
+  "find stagehand by browserbase on github and tell me who the top contributor is defined by line of code added"
 );
