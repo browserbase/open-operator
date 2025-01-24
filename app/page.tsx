@@ -68,7 +68,7 @@ export default function Home() {
               <span className="font-ppneue text-gray-900">Open Operator</span>
             </div>
             <div className="flex items-center gap-2">
-              <a href="https://github.com/browserbase/stagehand">
+              <a href="https://github.com/browserbase/open-operator">
                 <button className="h-fit flex items-center justify-center px-4 py-2 rounded-sm bg-black gap-2 text-sm text-white border border-pillSecondary">
                   <Image
                     src="/github.svg"
