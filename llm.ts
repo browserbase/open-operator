@@ -97,6 +97,7 @@ GOTO: Navigate to a new URL only if not accessible from current page or if you n
 ACT: Perform a single action on the page
 EXTRACT: Extract data from the page (don't rely on screenshots for text, use the EXTRACT tool and you'll be provided with the result)
 OBSERVE: List available actions when unsure what to do next
+WAIT: Wait for a number of milliseconds
 CLOSE: Close browser when goal is achieved`),
       instruction: z
         .string()
