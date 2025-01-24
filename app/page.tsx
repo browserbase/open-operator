@@ -67,6 +67,20 @@ export default function Home() {
               />
               <span className="font-ppneue text-gray-900">Open Operator</span>
             </div>
+            <div className="flex items-center gap-2">
+              <a href="https://github.com/browserbase/stagehand">
+                <button className="h-fit flex items-center justify-center px-4 py-2 rounded-sm bg-black gap-2 text-sm text-white border border-pillSecondary">
+                  <Image
+                    src="/github.svg"
+                    alt="GitHub"
+                    width={20}
+                    height={20}
+                    className="mr-2"
+                  />
+                  View GitHub
+                </button>
+              </a>
+            </div>
           </nav>
 
           {/* Main Content */}
@@ -85,25 +99,8 @@ export default function Home() {
                   <h1 className="text-2xl font-ppneue text-gray-900 text-center">
                     Open Operator
                   </h1>
-                  <p className="text-base font-ppsupply text-gray-500">
+                  <p className="text-base font-ppsupply text-gray-500 text-center">
                     Hit run to watch AI browse the web.
-                  </p>
-                  <p className="text-base font-ppsupply">
-                    Powered by{" "}
-                    <a
-                      href="https://stagehand.dev"
-                      className="text-yellow-600 hover:underline"
-                    >
-                      Stagehand
-                    </a>{" "}
-                    on{" "}
-                    <a
-                      href="https://browserbase.com"
-                      className="text-[#FF3B00] hover:underline"
-                    >
-                      Browserbase
-                    </a>
-                    .
                   </p>
                 </div>
 
@@ -150,9 +147,7 @@ export default function Home() {
                     How many wins do the 49ers have?
                   </button>
                   <button
-                    onClick={() =>
-                      startChat("What is Stephen Curry&apos;s PPG?")
-                    }
+                    onClick={() => startChat("What is Stephen Curry's PPG?")}
                     className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
                   >
                     What is Stephen Curry&apos;s PPG?
@@ -166,6 +161,23 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <p className="text-base font-ppsupply text-center mt-8">
+              Powered by{" "}
+              <a
+                href="https://stagehand.dev"
+                className="text-yellow-600 hover:underline"
+              >
+                🤘 Stagehand
+              </a>{" "}
+              on{" "}
+              <a
+                href="https://browserbase.com"
+                className="text-[#FF3B00] hover:underline"
+              >
+                🅱️ Browserbase
+              </a>
+              .
+            </p>
           </main>
         </div>
       ) : (
