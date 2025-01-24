@@ -98,6 +98,16 @@ async function createSession(timezone?: string) {
   return session;
 }
 
+async function endSession(sessionId: string) {
+  const bb = new Browserbase({
+    apiKey: process.env.BROWSERBASE_API_KEY!,
+  });
+  await bb.sessions.update(sessionId, {
+    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+    status: "REQUEST_RELEASE",
+  });
+}
+
 async function getDebugUrl(sessionId: string) {
   const bb = new Browserbase({
     apiKey: process.env.BROWSERBASE_API_KEY!,
@@ -125,3 +135,10 @@ export async function POST(request: Request) {
     );
   }
 } 
+
+export async function DELETE(request: Request) {
+  const body = await request.json();
+  const sessionId = body.sessionId as string;
+  await endSession(sessionId);
+  return NextResponse.json({ success: true });
+}

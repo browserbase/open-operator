@@ -63,8 +63,17 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
       uiState.steps[uiState.steps.length - 1].tool === "CLOSE"
     ) {
       setIsAgentFinished(true);
+      fetch("/api/session", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId: uiState.sessionId,
+        }),
+      });
     }
-  }, [uiState.steps]);
+  }, [uiState.sessionId, uiState.steps]);
 
   useEffect(() => {
     scrollToBottom();
