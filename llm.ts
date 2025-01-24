@@ -1,10 +1,10 @@
-import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import { CoreMessage, generateObject, UserContent } from "ai";
 import { z } from "zod";
 import { runStagehand } from "./execute.js";
 import { ObserveResult } from "@browserbasehq/stagehand";
 
-const LLMClient = anthropic("claude-3-5-sonnet-latest");
+const LLMClient = openai("gpt-4o");
 
 type Step = {
   text: string;
@@ -86,7 +86,7 @@ If the goal has been achieved, return "close".`,
         ),
       tool: z.enum(["GOTO", "ACT", "EXTRACT", "OBSERVE", "CLOSE"])
         .describe(`Use the following guidelines to pick which tool to use:
-          GOTO: Navigate to a URL.
+          GOTO: Navigate to a URL. Only use this if you need to navigate to a new page that is not accessible from the current one. Do not try to skip a step by navigating directly to a new page, use \`act\` for that. If you are querying a website, do not try to enter the search query into the URL and navigate to it. Use \`act\` instead.
           ACT: Perform an action on the page. Keep the instruction as precise and granular as possible. Use this to perform a step, not an entire action.
           EXTRACT: Extract data from the page. Use this when you need to extract information from the page, don't solely rely on a screenshot to read text from a page. If you choose this tool you will be provided with the result of the extraction.
           OBSERVE: Observe the potential actions on the page. Only use this if you are unsure what to do next. If you choose this tool you will be provided with a list of actions.
