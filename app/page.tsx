@@ -82,7 +82,7 @@ export default function Home() {
                 target="_blank" 
                 rel="noopener noreferrer"
               >
-                <button className="h-fit flex items-center justify-center px-4 py-2 rounded-sm bg-black gap-2 text-sm text-white border border-pillSecondary">
+                <button className="h-fit flex items-center justify-center px-4 py-2 rounded-md bg-[#1b2128] hover:bg-[#1d232b] gap-1 text-sm font-medium text-white border border-pillSecondary transition-colors duration-200">
                   <Image
                     src="/github.svg"
                     alt="GitHub"
