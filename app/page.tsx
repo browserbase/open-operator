@@ -7,6 +7,17 @@ import AnimatedButton from "./components/AnimatedButton";
 import Image from "next/image";
 import posthog from "posthog-js";
 
+const Tooltip = ({ children, text }: { children: React.ReactNode; text: string }) => {
+  return (
+    <div className="relative group">
+      {children}
+      <span className="absolute hidden group-hover:block w-auto px-3 py-2 min-w-max left-1/2 -translate-x-1/2 translate-y-3 bg-gray-900 text-white text-xs rounded-md font-ppsupply">
+        {text}
+      </span>
+    </div>
+  );
+};
+
 export default function Home() {
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [initialMessage, setInitialMessage] = useState("");
@@ -66,7 +77,7 @@ export default function Home() {
         <div className="min-h-screen bg-gray-50 flex flex-col">
           {/* Top Navigation */}
           <nav className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Image
                 src="/favicon.svg"
                 alt="Open Operator"
@@ -74,11 +85,15 @@ export default function Home() {
                 width={32}
                 height={32}
               />
-              <span className="font-ppneue text-gray-900">Open Operator</span>
+              <span className="font-ppsupply text-gray-900">Open Operator</span>
             </div>
             <div className="flex items-center gap-2">
-              <a href="https://github.com/browserbase/open-operator">
-                <button className="h-fit flex items-center justify-center px-4 py-2 rounded-sm bg-black gap-2 text-sm text-white border border-pillSecondary">
+              <a
+                href="https://github.com/browserbase/open-operator"
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <button className="h-fit flex items-center justify-center px-4 py-2 rounded-md bg-[#1b2128] hover:bg-[#1d232b] gap-1 text-sm font-medium text-white border border-pillSecondary transition-colors duration-200">
                   <Image
                     src="/github.svg"
                     alt="GitHub"
@@ -94,12 +109,18 @@ export default function Home() {
 
           {/* Main Content */}
           <main className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="w-full max-w-[640px] bg-white border border-gray-200 shadow-sm overflow-hidden">
+            <div className="w-full max-w-[640px] bg-white border border-gray-200 shadow-sm">
               <div className="w-full h-12 bg-white border-b border-gray-200 flex items-center px-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <Tooltip text="why would you want to close this?">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                  </Tooltip>
+                  <Tooltip text="s/o to the 🅱️rowserbase devs">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  </Tooltip>
+                  <Tooltip text="@pk_iv was here">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </Tooltip>
                 </div>
               </div>
 
