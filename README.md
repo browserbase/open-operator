@@ -10,6 +10,8 @@
 
 First, install the dependencies for this repository. This requires [pnpm](https://pnpm.io/installation#using-other-package-managers).
 
+<!-- This doesn't work with NPM, haven't tested with yarn -->
+
 ```bash
 pnpm install
 ```
@@ -32,6 +34,8 @@ Update `.env.local` with your API keys:
 - `BROWSERBASE_PROJECT_ID`: Your Browserbase project ID
 
 Then, run the development server:
+
+<!-- This doesn't work with NPM, haven't tested with yarn -->
 
 ```bash
 pnpm dev
