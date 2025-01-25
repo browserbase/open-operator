@@ -8,13 +8,11 @@
 
 ## Getting Started
 
-First, install the dependencies:
+First, install the dependencies for this repository. This requires [pnpm](https://pnpm.io/installation#using-other-package-managers).
+
+<!-- This doesn't work with NPM, haven't tested with yarn -->
 
 ```bash
-npm install
-# or
-yarn install
-# or
 pnpm install
 ```
 
@@ -37,11 +35,9 @@ Update `.env.local` with your API keys:
 
 Then, run the development server:
 
+<!-- This doesn't work with NPM, haven't tested with yarn -->
+
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
 ```
 
