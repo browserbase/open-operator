@@ -32,6 +32,10 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   const initializationRef = useRef(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAgentFinished, setIsAgentFinished] = useState(false);
+  const [pendingStep, setPendingStep] = useState<{
+    step: BrowserStep;
+    sessionId: string;
+  } | null>(null);
 
   const agentStateRef = useRef<AgentState>({
     sessionId: null,
@@ -57,6 +61,62 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     }
   }, []);
 
+  const updateNextStep = useCallback(async () => {
+    try {
+      if (!agentStateRef.current.sessionId) {
+        console.error("No session ID available");
+        return;
+      }
+
+      const body = {
+        goal: initialMessage,
+        sessionId: agentStateRef.current.sessionId,
+        previousSteps: agentStateRef.current.steps,
+        action: "GET_NEXT_STEP",
+      };
+
+      const nextStepResponse = await fetch("/api/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const nextStepData = await nextStepResponse.json();
+
+      if (!nextStepData.success) {
+        console.error("Next step error:", nextStepData);
+        throw new Error(nextStepData.error || "Failed to get next step");
+      }
+
+      const nextStep = {
+        ...nextStepData.result,
+        stepNumber: agentStateRef.current.steps.length + 1,
+      };
+
+      const steps = [...agentStateRef.current.steps, nextStep];
+
+      agentStateRef.current = {
+        ...agentStateRef.current,
+        steps,
+      };
+
+      setUiState((prev) => ({
+        ...prev,
+        steps,
+      }));
+
+      setPendingStep({
+        step: nextStep,
+        sessionId: agentStateRef.current.sessionId!,
+      });
+      console.log("Pending step:", nextStep);
+    } catch (error) {
+      console.error("Error getting next step:", error);
+    }
+  }, [initialMessage]);
+
   useEffect(() => {
     if (
       uiState.steps.length > 0 &&
@@ -78,6 +138,55 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   useEffect(() => {
     scrollToBottom();
   }, [uiState.steps, scrollToBottom]);
+
+  const handleExecuteStep = async () => {
+    if (!pendingStep) return;
+
+    // Clear the pending step before getting the next one
+    const pendingStepCopy = pendingStep;
+    setPendingStep(null);
+
+    try {
+      const executeResponse = await fetch("/api/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId: pendingStepCopy.sessionId,
+          step: pendingStepCopy.step,
+          action: "EXECUTE_STEP",
+        }),
+      });
+
+      const executeData = await executeResponse.json();
+
+      if (!executeData.success) {
+        throw new Error("Failed to execute step");
+      }
+
+      // Add a small delay to ensure the current step is processed
+      setTimeout(() => {
+        updateNextStep();
+      }, 500);
+    } catch (error) {
+      console.error("Error executing step:", error);
+    }
+  };
+
+  // Add event listener for tab key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        e.preventDefault(); // Prevent default tab behavior
+        // handleExecuteStep();
+        alert("Tab key pressed");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     console.log("useEffect called");
@@ -136,7 +245,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
           const data = await response.json();
 
           if (data.success) {
-            const newStep = {
+            const firstStep = {
               text: data.result.text,
               reasoning: data.result.reasoning,
               tool: data.result.tool,
@@ -146,80 +255,18 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
 
             agentStateRef.current = {
               ...agentStateRef.current,
-              steps: [newStep],
+              steps: [firstStep],
             };
 
             setUiState((prev) => ({
               ...prev,
-              steps: [newStep],
+              steps: [firstStep],
             }));
 
-            // Continue with subsequent steps
-            while (true) {
-              // Get next step from LLM
-              const nextStepResponse = await fetch("/api/agent", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  goal: initialMessage,
-                  sessionId: sessionData.sessionId,
-                  previousSteps: agentStateRef.current.steps,
-                  action: "GET_NEXT_STEP",
-                }),
-              });
-
-              const nextStepData = await nextStepResponse.json();
-
-              if (!nextStepData.success) {
-                throw new Error("Failed to get next step");
-              }
-
-              // Add the next step to UI immediately after receiving it
-              const nextStep = {
-                ...nextStepData.result,
-                stepNumber: agentStateRef.current.steps.length + 1,
-              };
-
-              agentStateRef.current = {
-                ...agentStateRef.current,
-                steps: [...agentStateRef.current.steps, nextStep],
-              };
-
-              setUiState((prev) => ({
-                ...prev,
-                steps: agentStateRef.current.steps,
-              }));
-
-              // Break after adding the CLOSE step to UI
-              if (nextStepData.done || nextStepData.result.tool === "CLOSE") {
-                break;
-              }
-
-              // Execute the step
-              const executeResponse = await fetch("/api/agent", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  sessionId: sessionData.sessionId,
-                  step: nextStepData.result,
-                  action: "EXECUTE_STEP",
-                }),
-              });
-
-              const executeData = await executeResponse.json();
-
-              if (!executeData.success) {
-                throw new Error("Failed to execute step");
-              }
-
-              if (executeData.done) {
-                break;
-              }
-            }
+            setPendingStep({
+              step: firstStep,
+              sessionId: sessionData.sessionId,
+            });
           }
         } catch (error) {
           console.error("Session initialization error:", error);
@@ -230,7 +277,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     };
 
     initializeSession();
-  }, [initialMessage]);
+  }, [initialMessage, updateNextStep]);
 
   // Spring configuration for smoother animations
   const springConfig = {
@@ -377,7 +424,11 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                   <motion.div
                     key={index}
                     variants={messageVariants}
-                    className="p-4 bg-white border border-gray-200 rounded-lg font-ppsupply space-y-2"
+                    className={`p-4 bg-white border border-gray-200 rounded-lg font-ppsupply space-y-2 ${
+                      pendingStep?.step.stepNumber === step.stepNumber
+                        ? "border-blue-500 ring-2 ring-blue-200"
+                        : ""
+                    }`}
                   >
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">
@@ -392,6 +443,20 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                       <span className="font-semibold">Reasoning: </span>
                       {step.reasoning}
                     </p>
+                    {step.tool === "CLOSE" ? (
+                      <button className="mt-4 w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors font-medium text-sm">
+                        Agent has finished
+                      </button>
+                    ) : (
+                      pendingStep?.step.stepNumber === step.stepNumber && (
+                        <button
+                          onClick={handleExecuteStep}
+                          className="mt-4 w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors font-medium text-sm"
+                        >
+                          Execute this step
+                        </button>
+                      )
+                    )}
                   </motion.div>
                 ))}
                 {isLoading && (
