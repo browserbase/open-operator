@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 import Browserbase from "@browserbasehq/sdk";
 
 type BrowserbaseRegion =
@@ -60,14 +60,14 @@ function getClosestRegion(timezone?: string): BrowserbaseRegion {
     // Use offset-based fallback
     const date = new Date();
     // Create a date formatter for the given timezone
-    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+    const formatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone });
     // Get the timezone offset in minutes
     const timeString = formatter.format(date);
     const testDate = new Date(timeString);
     const hourOffset = (testDate.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     const matchingRange = offsetRanges.find(
-      (range) => hourOffset >= range.min && hourOffset <= range.max,
+      (range) => hourOffset >= range.min && hourOffset <= range.max
     );
 
     return matchingRange?.region ?? "us-west-2";
@@ -76,26 +76,38 @@ function getClosestRegion(timezone?: string): BrowserbaseRegion {
   }
 }
 
-async function createSession(timezone?: string) {
+async function createSession(timezone?: string, contextId?: string) {
   const bb = new Browserbase({
     apiKey: process.env.BROWSERBASE_API_KEY!,
   });
-  const browserSettings: { context?: { id: string } } = {};
-  if (process.env.BROWSERBASE_CONTEXT_ID) {
+  const browserSettings: { context?: { id: string; persist: boolean } } = {};
+  if (contextId) {
     browserSettings.context = {
-      id: process.env.BROWSERBASE_CONTEXT_ID,
+      id: contextId,
+      persist: true,
+    };
+  } else {
+    const context = await bb.contexts.create({
+      projectId: process.env.BROWSERBASE_PROJECT_ID!,
+    });
+    browserSettings.context = {
+      id: context.id,
+      persist: true,
     };
   }
 
   console.log("timezone ", timezone);
-  console.log('getClosestRegion(timezone)', getClosestRegion(timezone))
+  console.log("getClosestRegion(timezone)", getClosestRegion(timezone));
   const session = await bb.sessions.create({
     projectId: process.env.BROWSERBASE_PROJECT_ID!,
     browserSettings,
     keepAlive: true,
     region: getClosestRegion(timezone),
   });
-  return session;
+  return {
+    session,
+    contextId: browserSettings.context?.id,
+  };
 }
 
 async function endSession(sessionId: string) {
@@ -120,21 +132,26 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const timezone = body.timezone as string;
-    const session = await createSession(timezone);
+    const providedContextId = body.contextId as string;
+    const { session, contextId } = await createSession(
+      timezone,
+      providedContextId
+    );
     const liveUrl = await getDebugUrl(session.id);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       sessionId: session.id,
-      sessionUrl: liveUrl
+      sessionUrl: liveUrl,
+      contextId,
     });
   } catch (error) {
-    console.error('Error creating session:', error);
+    console.error("Error creating session:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create session' },
+      { success: false, error: "Failed to create session" },
       { status: 500 }
     );
   }
-} 
+}
 
 export async function DELETE(request: Request) {
   const body = await request.json();
