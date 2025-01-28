@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWindowSize } from "usehooks-ts";
 import Image from "next/image";
+import { useAtom } from "jotai/react";
+import { contextIdAtom } from "../atoms";
+import posthog from "posthog-js";
 interface ChatFeedProps {
   initialMessage?: string;
   onClose: () => void;
@@ -32,7 +35,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   const initializationRef = useRef(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAgentFinished, setIsAgentFinished] = useState(false);
-
+  const [contextId, setContextId] = useAtom(contextIdAtom);
   const agentStateRef = useRef<AgentState>({
     sessionId: null,
     sessionUrl: null,
@@ -95,6 +98,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             },
             body: JSON.stringify({
               timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              contextId: contextId,
             }),
           });
           const sessionData = await sessionResponse.json();
@@ -102,6 +106,8 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
           if (!sessionData.success) {
             throw new Error(sessionData.error || "Failed to create session");
           }
+
+          setContextId(sessionData.contextId);
 
           agentStateRef.current = {
             ...agentStateRef.current,
@@ -134,6 +140,11 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
           });
 
           const data = await response.json();
+          posthog.capture("agent_start", {
+            goal: initialMessage,
+            sessionId: sessionData.sessionId,
+            contextId: sessionData.contextId,
+          });
 
           if (data.success) {
             const newStep = {
@@ -211,6 +222,13 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
               });
 
               const executeData = await executeResponse.json();
+
+              posthog.capture("agent_execute_step", {
+                goal: initialMessage,
+                sessionId: sessionData.sessionId,
+                contextId: sessionData.contextId,
+                step: nextStepData.result,
+              });
 
               if (!executeData.success) {
                 throw new Error("Failed to execute step");

@@ -29,6 +29,9 @@ importers:
       framer-motion:
         specifier: ^11.0.3
         version: 11.18.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      jotai:
+        specifier: ^2.11.1
+        version: 2.11.1(@types/react@19.0.8)(react@19.0.0)
       motion:
         specifier: ^12.0.3
         version: 12.0.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -1326,6 +1329,18 @@ packages:
   jiti@1.21.7:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
     hasBin: true
+
+  jotai@2.11.1:
+    resolution: {integrity: sha512-41Su098mpHIX29hF/XOpDb0SqF6EES7+HXfrhuBqVSzRkxX48hD5i8nGsEewWZNAsBWJCTTmuz8M946Ih2PfcQ==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=17.0.0'
+      react: '>=17.0.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -3446,6 +3461,11 @@ snapshots:
       '@pkgjs/parseargs': 0.11.0
 
   jiti@1.21.7: {}
+
+  jotai@2.11.1(@types/react@19.0.8)(react@19.0.0):
+    optionalDependencies:
+      '@types/react': 19.0.8
+      react: 19.0.0
 
   js-tokens@4.0.0: {}
 

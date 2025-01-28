@@ -16,6 +16,7 @@
     "@vercel/analytics": "^1.4.1",
     "ai": "^4.1.2",
     "framer-motion": "^11.0.3",
+    "jotai": "^2.11.1",
     "motion": "^12.0.3",
     "next": "15.1.6",
     "playwright": "^1.50.0",
