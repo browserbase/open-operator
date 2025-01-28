@@ -1,10 +1,27 @@
 import { NextResponse } from 'next/server';
 import { openai } from "@ai-sdk/openai";
+import { groq } from "@ai-sdk/groq";
 import { CoreMessage, generateObject, UserContent } from "ai";
 import { z } from "zod";
 import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
 
-const LLMClient = openai("gpt-4o");
+// Model configuration
+const MODEL_PROVIDER = process.env.MODEL_PROVIDER || 'openai';
+const MODEL_CONFIG = {
+  openai: {
+    provider: openai,
+    model: "gpt-4o"
+  },
+  groq: {
+    provider: groq,
+    model: "deepseek-r1-distill-llama-70b"
+  }
+};
+
+// Initialize LLM client based on provider
+const LLMClient = MODEL_CONFIG[MODEL_PROVIDER as keyof typeof MODEL_CONFIG].provider(
+  MODEL_CONFIG[MODEL_PROVIDER as keyof typeof MODEL_CONFIG].model
+);
 
 type Step = {
   text: string;

@@ -29,7 +29,9 @@ You'll need to set up your API keys:
 
 Update `.env.local` with your API keys:
 
-- `OPENAI_API_KEY`: Your OpenAI API key
+- `MODEL_PROVIDER`: Choose between 'openai' or 'groq' for the AI model provider
+- `OPENAI_API_KEY`: Your OpenAI API key (required if using OpenAI)
+- `GROQ_API_KEY`: Your Groq API key (required if using Groq)
 - `BROWSERBASE_API_KEY`: Your Browserbase API key
 - `BROWSERBASE_PROJECT_ID`: Your Browserbase project ID
 
