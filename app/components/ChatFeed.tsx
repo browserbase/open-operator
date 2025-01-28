@@ -102,12 +102,6 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             }),
           });
           const sessionData = await sessionResponse.json();
-          alert(
-            "orginal contextId: " +
-              contextId +
-              " new contextId: " +
-              sessionData.contextId
-          );
 
           if (!sessionData.success) {
             throw new Error(sessionData.error || "Failed to create session");
