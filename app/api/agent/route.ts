@@ -14,7 +14,7 @@ const MODEL_CONFIG = {
   },
   groq: {
     provider: groq,
-    model: "llama-3.3-70b-versatile"
+    model: "deepseek-r1-distill-llama-70b"
   }
 };
 
