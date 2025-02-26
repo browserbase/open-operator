@@ -32,7 +32,6 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { width } = useWindowSize();
   const isMobile = width ? width < 768 : false;
-  const initializationRef = useRef(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAgentFinished, setIsAgentFinished] = useState(false);
   const [contextId, setContextId] = useAtom(contextIdAtom);
@@ -52,6 +51,11 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     sessionUrl: null,
     steps: [],
   });
+
+  const [canStart, setCanStart] = useState(true);
+
+  // Add new state for controlling next step button
+  const [canExecuteNextStep, setCanExecuteNextStep] = useState(false);
 
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
@@ -82,173 +86,175 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
     scrollToBottom();
   }, [uiState.steps, scrollToBottom]);
 
-  useEffect(() => {
-    console.log("useEffect called");
-    const initializeSession = async () => {
-      if (initializationRef.current) return;
-      initializationRef.current = true;
+  const handleStartAgent = async () => {
+    if (!initialMessage || !canStart) return;
+    setCanStart(false);
+    setIsLoading(true);
 
-      if (initialMessage && !agentStateRef.current.sessionId) {
-        setIsLoading(true);
-        try {
-          const sessionResponse = await fetch("/api/session", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              contextId: contextId,
-            }),
-          });
-          const sessionData = await sessionResponse.json();
+    try {
+      const sessionResponse = await fetch("/api/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          contextId: contextId,
+        }),
+      });
+      const sessionData = await sessionResponse.json();
 
-          if (!sessionData.success) {
-            throw new Error(sessionData.error || "Failed to create session");
-          }
+      if (!sessionData.success) {
+        throw new Error(sessionData.error || "Failed to create session");
+      }
 
-          setContextId(sessionData.contextId);
+      setContextId(sessionData.contextId);
 
-          agentStateRef.current = {
-            ...agentStateRef.current,
-            sessionId: sessionData.sessionId,
-            sessionUrl: sessionData.sessionUrl.replace(
-              "https://www.browserbase.com/devtools-fullscreen/inspector.html",
-              "https://www.browserbase.com/devtools-internal-compiled/index.html"
-            ),
-          };
+      agentStateRef.current = {
+        ...agentStateRef.current,
+        sessionId: sessionData.sessionId,
+        sessionUrl: sessionData.sessionUrl.replace(
+          "https://www.browserbase.com/devtools-fullscreen/inspector.html",
+          "https://www.browserbase.com/devtools-internal-compiled/index.html"
+        ),
+      };
 
-          setUiState({
-            sessionId: sessionData.sessionId,
-            sessionUrl: sessionData.sessionUrl.replace(
-              "https://www.browserbase.com/devtools-fullscreen/inspector.html",
-              "https://www.browserbase.com/devtools-internal-compiled/index.html"
-            ),
-            steps: [],
-          });
+      setUiState({
+        sessionId: sessionData.sessionId,
+        sessionUrl: sessionData.sessionUrl.replace(
+          "https://www.browserbase.com/devtools-fullscreen/inspector.html",
+          "https://www.browserbase.com/devtools-internal-compiled/index.html"
+        ),
+        steps: [],
+      });
 
-          const response = await fetch("/api/agent", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              goal: initialMessage,
-              sessionId: sessionData.sessionId,
-              action: "START",
-            }),
-          });
+      const response = await fetch("/api/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          goal: initialMessage,
+          sessionId: sessionData.sessionId,
+          action: "START",
+        }),
+      });
 
-          const data = await response.json();
-          posthog.capture("agent_start", {
-            goal: initialMessage,
-            sessionId: sessionData.sessionId,
-            contextId: sessionData.contextId,
-          });
+      const data = await response.json();
+      posthog.capture("agent_start", {
+        goal: initialMessage,
+        sessionId: sessionData.sessionId,
+        contextId: sessionData.contextId,
+      });
 
-          if (data.success) {
-            const newStep = {
-              text: data.result.text,
-              reasoning: data.result.reasoning,
-              tool: data.result.tool,
-              instruction: data.result.instruction,
-              stepNumber: 1,
-            };
+      if (data.success) {
+        const newStep = {
+          text: data.result.text,
+          reasoning: data.result.reasoning,
+          tool: data.result.tool,
+          instruction: data.result.instruction,
+          stepNumber: 1,
+        };
 
-            agentStateRef.current = {
-              ...agentStateRef.current,
-              steps: [newStep],
-            };
+        agentStateRef.current = {
+          ...agentStateRef.current,
+          steps: [newStep],
+        };
 
-            setUiState((prev) => ({
-              ...prev,
-              steps: [newStep],
-            }));
+        setUiState((prev) => ({
+          ...prev,
+          steps: [newStep],
+        }));
 
-            // Continue with subsequent steps
-            while (true) {
-              // Get next step from LLM
-              const nextStepResponse = await fetch("/api/agent", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  goal: initialMessage,
-                  sessionId: sessionData.sessionId,
-                  previousSteps: agentStateRef.current.steps,
-                  action: "GET_NEXT_STEP",
-                }),
-              });
+        // Enable the next step button
+        setCanExecuteNextStep(true);
+      }
+    } catch (error) {
+      console.error("Session initialization error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-              const nextStepData = await nextStepResponse.json();
+  // Add new handler for next step
+  const handleNextStep = async () => {
+    setIsLoading(true);
+    setCanExecuteNextStep(false);
 
-              if (!nextStepData.success) {
-                throw new Error("Failed to get next step");
-              }
+    try {
+      // Get next step from LLM
+      const nextStepResponse = await fetch("/api/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          goal: initialMessage,
+          sessionId: uiState.sessionId,
+          previousSteps: agentStateRef.current.steps,
+          action: "GET_NEXT_STEP",
+        }),
+      });
 
-              // Add the next step to UI immediately after receiving it
-              const nextStep = {
-                ...nextStepData.result,
-                stepNumber: agentStateRef.current.steps.length + 1,
-              };
+      const nextStepData = await nextStepResponse.json();
 
-              agentStateRef.current = {
-                ...agentStateRef.current,
-                steps: [...agentStateRef.current.steps, nextStep],
-              };
+      if (!nextStepData.success) {
+        throw new Error("Failed to get next step");
+      }
 
-              setUiState((prev) => ({
-                ...prev,
-                steps: agentStateRef.current.steps,
-              }));
+      // Add the next step to UI
+      const nextStep = {
+        ...nextStepData.result,
+        stepNumber: agentStateRef.current.steps.length + 1,
+      };
 
-              // Break after adding the CLOSE step to UI
-              if (nextStepData.done || nextStepData.result.tool === "CLOSE") {
-                break;
-              }
+      agentStateRef.current = {
+        ...agentStateRef.current,
+        steps: [...agentStateRef.current.steps, nextStep],
+      };
 
-              // Execute the step
-              const executeResponse = await fetch("/api/agent", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  sessionId: sessionData.sessionId,
-                  step: nextStepData.result,
-                  action: "EXECUTE_STEP",
-                }),
-              });
+      setUiState((prev) => ({
+        ...prev,
+        steps: agentStateRef.current.steps,
+      }));
 
-              const executeData = await executeResponse.json();
+      // If not done, execute the step
+      if (!nextStepData.done && nextStepData.result.tool !== "CLOSE") {
+        const executeResponse = await fetch("/api/agent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sessionId: uiState.sessionId,
+            step: nextStepData.result,
+            action: "EXECUTE_STEP",
+          }),
+        });
 
-              posthog.capture("agent_execute_step", {
-                goal: initialMessage,
-                sessionId: sessionData.sessionId,
-                contextId: sessionData.contextId,
-                step: nextStepData.result,
-              });
+        const executeData = await executeResponse.json();
 
-              if (!executeData.success) {
-                throw new Error("Failed to execute step");
-              }
+        posthog.capture("agent_execute_step", {
+          goal: initialMessage,
+          sessionId: uiState.sessionId,
+          contextId: contextId,
+          step: nextStepData.result,
+        });
 
-              if (executeData.done) {
-                break;
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Session initialization error:", error);
-        } finally {
-          setIsLoading(false);
+        if (!executeData.success) {
+          throw new Error("Failed to execute step");
+        }
+
+        if (!executeData.done) {
+          setCanExecuteNextStep(true);
         }
       }
-    };
-
-    initializeSession();
-  }, [initialMessage]);
+    } catch (error) {
+      console.error("Error executing next step:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Spring configuration for smoother animations
   const springConfig = {
@@ -388,6 +394,16 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                   >
                     <p className="font-semibold">Goal:</p>
                     <p>{initialMessage}</p>
+                    {canStart && (
+                      <motion.button
+                        onClick={handleStartAgent}
+                        className="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Start Agent
+                      </motion.button>
+                    )}
                   </motion.div>
                 )}
 
@@ -412,6 +428,18 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                     </p>
                   </motion.div>
                 ))}
+
+                {canExecuteNextStep && !isLoading && (
+                  <motion.button
+                    onClick={handleNextStep}
+                    className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Next Step
+                  </motion.button>
+                )}
+
                 {isLoading && (
                   <motion.div
                     variants={messageVariants}
