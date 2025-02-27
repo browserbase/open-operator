@@ -9,16 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/cerebras": "^0.1.12",
+    "@ai-sdk/groq": "^1.1.11",
     "@ai-sdk/openai": "^1.1.2",
     "@ai-sdk/provider": "^1.0.6",
     "@browserbasehq/sdk": "^2.0.0",
-    "@browserbasehq/stagehand": "^1.10.1",
+    "@browserbasehq/stagehand": "^1.13.1",
     "@vercel/analytics": "^1.4.1",
     "ai": "^4.1.2",
+    "dotenv": "^16.4.7",
     "framer-motion": "^11.0.3",
     "jotai": "^2.11.1",
     "motion": "^12.0.3",
     "next": "15.1.6",
+    "openai": "^4.85.4",
     "playwright": "^1.50.0",
     "playwright-core": "^1.50.0",
     "posthog-js": "^1.209.3",
@@ -38,5 +42,6 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "pnpm@9.15.0+sha512.76e2379760a4328ec4415815bcd6628dee727af3779aaa4c914e3944156c4299921a89f976381ee107d41f12cfa4b66681ca9c718f0668fa0831ed4c6d8ba56c"
 }

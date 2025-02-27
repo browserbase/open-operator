@@ -1,10 +1,8 @@
-import { NextResponse } from 'next/server';
-import { openai } from "@ai-sdk/openai";
+import { NextResponse } from "next/server";
 import { CoreMessage, generateObject, UserContent } from "ai";
 import { z } from "zod";
-import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
-
-const LLMClient = openai("gpt-4o");
+import { ObserveResult, Page, Stagehand } from "@browserbasehq/stagehand";
+import StagehandConfig, { LLMClient } from "@/stagehand.config";
 
 type Step = {
   text: string;
@@ -19,13 +17,20 @@ async function runStagehand({
   instruction,
 }: {
   sessionID: string;
-  method: "GOTO" | "ACT" | "EXTRACT" | "CLOSE" | "SCREENSHOT" | "OBSERVE" | "WAIT" | "NAVBACK";
+  method:
+    | "GOTO"
+    | "ACT"
+    | "EXTRACT"
+    | "CLOSE"
+    | "SCREENSHOT"
+    | "OBSERVE"
+    | "WAIT"
+    | "NAVBACK";
   instruction?: string;
 }) {
   const stagehand = new Stagehand({
+    ...StagehandConfig,
     browserbaseSessionID: sessionID,
-    env: "BROWSERBASE",
-    logger: () => {},
   });
   await stagehand.init();
 
@@ -81,6 +86,62 @@ async function runStagehand({
   }
 }
 
+async function getSuggestions({
+  page,
+  goal,
+  stepInstruction,
+  previousSteps,
+}: {
+  page: Page;
+  goal?: string;
+  stepInstruction?: string;
+  previousSteps: {
+    method: string;
+    description: string;
+    result?: string;
+  }[];
+}) {
+  const suggestions = await page.observe(
+    `
+	  ${goal ? `You are trying to achieve the following goal: "${goal}"` : ""}
+	  ${
+      stepInstruction
+        ? `THE USER'S SPECIFIC STEP INSTRUCTION IS AS FOLLOWS: "${stepInstruction}"`
+        : ""
+    }
+	  ${
+      previousSteps.length > 0
+        ? `THE PREVIOUS STEPS ARE AS FOLLOWS: ${previousSteps
+            .map(
+              (step, i) =>
+                `[${i + 1}] ${step.method.toUpperCase()}: ${step.description}`
+            )
+            .join("\n")}`
+        : ""
+    }
+	  If there is data on the page, get the top 5 things that a user would want to do (take action) or read on this page, with the most likely first. Limit the suggestions to 5.   
+			If the user is requesting text (NON-INTERACTABLE) information from the page, and you see the information in the current page, set the method to 'EXTRACT' and include the data 
+				in the description. Make sure to select an element id pointing to the element to extract from, or its parent.
+			If the user wants to interact with an element on the page, or the page in general, such as clicking a button, filling a form, or typing into a search bar, DO NOT USE EXTRACT.
+			If the method is 'EXTRACT', set a description (think of it as an instruction) of the data to extract as the first argument. For the second argument, provide a JSON schema that matches the structure of the data to be extracted. The schema should be a valid JSON schema object with proper types and structure. THE JSON SCHEMA MUST BE A STRING. For example:
+		'{
+		  "type": "object",
+		  "properties": {
+			"title": { "type": "string" },
+			"description": { "type": "string" },
+			"items": {
+			  "type": "array",
+			  "items": { "type": "string" }
+			}
+		  },
+		  "required": ["title"]
+		}'
+		Do NOT include the result values in the argument, instead describe what the result should look like. Put the actual extracted values in the description.
+		Without a specific instruction, MAKE SURE to combine / alternate extract and non-extract suggestions such as click, fill, type, etc. DON'T PROVIDE ONLY ACT CALLS, COMBINE WITH EXTRACT. ON EXTRACT CALLS PROVIDE BOTH ARGUMENTS LIKE IN THE TEMPLATE: STICK TO ZOD SCHEMA AS A STRING. THE ZOD SCHEMA SHOULD BE AN OBJECT AT THE ROOT LEVEL, FOR EXAMPLE: '{"type": "object", "properties": {"example": {"type": "string"}}}. The first part of a zod schema should always be the object'`
+  );
+  return suggestions;
+}
+
 async function sendPrompt({
   goal,
   sessionID,
@@ -96,21 +157,24 @@ async function sendPrompt({
 
   try {
     const stagehand = new Stagehand({
+      ...StagehandConfig,
       browserbaseSessionID: sessionID,
-      env: "BROWSERBASE"
     });
     await stagehand.init();
     currentUrl = await stagehand.page.url();
     await stagehand.close();
   } catch (error) {
-    console.error('Error getting page info:', error);
+    console.error("Error getting page info:", error);
   }
 
   const content: UserContent = [
     {
       type: "text",
-      text: `Consider the following screenshot of a web page${currentUrl ? ` (URL: ${currentUrl})` : ''}, with the goal being "${goal}".
-${previousSteps.length > 0
+      text: `Consider the following screenshot of a web page${
+        currentUrl ? ` (URL: ${currentUrl})` : ""
+      }, with the goal being "${goal}".
+${
+  previousSteps.length > 0
     ? `Previous steps taken:
 ${previousSteps
   .map(
@@ -141,7 +205,10 @@ If the goal has been achieved, return "close".`,
   ];
 
   // Add screenshot if navigated to a page previously
-  if (previousSteps.length > 0 && previousSteps.some((step) => step.tool === "GOTO")) {
+  if (
+    previousSteps.length > 0 &&
+    previousSteps.some((step) => step.tool === "GOTO")
+  ) {
     content.push({
       type: "image",
       image: (await runStagehand({
@@ -193,32 +260,34 @@ If the goal has been achieved, return "close".`,
 async function selectStartingUrl(goal: string) {
   const message: CoreMessage = {
     role: "user",
-    content: [{
-      type: "text",
-      text: `Given the goal: "${goal}", determine the best URL to start from.
+    content: [
+      {
+        type: "text",
+        text: `Given the goal: "${goal}", determine the best URL to start from.
 Choose from:
 1. A relevant search engine (Google, Bing, etc.)
 2. A direct URL if you're confident about the target website
 3. Any other appropriate starting point
 
-Return a URL that would be most effective for achieving this goal.`
-    }]
+Return a URL that would be most effective for achieving this goal.`,
+      },
+    ],
   };
 
   const result = await generateObject({
     model: LLMClient,
     schema: z.object({
       url: z.string().url(),
-      reasoning: z.string()
+      reasoning: z.string(),
     }),
-    messages: [message]
+    messages: [message],
   });
 
   return result.object;
 }
 
 export async function GET() {
-  return NextResponse.json({ message: 'Agent API endpoint ready' });
+  return NextResponse.json({ message: "Agent API endpoint ready" });
 }
 
 export async function POST(request: Request) {
@@ -228,17 +297,17 @@ export async function POST(request: Request) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { error: 'Missing sessionId in request body' },
+        { error: "Missing sessionId in request body" },
         { status: 400 }
       );
     }
 
     // Handle different action types
     switch (action) {
-      case 'START': {
+      case "START": {
         if (!goal) {
           return NextResponse.json(
-            { error: 'Missing goal in request body' },
+            { error: "Missing goal in request body" },
             { status: 400 }
           );
         }
@@ -249,30 +318,51 @@ export async function POST(request: Request) {
           text: `Navigating to ${url}`,
           reasoning,
           tool: "GOTO" as const,
-          instruction: url
+          instruction: url,
         };
-        
+
         await runStagehand({
           sessionID: sessionId,
           method: "GOTO",
-          instruction: url
+          instruction: url,
         });
 
-        return NextResponse.json({ 
+        return NextResponse.json({
           success: true,
           result: firstStep,
           steps: [firstStep],
-          done: false
+          done: false,
         });
       }
 
-      case 'GET_NEXT_STEP': {
+      case "GET_NEXT_STEP": {
         if (!goal) {
           return NextResponse.json(
-            { error: 'Missing goal in request body' },
+            { error: "Missing goal in request body" },
             { status: 400 }
           );
         }
+
+        console.log("STARTING STAGEHAND");
+        const startTime = performance.now();
+        const stagehand = new Stagehand({
+          ...StagehandConfig,
+          browserbaseSessionID: sessionId,
+        });
+        await stagehand.init();
+        const suggestions = await getSuggestions({
+          page: stagehand.page,
+          goal,
+          previousSteps: previousSteps.map((step: Step) => ({
+            method: step.tool,
+            description: step.text,
+          })),
+          // previousExtraction: previousSteps.find(step => step.tool === "EXTRACT")?.result,
+        });
+        await stagehand.close();
+        const endTime = performance.now();
+        console.log(`Time taken: ${endTime - startTime}ms`);
+        console.log("SUGGESTIONS", suggestions);
 
         // Get the next step from the LLM
         const { result, previousSteps: newPreviousSteps } = await sendPrompt({
@@ -285,15 +375,15 @@ export async function POST(request: Request) {
           success: true,
           result,
           steps: newPreviousSteps,
-          done: result.tool === "CLOSE"
+          done: result.tool === "CLOSE",
         });
       }
 
-      case 'EXECUTE_STEP': {
+      case "EXECUTE_STEP": {
         const { step } = body;
         if (!step) {
           return NextResponse.json(
-            { error: 'Missing step in request body' },
+            { error: "Missing step in request body" },
             { status: 400 }
           );
         }
@@ -308,21 +398,21 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           extraction,
-          done: step.tool === "CLOSE"
+          done: step.tool === "CLOSE",
         });
       }
 
       default:
         return NextResponse.json(
-          { error: 'Invalid action type' },
+          { error: "Invalid action type" },
           { status: 400 }
         );
     }
   } catch (error) {
-    console.error('Error in agent endpoint:', error);
+    console.error("Error in agent endpoint:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to process request' },
+      { success: false, error: "Failed to process request" },
       { status: 500 }
     );
   }
-} 
+}
