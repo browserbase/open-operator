@@ -9,10 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.1.2",
-    "@ai-sdk/provider": "^1.0.6",
+    "@ai-sdk/anthropic": "^1.2.11",
     "@browserbasehq/sdk": "^2.0.0",
-    "@browserbasehq/stagehand": "^1.10.1",
+    "@browserbasehq/stagehand": "^2.2.1",
     "@vercel/analytics": "^1.4.1",
     "ai": "^4.1.2",
     "framer-motion": "^11.0.3",

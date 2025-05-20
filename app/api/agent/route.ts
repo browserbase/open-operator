@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
-import { openai } from "@ai-sdk/openai";
-import { CoreMessage, generateObject, UserContent } from "ai";
+import { NextResponse } from "next/server";
+import { anthropic } from "@ai-sdk/anthropic";
+import { CoreMessage, generateObject, LanguageModelV1, UserContent } from "ai";
 import { z } from "zod";
 import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
 
-const LLMClient = openai("gpt-4o");
+const LLMClient = anthropic("claude-3-7-sonnet-latest");
 
 type Step = {
   text: string;
@@ -19,13 +19,22 @@ async function runStagehand({
   instruction,
 }: {
   sessionID: string;
-  method: "GOTO" | "ACT" | "EXTRACT" | "CLOSE" | "SCREENSHOT" | "OBSERVE" | "WAIT" | "NAVBACK";
+  method:
+    | "GOTO"
+    | "ACT"
+    | "EXTRACT"
+    | "CLOSE"
+    | "SCREENSHOT"
+    | "OBSERVE"
+    | "WAIT"
+    | "NAVBACK";
   instruction?: string;
 }) {
   const stagehand = new Stagehand({
     browserbaseSessionID: sessionID,
     env: "BROWSERBASE",
-    logger: () => {},
+    modelName: "google/gemini-2.0-flash",
+    disablePino: true,
   });
   await stagehand.init();
 
@@ -50,10 +59,7 @@ async function runStagehand({
       }
 
       case "OBSERVE":
-        return await page.observe({
-          instruction,
-          useAccessibilityTree: true,
-        });
+        return await page.observe(instruction!);
 
       case "CLOSE":
         await stagehand.close();
@@ -97,20 +103,25 @@ async function sendPrompt({
   try {
     const stagehand = new Stagehand({
       browserbaseSessionID: sessionID,
-      env: "BROWSERBASE"
+      env: "BROWSERBASE",
+      disablePino: true,
+      modelName: "google/gemini-2.0-flash",
     });
     await stagehand.init();
     currentUrl = await stagehand.page.url();
     await stagehand.close();
   } catch (error) {
-    console.error('Error getting page info:', error);
+    console.error("Error getting page info:", error);
   }
 
   const content: UserContent = [
     {
       type: "text",
-      text: `Consider the following screenshot of a web page${currentUrl ? ` (URL: ${currentUrl})` : ''}, with the goal being "${goal}".
-${previousSteps.length > 0
+      text: `Consider the following screenshot of a web page${
+        currentUrl ? ` (URL: ${currentUrl})` : ""
+      }, with the goal being "${goal}".
+${
+  previousSteps.length > 0
     ? `Previous steps taken:
 ${previousSteps
   .map(
@@ -141,7 +152,10 @@ If the goal has been achieved, return "close".`,
   ];
 
   // Add screenshot if navigated to a page previously
-  if (previousSteps.length > 0 && previousSteps.some((step) => step.tool === "GOTO")) {
+  if (
+    previousSteps.length > 0 &&
+    previousSteps.some((step) => step.tool === "GOTO")
+  ) {
     content.push({
       type: "image",
       image: (await runStagehand({
@@ -166,7 +180,7 @@ If the goal has been achieved, return "close".`,
   };
 
   const result = await generateObject({
-    model: LLMClient,
+    model: LLMClient as LanguageModelV1,
     schema: z.object({
       text: z.string(),
       reasoning: z.string(),
@@ -193,32 +207,34 @@ If the goal has been achieved, return "close".`,
 async function selectStartingUrl(goal: string) {
   const message: CoreMessage = {
     role: "user",
-    content: [{
-      type: "text",
-      text: `Given the goal: "${goal}", determine the best URL to start from.
+    content: [
+      {
+        type: "text",
+        text: `Given the goal: "${goal}", determine the best URL to start from.
 Choose from:
 1. A relevant search engine (Google, Bing, etc.)
 2. A direct URL if you're confident about the target website
 3. Any other appropriate starting point
 
-Return a URL that would be most effective for achieving this goal.`
-    }]
+Return a URL that would be most effective for achieving this goal.`,
+      },
+    ],
   };
 
   const result = await generateObject({
-    model: LLMClient,
+    model: LLMClient as LanguageModelV1,
     schema: z.object({
       url: z.string().url(),
-      reasoning: z.string()
+      reasoning: z.string(),
     }),
-    messages: [message]
+    messages: [message],
   });
 
   return result.object;
 }
 
 export async function GET() {
-  return NextResponse.json({ message: 'Agent API endpoint ready' });
+  return NextResponse.json({ message: "Agent API endpoint ready" });
 }
 
 export async function POST(request: Request) {
@@ -228,17 +244,17 @@ export async function POST(request: Request) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { error: 'Missing sessionId in request body' },
+        { error: "Missing sessionId in request body" },
         { status: 400 }
       );
     }
 
     // Handle different action types
     switch (action) {
-      case 'START': {
+      case "START": {
         if (!goal) {
           return NextResponse.json(
-            { error: 'Missing goal in request body' },
+            { error: "Missing goal in request body" },
             { status: 400 }
           );
         }
@@ -249,27 +265,27 @@ export async function POST(request: Request) {
           text: `Navigating to ${url}`,
           reasoning,
           tool: "GOTO" as const,
-          instruction: url
+          instruction: url,
         };
-        
+
         await runStagehand({
           sessionID: sessionId,
           method: "GOTO",
-          instruction: url
+          instruction: url,
         });
 
-        return NextResponse.json({ 
+        return NextResponse.json({
           success: true,
           result: firstStep,
           steps: [firstStep],
-          done: false
+          done: false,
         });
       }
 
-      case 'GET_NEXT_STEP': {
+      case "GET_NEXT_STEP": {
         if (!goal) {
           return NextResponse.json(
-            { error: 'Missing goal in request body' },
+            { error: "Missing goal in request body" },
             { status: 400 }
           );
         }
@@ -285,15 +301,15 @@ export async function POST(request: Request) {
           success: true,
           result,
           steps: newPreviousSteps,
-          done: result.tool === "CLOSE"
+          done: result.tool === "CLOSE",
         });
       }
 
-      case 'EXECUTE_STEP': {
+      case "EXECUTE_STEP": {
         const { step } = body;
         if (!step) {
           return NextResponse.json(
-            { error: 'Missing step in request body' },
+            { error: "Missing step in request body" },
             { status: 400 }
           );
         }
@@ -308,21 +324,21 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           extraction,
-          done: step.tool === "CLOSE"
+          done: step.tool === "CLOSE",
         });
       }
 
       default:
         return NextResponse.json(
-          { error: 'Invalid action type' },
+          { error: "Invalid action type" },
           { status: 400 }
         );
     }
   } catch (error) {
-    console.error('Error in agent endpoint:', error);
+    console.error("Error in agent endpoint:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to process request' },
+      { success: false, error: "Failed to process request" },
       { status: 500 }
     );
   }
-} 
+}
