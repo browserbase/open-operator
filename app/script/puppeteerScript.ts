@@ -221,19 +221,23 @@ export async function runPuppeteerScript(
         if (!textArea) {
           throw new Error(`Selector "${selector}" not found.`);
         }
-        await textArea.focus();
-        const isMac = await page.evaluate(() => navigator.platform.includes('Mac'));
-        if (isMac) {
-          await page.keyboard.down('Meta');
-        } else {
-          await page.keyboard.down('Control');
-        }
-        await page.keyboard.press('A');
-        await page.keyboard.up(isMac ? 'Meta' : 'Control');
-        await page.keyboard.press('Backspace');
-        console.log(`Cleared existing text in "${selector}".`);
-        await textArea.type(text);
-        console.log(`Typed into "${selector}": "${text}"`);
+        
+        // Method 1: Focus, select all, and replace (fastest while still clearing properly)
+        await page.evaluate((selector, text) => {
+          const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
+          if (element) {
+            element.focus();
+            element.select(); // Select all existing text
+            element.value = ''; // Clear the value
+            element.value = text; // Set new value
+            // Trigger events to notify the page
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            element.blur(); // Remove focus
+          }
+        }, selector, text);
+        
+        console.log(`Cleared and set value for "${selector}": "${text}"`);
         return; // Success, exit the retry loop
       } catch (error) {
         retries--;
@@ -244,11 +248,36 @@ export async function runPuppeteerScript(
             continue;
           }
         }
-        emit(uid, 'error', `Error in clearAndType for selector: ${error}`);
-        console.error(`Error in clearAndType for selector "${selector}":`, error);
-        isBrowserClosed = true;
-        await browser.close();
-        throw error;
+        
+        // Fallback to keyboard-based clearing and typing if direct setting fails
+        try {
+          const textArea = await page.$(selector);
+          if (!textArea) {
+            throw new Error(`Selector "${selector}" not found.`);
+          }
+          await textArea.focus();
+          const isMac = await page.evaluate(() => navigator.platform.includes('Mac'));
+          if (isMac) {
+            await page.keyboard.down('Meta');
+          } else {
+            await page.keyboard.down('Control');
+          }
+          await page.keyboard.press('A');
+          await page.keyboard.up(isMac ? 'Meta' : 'Control');
+          await page.keyboard.press('Backspace');
+          console.log(`Cleared existing text in "${selector}".`);
+          
+          // Use faster typing with minimal delay
+          await textArea.type(text, { delay: 0 });
+          console.log(`Typed into "${selector}": "${text}"`);
+          return;
+        } catch (fallbackError) {
+          emit(uid, 'error', `Error in clearAndType for selector: ${fallbackError}`);
+          console.error(`Error in clearAndType for selector "${selector}":`, fallbackError);
+          isBrowserClosed = true;
+          await browser.close();
+          throw fallbackError;
+        }
       }
     }
   };
@@ -601,7 +630,7 @@ export async function runPuppeteerScript(
     await sleep(200);
     
     await page.waitForSelector('#SearchCriteria_CaseHeaderNumber', { visible: true, timeout: defaultTimeout });
-    await page.type('#SearchCriteria_CaseHeaderNumber', caseNumber);
+    await page.type('#SearchCriteria_CaseHeaderNumber', caseNumber, { delay: 0 });
 
     console.log("Cases & Notes page loaded successfully");
     await page.click("#searchButton");
@@ -669,9 +698,9 @@ export async function runPuppeteerScript(
       await sleep(100);
       const sanitizedStartTime = sanitizeTime(formattedStartTime);
       const sanitizedEndTime = sanitizeTime(formattedEndTime);
-      await page.type("#DataModel_StartTime", sanitizedStartTime);
+      await page.type("#DataModel_StartTime", sanitizedStartTime, { delay: 0 });
       console.log(`Start Time set to "${sanitizedStartTime}"`);
-      await page.type("#DataModel_EndTime", sanitizedEndTime);
+      await page.type("#DataModel_EndTime", sanitizedEndTime, { delay: 0 });
       console.log(`End Time set to "${sanitizedEndTime}"`);
       
       await page.waitForFunction(() => {
