@@ -4,7 +4,7 @@ import puppeteer, { Browser, Page } from "puppeteer-core";
 // Type definitions for the form data
 export interface FormData {
   companyCode: string;
-  Email: string;
+  username: string;
   password: string;
   caseNumber: string;
   dateOfService: string;

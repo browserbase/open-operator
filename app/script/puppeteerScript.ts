@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 // Type definitions for the form data
 export interface FormData {
   companyCode: string;
-  Email: string;
+  username: string;
   password: string;
   caseNumber: string;
   dateOfService: string;
@@ -56,7 +56,7 @@ export async function runPuppeteerScript(
 ): Promise<void> {
   const {
     companyCode,
-    Email,
+    username,
     password,
     caseNumber,
     dateOfService,
@@ -380,7 +380,7 @@ export async function runPuppeteerScript(
             return toastMessage && toastMessage.textContent?.includes("Changes saved successfully.");
           }, { timeout: defaultTimeout });
           console.log("Mileage saved successfully (toast message appeared).");
-        } catch (toastError) {
+        } catch {
           console.error("Timeout waiting for mileage save confirmation toast message.");
         }
         await sleep(100);
@@ -388,13 +388,7 @@ export async function runPuppeteerScript(
         if (i === endAddresses.length - 1) {
           const endMileageValue = await getLastEndMileageValue(page);
           if (endMileageValue !== null) {
-            const cleanedEndMileageValue = endMileageValue.replace(/,/g, '');
-            const processedNoteData: ProcessedNoteData = {
-              dateOfService: dateOfService.trim(),
-              startTime: startTime.trim(),
-              endTime: endTime.trim(),
-              mileage: parseInt(cleanedEndMileageValue, 10) || 0
-            };
+         
             console.log(`End Mileage value for the last entry is: "${endMileageValue}"`);
             // Note: upsertProcessedNoteHistory would need to be implemented separately
             emit(uid, 'miles', ` [${dateOfService}] [${startTime}] [${endTime}] [${endMileageValue}]`);
@@ -529,7 +523,7 @@ export async function runPuppeteerScript(
     console.log("Password input is visible.");
     
     await clearAndType(page, "#Company", companyCode);
-    await clearAndType(page, "#Email", Email);
+    await clearAndType(page, "#Email", username);
     await clearAndType(page, "#Password", password);
     
     await page.click(".btn.btn-subtle-primary.w-100.mb-3");
