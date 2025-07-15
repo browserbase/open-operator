@@ -21,6 +21,7 @@
     "playwright": "^1.50.0",
     "playwright-core": "^1.50.0",
     "posthog-js": "^1.209.3",
+    "puppeteer-core": "^23.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "^0.33.5",
