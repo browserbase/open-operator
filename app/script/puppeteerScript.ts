@@ -574,9 +574,6 @@ export async function runPuppeteerScript(
     await page.goto("https://portal.ecasenotes.com", { waitUntil: "networkidle2" });
 
     emit(uid, 'success', 'Ecasenotes reached');
-    let screenshot1 = await page.screenshot({ encoding: 'base64', type: 'png' });
-    let mimeType = 'image/png';
-    emit(uid, 'screenshot', { mimeType, data: screenshot1 });
     emit(uid, 'progress', 'Signing In...');
     
     console.log(additionalDropdownValues);
@@ -593,8 +590,6 @@ export async function runPuppeteerScript(
     
     await page.click(".btn.btn-subtle-primary.w-100.mb-3");
     
-    let screenshot = await page.screenshot({ encoding: 'base64', type: 'png' });
-    emit(uid, 'screenshot', { mimeType, data: screenshot });
     emit(uid, 'success', 'Login successful!');
     console.log("Login successful and dashboard loaded");
     emit(uid, 'progress', 'Fetching Notes!');
@@ -604,8 +599,6 @@ export async function runPuppeteerScript(
 
     console.log("Navigated to Cases & Notes");
     await sleep(200);
-    let screenshot4 = await page.screenshot({ encoding: 'base64', type: 'png' });
-    emit(uid, 'screenshot', { mimeType, data: screenshot4 });
     
     await page.waitForSelector('#SearchCriteria_CaseHeaderNumber', { visible: true, timeout: defaultTimeout });
     await page.type('#SearchCriteria_CaseHeaderNumber', caseNumber);
@@ -617,9 +610,6 @@ export async function runPuppeteerScript(
     
     await page.waitForSelector(".sort-CaseNumber", { visible: true });
     console.log("Case results loaded");
-
-    let screenshot5 = await page.screenshot({ encoding: 'base64', type: 'png' });
-    emit(uid, 'screenshot', { mimeType, data: screenshot5 });
     
     await page.evaluate((caseNumber) => {
       const caseLink = Array.from(document.querySelectorAll('.sort-CaseNumber')).find(el => el.textContent?.trim() === caseNumber) as HTMLElement;
@@ -631,8 +621,6 @@ export async function runPuppeteerScript(
     }, caseNumber);
     
     console.log(`Clicked on case number ${caseNumber}`);
-    let screenshot6 = await page.screenshot({ encoding: 'base64', type: 'png' });
-    emit(uid, 'screenshot', { mimeType, data: screenshot6 });
     
     await page.waitForSelector("#pageTabs", { visible: true });
     await page.evaluate(() => {
@@ -648,8 +636,6 @@ export async function runPuppeteerScript(
       }
     });
     
-    let screenshot7 = await page.screenshot({ encoding: 'base64', type: 'png' });
-    emit(uid, 'screenshot', { mimeType, data: screenshot7 });
     console.log(`Clicked on "Case Notes" link for case number ${caseNumber}`);
 
     let noteExists = await findAndClickEdit(page, formattedDate, targetServiceTime);
@@ -730,15 +716,10 @@ export async function runPuppeteerScript(
       }, personServed);
       console.log(`Person served set to "${personServed}"`);
 
-      let screenshot2 = await page.screenshot({ encoding: 'base64', type: 'png' });
-      emit(uid, 'screenshot', { mimeType, data: screenshot2 });
-      
       await page.waitForSelector("#saveButton", { visible: true });
       await page.click("#saveButton");
       await sleep(500);
 
-      let screenshot8 = await page.screenshot({ encoding: 'base64', type: 'png' });
-      emit(uid, 'screenshot', { mimeType, data: screenshot8 });
       emit(uid, 'success', 'Note Created!');
       emit(uid, 'toast', 'Note Created!');
     }
@@ -759,8 +740,6 @@ export async function runPuppeteerScript(
           emit(uid, 'progress', `Populating ${field} with content: "${value}"`);
           console.log(`Populating ${field} with content: "${value}"`);
           await clearAndType(page, textareaSelector, value);
-          let screenshot10 = await page.screenshot({ encoding: 'base64', type: 'png' });
-          emit(uid, 'screenshot', { mimeType, data: screenshot10 });
         } catch (error) {
           emit(uid, 'error', `Failed to populate ${field} with selector "${textareaSelector}": ${error}`);
           console.error(`Failed to populate ${field} with selector "${textareaSelector}":`, error);
