@@ -10,6 +10,7 @@ export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
+  const [executionId, setExecutionId] = useState<string | null>(null);
 
   const handleFormSubmit = async (formData: FormData) => {
     setIsLoading(true);
@@ -27,6 +28,7 @@ export default function Home() {
 
       if (result.success) {
         setSessionUrl(result.sessionUrl);
+        setExecutionId(result.executionId);
         setIsExecuting(true);
       } else {
         console.error("Failed to start automation:", result.error);
@@ -43,6 +45,7 @@ export default function Home() {
   const handleClose = () => {
     setIsExecuting(false);
     setSessionUrl(null);
+    setExecutionId(null);
   };
 
   return (
@@ -56,6 +59,7 @@ export default function Home() {
         <ExecutionView 
           onClose={handleClose}
           sessionUrl={sessionUrl || undefined}
+          executionId={executionId || undefined}
         />
       )}
     </AnimatePresence>
