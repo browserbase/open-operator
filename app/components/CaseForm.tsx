@@ -182,7 +182,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
               {/* Login Credentials */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Login Credentials</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Ecasenote Login Credentials</h3>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center">
                       <input
