@@ -21,7 +21,6 @@ interface ProgressUpdate {
 export default function ExecutionView({ onClose, sessionUrl }: ExecutionViewProps) {
   const [progress, setProgress] = useState<ProgressUpdate[]>([]);
   const [isComplete, setIsComplete] = useState(false);
-  const [currentScreenshot, setCurrentScreenshot] = useState<string | null>(null);
 
   // Simulate progress updates for now
   useEffect(() => {
@@ -179,7 +178,7 @@ export default function ExecutionView({ onClose, sessionUrl }: ExecutionViewProp
 
             <div className="flex-1 overflow-y-auto">
               <div className="space-y-4">
-                {progress.map((step, index) => (
+                {progress.filter(step => step && step.type).map((step, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: 20 }}
@@ -194,9 +193,11 @@ export default function ExecutionView({ onClose, sessionUrl }: ExecutionViewProp
                       </p>
                       {step.data?.data && (
                         <div className="mt-2">
-                          <img
+                          <Image
                             src={`data:${step.data.mimeType};base64,${step.data.data}`}
                             alt="Screenshot"
+                            width={400}
+                            height={300}
                             className="w-full rounded border border-gray-200"
                           />
                         </div>

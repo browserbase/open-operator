@@ -34,10 +34,17 @@ async function getBrowserInstance(sessionID: string): Promise<Browser> {
     const session = await bb.sessions.retrieve(sessionID);
     
     console.log(`Retrieved existing Browserbase session: ${session.id}`);
+    console.log(`Session status: ${session.status}`);
+    console.log(`Connect URL available: ${session.connectUrl ? 'Yes' : 'No'}`);
+
+    if (!session.connectUrl) {
+      throw new Error(`Session ${sessionID} does not have a valid connect URL. Session status: ${session.status}`);
+    }
 
     // Connect to the existing session using the official SDK method
     browser = await puppeteer.connect({
-      browserWSEndpoint: session.connectUrl!,
+      browserWSEndpoint: session.connectUrl,
+      defaultViewport: null, // Use the session's viewport
     });
     
     try {
