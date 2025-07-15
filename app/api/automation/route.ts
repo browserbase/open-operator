@@ -44,6 +44,19 @@ export async function POST(request: NextRequest) {
       contextId: sessionData.contextId,
     });
 
+    // Import and run the puppeteer script with the session ID
+    const { runPuppeteerScript } = await import("../../script/puppeteerScript");
+    
+    // Run the script in the background
+    console.log("Starting Puppeteer script with session:", sessionData.sessionId);
+    runPuppeteerScript(formData, executionId, sessionData.sessionId, (uid, event, data) => {
+      console.log(`Event for ${uid}: ${event}`, data);
+      // In a real implementation, you might want to use WebSockets or Server-Sent Events
+      // to send these updates to the frontend in real-time
+    }).catch((error) => {
+      console.error("Puppeteer script failed:", error);
+    });
+
     // Return the session information so the frontend can start showing the browser
     return NextResponse.json({
       success: true,

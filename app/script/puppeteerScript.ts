@@ -1,6 +1,5 @@
 import puppeteer, { Browser, Page } from "puppeteer-core";
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
+import Browserbase from "@browserbasehq/sdk";
 
 // Type definitions for the form data
 export interface FormData {
@@ -52,6 +51,7 @@ export interface ProgressEmitter {
 export async function runPuppeteerScript(
   formData: FormData, 
   uid: string,
+  sessionId: string,
   emitToUser?: (uid: string, event: string, data: unknown) => void
 ): Promise<void> {
   const {
@@ -75,7 +75,8 @@ export async function runPuppeteerScript(
   // Default emitter if none provided
   const emit = emitToUser || (() => {});
 
-  const { stdout: chromiumPath } = await promisify(exec)("which chromium");
+  // Remove the local chromium path requirement since we're using Browserbase
+  // const { stdout: chromiumPath } = await promisify(exec)("which chromium");
 
   const desiredOrder: (keyof ObservationNotes)[] = [
     'pickUpAddress',
@@ -213,30 +214,42 @@ export async function runPuppeteerScript(
   };
 
   const clearAndType = async (page: Page, selector: string, text: string): Promise<void> => {
-    try {
-      const textArea = await page.$(selector);
-      if (!textArea) {
-        throw new Error(`Selector "${selector}" not found.`);
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const textArea = await page.$(selector);
+        if (!textArea) {
+          throw new Error(`Selector "${selector}" not found.`);
+        }
+        await textArea.focus();
+        const isMac = await page.evaluate(() => navigator.platform.includes('Mac'));
+        if (isMac) {
+          await page.keyboard.down('Meta');
+        } else {
+          await page.keyboard.down('Control');
+        }
+        await page.keyboard.press('A');
+        await page.keyboard.up(isMac ? 'Meta' : 'Control');
+        await page.keyboard.press('Backspace');
+        console.log(`Cleared existing text in "${selector}".`);
+        await textArea.type(text);
+        console.log(`Typed into "${selector}": "${text}"`);
+        return; // Success, exit the retry loop
+      } catch (error) {
+        retries--;
+        if (error instanceof Error && error.message.includes('Target closed')) {
+          console.warn(`Target closed error for selector "${selector}", retries left: ${retries}`);
+          if (retries > 0) {
+            await sleep(2000); // Wait before retry
+            continue;
+          }
+        }
+        emit(uid, 'error', `Error in clearAndType for selector: ${error}`);
+        console.error(`Error in clearAndType for selector "${selector}":`, error);
+        isBrowserClosed = true;
+        await browser.close();
+        throw error;
       }
-      await textArea.focus();
-      const isMac = await page.evaluate(() => navigator.platform.includes('Mac'));
-      if (isMac) {
-        await page.keyboard.down('Meta');
-      } else {
-        await page.keyboard.down('Control');
-      }
-      await page.keyboard.press('A');
-      await page.keyboard.up(isMac ? 'Meta' : 'Control');
-      await page.keyboard.press('Backspace');
-      console.log(`Cleared existing text in "${selector}".`);
-      await textArea.type(text);
-      console.log(`Typed into "${selector}": "${text}"`);
-    } catch (error) {
-      emit(uid, 'error', `Error in clearAndType for selector: ${error}`);
-      console.error(`Error in clearAndType for selector "${selector}":`, error);
-      isBrowserClosed = true;
-      await browser.close();
-      throw error;
     }
   };
 
@@ -407,17 +420,57 @@ export async function runPuppeteerScript(
 
   let isBrowserClosed = false;
   let browser: Browser;
+  let keepAliveInterval: NodeJS.Timeout | null = null;
 
-  // Launch Puppeteer using Chromium from system
-  browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    defaultViewport: { width: 1920, height: 1080 },
-    executablePath: chromiumPath.trim(),
-  });
+  // Connect to the existing Browserbase session instead of launching local browser
+  try {
+    console.log(`Connecting to Browserbase session: ${sessionId}`);
+    
+    // Get the session details from Browserbase
+    const bb = new Browserbase({
+      apiKey: process.env.BROWSERBASE_API_KEY!,
+    });
+    
+    const session = await bb.sessions.retrieve(sessionId);
+    
+    if (!session.connectUrl) {
+      throw new Error(`Session ${sessionId} does not have a valid connect URL`);
+    }
+    
+    // Connect to the existing session
+    browser = await puppeteer.connect({
+      browserWSEndpoint: session.connectUrl,
+      defaultViewport: null, // Use the session's viewport
+    });
+    
+    console.log(`Successfully connected to Browserbase session: ${sessionId}`);
+  } catch (error) {
+    console.error(`Failed to connect to Browserbase session ${sessionId}:`, error);
+    throw new Error(`Failed to connect to browser session: ${error}`);
+  }
 
   console.log("addresses", endAddresses);
-  const page = await browser.newPage();
+  
+  // Get the existing page instead of creating a new one
+  const pages = await browser.pages();
+  let page: Page;
+  
+  if (pages.length > 0) {
+    page = pages[0];
+    console.log("Using existing page from browser session");
+  } else {
+    page = await browser.newPage();
+    console.log("Created new page in browser session");
+  }
+  
+  // Verify the page is still active
+  try {
+    await page.url();
+    console.log("Page is accessible and ready");
+  } catch (error) {
+    console.error("Page is not accessible:", error);
+    throw new Error("Browser page is not accessible");
+  }
 
   const findAndClickEdit = async (page: Page, targetDate: string, targetTime: string): Promise<boolean> => {
     console.log(`Searching for Date: "${targetDate}" and Time: "${targetTime}"...`);
@@ -506,6 +559,18 @@ export async function runPuppeteerScript(
 
   try {
     console.log("addresses", endAddresses);
+    
+    // Keep the session alive by taking a screenshot periodically
+    keepAliveInterval = setInterval(async () => {
+      try {
+        if (!isBrowserClosed && page) {
+          await page.evaluate(() => document.title); // Simple check to keep connection alive
+        }
+      } catch (error) {
+        console.warn("Keep-alive check failed:", error);
+      }
+    }, 30000); // Every 30 seconds
+    
     await page.goto("https://portal.ecasenotes.com", { waitUntil: "networkidle2" });
 
     emit(uid, 'success', 'Ecasenotes reached');
@@ -774,6 +839,11 @@ export async function runPuppeteerScript(
     await browser.close();
 
   } catch (error) {
+    // Clear the keep-alive interval
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+    }
+    
     emit(uid, 'error', `An unexpected error occurred: ${error}`);
     console.error("An unexpected error occurred:", error);
     
@@ -790,6 +860,11 @@ export async function runPuppeteerScript(
     throw error;
 
   } finally {
+    // Clear the keep-alive interval
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+    }
+    
     isBrowserClosed = true;
     if (browser && !isBrowserClosed) {
       await browser.close();
