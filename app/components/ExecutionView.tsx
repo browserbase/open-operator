@@ -7,6 +7,7 @@ import Image from "next/image";
 interface ExecutionViewProps {
   onClose: () => void;
   sessionUrl?: string;
+  executionId?: string;
 }
 
 interface ProgressUpdate {
@@ -18,42 +19,59 @@ interface ProgressUpdate {
   };
 }
 
-export default function ExecutionView({ onClose, sessionUrl }: ExecutionViewProps) {
+export default function ExecutionView({ onClose, sessionUrl, executionId }: ExecutionViewProps) {
   const [progress, setProgress] = useState<ProgressUpdate[]>([]);
   const [isComplete, setIsComplete] = useState(false);
+  const [currentScreenshot, setCurrentScreenshot] = useState<string | null>(null);
 
-  // Simulate progress updates for now
+  // Connect to real-time events via Server-Sent Events
   useEffect(() => {
-    const progressSteps = [
-      { type: "progress", message: "Connecting to browser session..." },
-      { type: "progress", message: "Navigating to ECaseNotes portal..." },
-      { type: "success", message: "Successfully reached ECaseNotes" },
-      { type: "progress", message: "Signing in with credentials..." },
-      { type: "success", message: "Login successful!" },
-      { type: "progress", message: "Fetching Notes..." },
-      { type: "progress", message: "Searching for case..." },
-      { type: "progress", message: "Creating new note..." },
-      { type: "success", message: "Note created successfully!" },
-      { type: "progress", message: "Populating observation notes..." },
-      { type: "progress", message: "Processing mileage information..." },
-      { type: "success", message: "Mileage saved successfully!" },
-      { type: "finished", message: "Process completed successfully!" },
-    ];
+    if (!executionId) {
+      console.warn("No executionId provided for ExecutionView");
+      return;
+    }
 
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < progressSteps.length) {
-        setProgress(prev => [...prev, progressSteps[currentStep] as ProgressUpdate]);
-        if (progressSteps[currentStep].type === "finished") {
-          setIsComplete(true);
-          clearInterval(interval);
+    console.log("Connecting to automation events for execution:", executionId);
+    
+    const eventSource = new EventSource(`/api/automation/events?executionId=${executionId}`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Received event:", data);
+        
+        const progressUpdate: ProgressUpdate = {
+          type: data.type as ProgressUpdate['type'],
+          message: data.message,
+          data: data.data
+        };
+        
+        setProgress(prev => [...prev, progressUpdate]);
+        
+        // Handle screenshots
+        if (data.type === 'screenshot' && data.data?.data) {
+          setCurrentScreenshot(`data:${data.data.mimeType};base64,${data.data.data}`);
         }
-        currentStep++;
+        
+        // Handle completion
+        if (data.type === 'finished') {
+          setIsComplete(true);
+        }
+      } catch (error) {
+        console.error("Failed to parse event data:", error);
       }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error("EventSource error:", error);
+    };
+    
+    // Cleanup on unmount
+    return () => {
+      console.log("Closing SSE connection for execution:", executionId);
+      eventSource.close();
+    };
+  }, [executionId]);
 
   const getStepIcon = (type: string) => {
     switch (type) {
@@ -152,6 +170,16 @@ export default function ExecutionView({ onClose, sessionUrl }: ExecutionViewProp
                   referrerPolicy="no-referrer"
                   title="Browser Session"
                 />
+              ) : currentScreenshot ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Image 
+                    src={currentScreenshot} 
+                    alt="Browser Screenshot" 
+                    width={800}
+                    height={600}
+                    className="max-w-full max-h-full rounded-lg border border-gray-200 object-contain"
+                  />
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-500">
                   <div className="text-center">
