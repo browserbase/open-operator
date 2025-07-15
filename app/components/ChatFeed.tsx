@@ -343,11 +343,12 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="w-full aspect-video"
+                  className="w-full"
+                  style={{ height: isMobile ? '400px' : '600px' }}
                 >
                   <iframe
                     src={uiState.sessionUrl}
-                    className="w-full h-full"
+                    className="w-full h-full rounded-lg border border-gray-200"
                     sandbox="allow-same-origin allow-scripts allow-forms"
                     loading="lazy"
                     referrerPolicy="no-referrer"
