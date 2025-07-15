@@ -1,8 +1,11 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { openai } from "@ai-sdk/openai";
 import { CoreMessage, generateObject, LanguageModelV1, UserContent } from "ai";
 import { z } from "zod";
-import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
+import puppeteer, { Browser } from "puppeteer-core";
+import Browserbase from "@browserbasehq/sdk";
 
 const LLMClient = openai("gpt-4o");
 
@@ -13,46 +16,41 @@ type Step = {
   instruction: string;
 };
 
-// Global map to store Stagehand instances per session
-const stagelandInstances = new Map<string, Stagehand>();
+// Global map to store Browser instances per session
+const browserInstances = new Map<string, Browser>();
 
-async function getStagehandInstance(sessionID: string): Promise<Stagehand> {
-  let stagehand = stagelandInstances.get(sessionID);
+async function getBrowserInstance(sessionID: string): Promise<Browser> {
+  let browser = browserInstances.get(sessionID);
   
-  if (!stagehand) {
-    console.log(`Creating new Stagehand instance for session: ${sessionID}`);
+  if (!browser) {
+    console.log(`Connecting to existing Browser session: ${sessionID}`);
+
+    // Initialize Browserbase SDK
+    const bb = new Browserbase({
+      apiKey: process.env.BROWSERBASE_API_KEY!,
+    });
+
+    // Retrieve the existing session (created by /api/session)
+    const session = await bb.sessions.retrieve(sessionID);
     
-    stagehand = new Stagehand({
-      browserbaseSessionID: sessionID,
-      env: "BROWSERBASE",
-      apiKey: process.env.BROWSERBASE_API_KEY,
-      projectId: process.env.BROWSERBASE_PROJECT_ID,
-      modelName: "openai/gpt-4o",
-      modelClientOptions: {
-        apiKey: process.env.OPENAI_API_KEY,
-      },
-      disablePino: true,
-      enableCaching: false,
-      verbose: 2,
-      domSettleTimeoutMs: 30000,
+    console.log(`Retrieved existing Browserbase session: ${session.id}`);
+
+    // Connect to the existing session using the official SDK method
+    browser = await puppeteer.connect({
+      browserWSEndpoint: session.connectUrl!,
     });
     
     try {
-      console.log(`Initializing Stagehand for session: ${sessionID}`);
+      console.log(`Connecting to Browserbase session: ${session.id}`);
       console.log(`Using Browserbase API Key: ${process.env.BROWSERBASE_API_KEY ? 'Set' : 'Not Set'}`);
       console.log(`Using Browserbase Project ID: ${process.env.BROWSERBASE_PROJECT_ID ? 'Set' : 'Not Set'}`);
       console.log(`Using OpenAI API Key: ${process.env.OPENAI_API_KEY ? 'Set' : 'Not Set'}`);
       
-      // Add a longer delay to ensure the Browserbase session is fully ready
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      console.log(`Successfully connected to browser for session: ${session.id}`);
       
-      await stagehand.init();
-      console.log(`Successfully initialized Stagehand for session: ${sessionID}`);
-      
-      // Verify the page is accessible
-      if (!stagehand.page) {
-        throw new Error("Page object is not available after initialization");
-      }
+      // Get pages and verify browser is working
+      const pages = await browser.pages();
+      const page = pages.length > 0 ? pages[0] : await browser.newPage();
       
       // Test the page connectivity with retry logic
       let pageReady = false;
@@ -60,17 +58,9 @@ async function getStagehandInstance(sessionID: string): Promise<Stagehand> {
       
       while (!pageReady && retries > 0) {
         try {
-          await stagehand.page.url();
-          console.log(`Page is accessible for session: ${sessionID}`);
-          
-          // Additional check - try to get page context
-          const context = stagehand.page.context();
-          if (context) {
-            console.log(`Browser context is available for session: ${sessionID}`);
-            pageReady = true;
-          } else {
-            throw new Error("Browser context not available");
-          }
+          await page.url();
+          console.log(`Page is accessible for session: ${session.id}`);
+          pageReady = true;
         } catch (pageError) {
           console.error(`Page accessibility attempt ${4 - retries}:`, pageError);
           if (retries > 1) {
@@ -85,9 +75,10 @@ async function getStagehandInstance(sessionID: string): Promise<Stagehand> {
         throw new Error("Page is not accessible after multiple attempts");
       }
       
-      stagelandInstances.set(sessionID, stagehand);
+      browserInstances.set(sessionID, browser);
+      console.log(`Session replay available at: https://browserbase.com/sessions/${session.id}`);
     } catch (error) {
-      console.error(`Failed to initialize Stagehand for session ${sessionID}:`, error);
+      console.error(`Failed to initialize Browser for session ${sessionID}:`, error);
       console.error(`Error details:`, {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : 'No stack trace',
@@ -97,20 +88,20 @@ async function getStagehandInstance(sessionID: string): Promise<Stagehand> {
       
       // Clean up failed instance
       try {
-        await stagehand.close();
+        await browser.close();
       } catch (closeError) {
-        console.error("Error closing failed stagehand instance:", closeError);
+        console.error("Error closing failed browser instance:", closeError);
       }
       
       // Provide more specific error message
-      let errorMessage = 'Failed to initialize browser session';
+      let errorMessage = 'Failed to connect to browser session';
       if (error instanceof Error) {
-        if (error.message.includes('500')) {
-          errorMessage = `Browserbase session '${sessionID}' not found or invalid. Please create a new session using /api/session first.`;
+        if (error.message.includes('500') || error.message.includes('404')) {
+          errorMessage = `Browserbase session '${sessionID}' not found. Please create a new session using /api/session first.`;
         } else if (error.message.includes('401') || error.message.includes('403')) {
           errorMessage = 'Invalid Browserbase API credentials. Please check your BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID.';
         } else {
-          errorMessage = `Failed to initialize browser session: ${error.message}`;
+          errorMessage = `Failed to connect to browser session: ${error.message}`;
         }
       }
       
@@ -119,34 +110,36 @@ async function getStagehandInstance(sessionID: string): Promise<Stagehand> {
   } else {
     // Verify existing instance is still valid
     try {
-      if (!stagehand.page) {
+      const pages = await browser.pages();
+      if (pages.length === 0) {
         console.log(`Invalid existing instance for session ${sessionID}, creating new one`);
-        stagelandInstances.delete(sessionID);
-        return getStagehandInstance(sessionID); // Recursive call to create new instance
+        browserInstances.delete(sessionID);
+        return getBrowserInstance(sessionID); // Recursive call to create new instance
       }
     } catch {
       console.log(`Existing instance for session ${sessionID} is invalid, creating new one`);
-      stagelandInstances.delete(sessionID);
-      return getStagehandInstance(sessionID); // Recursive call to create new instance
+      browserInstances.delete(sessionID);
+      return getBrowserInstance(sessionID); // Recursive call to create new instance
     }
   }
   
-  return stagehand;
+  return browser;
 }
 
-async function cleanupStagehandInstance(sessionID: string) {
-  const stagehand = stagelandInstances.get(sessionID);
-  if (stagehand) {
+async function cleanupBrowserInstance(sessionID: string) {
+  const browser = browserInstances.get(sessionID);
+  if (browser) {
     try {
-      await stagehand.close();
+      await browser.close();
+      console.log(`Closed browser for session: ${sessionID}`);
     } catch (error) {
-      console.error("Error closing stagehand instance:", error);
+      console.error("Error closing browser instance:", error);
     }
-    stagelandInstances.delete(sessionID);
+    browserInstances.delete(sessionID);
   }
 }
 
-async function runStagehand({
+async function runBrowserAction({
   sessionID,
   method,
   instruction,
@@ -166,18 +159,15 @@ async function runStagehand({
   try {
     console.log(`Running ${method} for session: ${sessionID}`);
     
-    let stagehand = await getStagehandInstance(sessionID);
-    let page = stagehand.page;
-
-    if (!page) {
-      throw new Error("Page object is not available");
-    }
+    let browser = await getBrowserInstance(sessionID);
+    const pages = await browser.pages();
+    let page = pages.length > 0 ? pages[0] : await browser.newPage();
 
     switch (method) {
       case "GOTO":
         console.log(`Navigating to: ${instruction}`);
         
-        // First, verify the stagehand instance is still connected
+        // First, verify the browser instance is still connected
         let retryCount = 0;
         const maxRetries = 3;
         
@@ -201,6 +191,7 @@ async function runStagehand({
             console.log(`Attempting navigation to: ${instruction}`);
             await page.goto(instruction!, {
               timeout: 60000,  // Increased timeout for Browserbase
+              waitUntil: 'domcontentloaded',
             });
             
             console.log(`Successfully navigated to: ${instruction}`);
@@ -224,16 +215,17 @@ async function runStagehand({
               console.log(`Detected connection issue, cleaning up and reinitializing...`);
               
               // Clean up the current instance
-              stagelandInstances.delete(sessionID);
+              browserInstances.delete(sessionID);
               
               // Wait a bit before retrying
               await new Promise(resolve => setTimeout(resolve, 5000));
               
               // Get a fresh instance (this will trigger reinitialize)
-              const freshStagehand = await getStagehandInstance(sessionID);
-              stagehand = freshStagehand;
-              page = freshStagehand.page;
-              console.log(`Reinitialized Stagehand instance for session: ${sessionID}`);
+              const freshBrowser = await getBrowserInstance(sessionID);
+              browser = freshBrowser;
+              const freshPages = await browser.pages();
+              page = freshPages.length > 0 ? freshPages[0] : await browser.newPage();
+              console.log(`Reinitialized Browser instance for session: ${sessionID}`);
               
             } else {
               // For other errors, just wait before retrying
@@ -245,35 +237,48 @@ async function runStagehand({
 
       case "ACT":
         console.log(`Performing action: ${instruction}`);
-        await page.act(instruction!);
+        // For ACT, we'll need to implement basic actions like click, type, etc.
+        // This is a simplified version - you might want to add more sophisticated action parsing
+        if (instruction?.includes('click')) {
+          const selector = instruction.split('click ')[1];
+          await page.click(selector);
+        } else if (instruction?.includes('type')) {
+          const parts = instruction.split(' ');
+          const text = parts.slice(2).join(' ');
+          const selector = parts[1];
+          await page.type(selector, text);
+        }
         console.log(`Successfully performed action: ${instruction}`);
         break;
 
       case "EXTRACT": {
         console.log(`Extracting: ${instruction}`);
-        const { extraction } = await page.extract(instruction!);
+        // Basic extraction - get page content or specific elements
+        const content = await page.evaluate(() => document.body.innerText);
         console.log(`Successfully extracted data`);
-        return extraction;
+        return content;
       }
 
       case "OBSERVE":
         console.log(`Observing: ${instruction}`);
-        const observation = await page.observe(instruction!);
+        // Basic observation - get page information
+        const title = await page.title();
+        const url = await page.url();
+        const observation = { title, url };
         console.log(`Successfully observed page`);
         return observation;
 
       case "CLOSE":
         console.log(`Closing session: ${sessionID}`);
-        await cleanupStagehandInstance(sessionID);
+        await cleanupBrowserInstance(sessionID);
         console.log(`Successfully closed session: ${sessionID}`);
         break;
 
       case "SCREENSHOT": {
         console.log(`Taking screenshot for session: ${sessionID}`);
-        const cdpSession = await page.context().newCDPSession(page);
-        const { data } = await cdpSession.send("Page.captureScreenshot");
+        const screenshot = await page.screenshot({ encoding: 'base64' });
         console.log(`Successfully took screenshot`);
-        return data;
+        return screenshot;
       }
 
       case "WAIT":
@@ -290,7 +295,7 @@ async function runStagehand({
         break;
     }
   } catch (error) {
-    console.error(`Error in runStagehand (${method}):`, error);
+    console.error(`Error in runBrowserAction (${method}):`, error);
     
     // Check for specific error types that indicate session issues
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -301,7 +306,7 @@ async function runStagehand({
     
     if (isConnectionError) {
       console.log(`Connection error detected for session ${sessionID}, cleaning up instance`);
-      await cleanupStagehandInstance(sessionID);
+      await cleanupBrowserInstance(sessionID);
     }
     
     throw error;
@@ -317,13 +322,15 @@ async function sendPrompt({
   goal: string;
   sessionID: string;
   previousSteps?: Step[];
-  previousExtraction?: string | ObserveResult[];
+  previousExtraction?: string | object[];
 }) {
   let currentUrl = "";
 
   try {
-    const stagehand = await getStagehandInstance(sessionID);
-    currentUrl = await stagehand.page.url();
+    const browser = await getBrowserInstance(sessionID);
+    const pages = await browser.pages();
+    const page = pages.length > 0 ? pages[0] : await browser.newPage();
+    currentUrl = await page.url();
   } catch (error) {
     console.error("Error getting page info:", error);
     // Continue without current URL if there's an issue
@@ -373,7 +380,7 @@ If the goal has been achieved, return "close".`,
   ) {
     content.push({
       type: "image",
-      image: (await runStagehand({
+      image: (await runBrowserAction({
         sessionID,
         method: "SCREENSHOT",
       })) as string,
@@ -507,7 +514,7 @@ export async function POST(request: Request) {
           instruction: url,
         };
 
-        await runStagehand({
+        await runBrowserAction({
           sessionID: sessionId,
           method: "GOTO",
           instruction: url,
@@ -553,8 +560,8 @@ export async function POST(request: Request) {
           );
         }
 
-        // Execute the step using Stagehand
-        const extraction = await runStagehand({
+        // Execute the step using Puppeteer
+        const extraction = await runBrowserAction({
           sessionID: sessionId,
           method: step.tool,
           instruction: step.instruction,
