@@ -445,7 +445,7 @@ export async function runPuppeteerScript(
               }
             }
           } catch (e) {
-            // Continue to next selector
+         
           }
         }
         
