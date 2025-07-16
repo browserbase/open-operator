@@ -294,6 +294,46 @@ export async function runPuppeteerScript(
     try {
       await sleep(4500);
 
+      // Debug: Check what elements are actually present on the page
+      const pageContent = await page.evaluate(() => {
+        const elements = {
+          searchResultsTable: !!document.querySelector('#searchResultsTable'),
+          alertInfo: !!document.querySelector('.alert.alert-subtle-info.p-2'),
+          allAlerts: Array.from(document.querySelectorAll('.alert')).map(el => ({
+            className: el.className,
+            text: el.textContent?.trim().substring(0, 100) || '',
+            visible: (el as HTMLElement).offsetParent !== null
+          })),
+          allTables: Array.from(document.querySelectorAll('table')).map(el => el.id || el.className),
+          bodyText: document.body.innerText.substring(0, 500)
+        };
+        return elements;
+      });
+      
+
+      // First, check if any alerts contain "no trips" message
+      const noTripsAlert = await page.evaluate(() => {
+        const alerts = document.querySelectorAll('.alert');
+        for (const alert of alerts) {
+          const text = alert.textContent?.toLowerCase() || '';
+          if (text.includes('no trips') || text.includes('no data') || text.includes('empty')) {
+            return {
+              found: true,
+              text: alert.textContent?.trim() || '',
+              className: alert.className
+            };
+          }
+        }
+        return { found: false };
+      });
+
+      if (noTripsAlert.found) {
+        console.log(`Found "no trips" message: "${noTripsAlert.text}"`);
+        emit(uid, 'progress', 'Found "no trips" message, proceeding to add new mileage.');
+        return;
+      }
+
+      // If no "no trips" message, try to wait for table or specific alert
       const raceResult = await Promise.race([
         page.waitForSelector(tableSelector, { visible: true, timeout: 8000 }).then(() => 'table'),
         page.waitForSelector(noTripsMessageSelector, { visible: true, timeout: 8000 }).then(() => 'message'),
@@ -346,8 +386,43 @@ export async function runPuppeteerScript(
         console.log('"No trips found" message found. Proceeding to add new mileage.');
         return;
       } else {
-        console.error('Neither mileage table nor "No trips found" message found within the timeout.');
-        throw new Error('Mileage table or "No trips found" message not found within the timeout.');
+        // Timeout occurred, try alternative approaches
+        emit(uid, 'progress', 'Timeout occurred, checking for alternative elements...');
+        
+        // Check for alternative "no trips" message patterns
+        const alternativeNoTripsSelectors = [
+          '.alert-info',
+          '.alert.alert-info',
+          '.alert-warning',
+          '.alert.alert-warning',
+          '[class*="alert"][class*="info"]',
+          '[class*="no-trips"]',
+          '[class*="empty"]'
+        ];
+        
+        let foundAlternative = false;
+        for (const selector of alternativeNoTripsSelectors) {
+          try {
+            const element = await page.$(selector);
+            if (element) {
+              const text = await page.evaluate(el => el.textContent?.toLowerCase() || '', element);
+              if (text.includes('no trips') || text.includes('no data') || text.includes('empty')) {
+                console.log(`Found alternative "no trips" message with selector: ${selector}`);
+                emit(uid, 'progress', 'Found "no trips" message, proceeding to add new mileage.');
+                foundAlternative = true;
+                return;
+              }
+            }
+          } catch (e) {
+            // Continue to next selector
+          }
+        }
+        
+        if (!foundAlternative) {
+          console.error('Neither mileage table nor "No trips found" message found within the timeout.');
+          console.error('Page debug info:', pageContent);
+          throw new Error('Mileage table or "No trips found" message not found within the timeout.');
+        }
       }
     } catch (error) {
       console.error('An error occurred:', (error as Error).message);
