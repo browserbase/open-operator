@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import CaseForm from "./components/CaseForm";
 import ExecutionView from "./components/ExecutionView";
@@ -120,90 +119,64 @@ export default function Home() {
 
           {/* Tab Content */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-full">
-            <AnimatePresence mode="wait">
-              {activeTab === 'form' ? (
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="h-full"
-                >
-                  {isExecuting && submittedFormData ? (
-                    // Show form in read-only mode when executing
-                    <div className="h-full overflow-y-auto">
-                      <CaseForm 
-                        onSubmit={handleFormSubmit} 
-                        isLoading={isLoading}
-                        readOnly={true}
-                        initialFormData={submittedFormData}
-                      />
+            {/* Form Tab Content - Always render to preserve state */}
+            <div className={`h-full ${activeTab === 'form' ? 'block' : 'hidden'}`}>
+              <div className="h-full overflow-y-auto">
+                <CaseForm 
+                  onSubmit={handleFormSubmit} 
+                  isLoading={isLoading}
+                  readOnly={isExecuting}
+                />
+              </div>
+            </div>
+
+            {/* Browser Tab Content */}
+            <div className={`h-full ${activeTab === 'browser' ? 'block' : 'hidden'}`}>
+              {isExecuting ? (
+                <>
+                  <div className="w-full h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
                     </div>
-                  ) : (
-                    // Show form when not executing
-                    <div className="h-full overflow-y-auto">
-                      <CaseForm 
-                        onSubmit={handleFormSubmit} 
-                        isLoading={isLoading}
-                      />
+                    <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
+                      Browser Session
                     </div>
-                  )}
-                </motion.div>
+                  </div>
+                  <div className="p-4 h-full">
+                    {sessionUrl ? (
+                      <iframe
+                        src={sessionUrl}
+                        className="w-full h-full rounded-lg border border-gray-200 dark:border-gray-700"
+                        sandbox="allow-same-origin allow-scripts allow-forms"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        title="Browser Session"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                        <div className="text-center">
+                          <div className="w-16 h-16 border-4 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                          <p>Initializing browser session...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
-                <motion.div
-                  key="browser"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="h-full"
-                >
-                  {isExecuting ? (
-                    <>
-                      <div className="w-full h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-red-500" />
-                          <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                          <div className="w-3 h-3 rounded-full bg-green-500" />
-                        </div>
-                        <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
-                          Browser Session
-                        </div>
-                      </div>
-                      <div className="p-4 h-full">
-                        {sessionUrl ? (
-                          <iframe
-                            src={sessionUrl}
-                            className="w-full h-full rounded-lg border border-gray-200 dark:border-gray-700"
-                            sandbox="allow-same-origin allow-scripts allow-forms"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            title="Browser Session"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                            <div className="text-center">
-                              <div className="w-16 h-16 border-4 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-                              <p>Initializing browser session...</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                        <p>Browser session will appear here when automation starts</p>
-                      </div>
+                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
                     </div>
-                  )}
-                </motion.div>
+                    <p>Browser session will appear here when automation starts</p>
+                  </div>
+                </div>
               )}
-            </AnimatePresence>
+            </div>
           </div>
         </div>
 
