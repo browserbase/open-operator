@@ -501,6 +501,74 @@ export async function runPuppeteerScript(
     throw new Error("Browser page is not accessible");
   }
 
+  const checkForExistingNote = async (page: Page): Promise<boolean> => {
+    try {
+      emit(uid, 'progress', 'Checking for existing notes...');
+      
+      // Create search string in format: MM/DD/YY h:mmAM to h:mmAM
+      const searchString = `${formattedDate} ${formattedStartTime} to ${formattedEndTime}`;
+      console.log(`Searching for existing note with: "${searchString}"`);
+      
+      // Click on the filter/search input
+      const searchInputSelector = '.form-control.search-input.search';
+      await page.waitForSelector(searchInputSelector, { visible: true, timeout: defaultTimeout });
+      await page.click(searchInputSelector);
+      console.log('Clicked on search filter input');
+      
+      // Clear the input first
+      await page.evaluate((selector) => {
+        const input = document.querySelector(selector) as HTMLInputElement;
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+      }, searchInputSelector);
+      
+      // Type the search string character by character to trigger proper events
+      await page.type(searchInputSelector, searchString, { delay: 100 });
+      console.log(`Typed search string: "${searchString}"`);
+      
+      // Trigger additional events that might be needed for the filter
+      await page.evaluate((selector) => {
+        const input = document.querySelector(selector) as HTMLInputElement;
+        if (input) {
+          // Trigger various events that might be needed
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+          input.dispatchEvent(new Event('search', { bubbles: true }));
+        }
+      }, searchInputSelector);
+      
+      // Wait for the table to load after filtering
+      await sleep(2000);
+      
+      // Look for the first note link matching the pattern href="/DFCS/Notes/Note?id=..."
+      const noteFound = await page.evaluate(() => {
+        const noteLinks = document.querySelectorAll('a[href*="/DFCS/Notes/Note?id="]');
+        if (noteLinks.length > 0) {
+          const firstLink = noteLinks[0] as HTMLElement;
+          firstLink.click();
+          return true;
+        }
+        return false;
+      });
+      
+      if (noteFound) {
+        console.log('Found existing note, clicked on it');
+        emit(uid, 'success', 'Found existing note!');
+        return true;
+      } else {
+        console.log('No existing note found');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('Error checking for existing note:', error);
+      return false;
+    }
+  };
+
   const findAndClickEdit = async (page: Page, targetDate: string, targetTime: string): Promise<boolean> => {
     console.log(`Searching for Date: "${targetDate}" and Time: "${targetTime}"...`);
     await page.waitForSelector("#data-models-table-body tr", { timeout: defaultTimeout });
@@ -589,7 +657,10 @@ export async function runPuppeteerScript(
   try {
     console.log("addresses", endAddresses);
     
-    // Keep the session alive by taking a screenshot periodically
+    // Test emit function first
+    emit(uid, 'progress', 'Puppeteer script started - testing emit function');
+    console.log('Emitted test message');
+    
     keepAliveInterval = setInterval(async () => {
       try {
         if (!isBrowserClosed && page) {
@@ -669,90 +740,102 @@ export async function runPuppeteerScript(
     
     console.log(`Clicked on "Case Notes" link for case number ${caseNumber}`);
 
-    let noteExists = await findAndClickEdit(page, formattedDate, targetServiceTime);
-    if (noteExists) {
-      console.log(`A note for Date: "${formattedDate}" and Time: "${targetServiceTime}" already exists. Skipping creation.`);
-      emit(uid, 'progress', 'An existing Note has been found!');
-    } else {
-      console.log(`No existing note found for Date: "${formattedDate}" and Time: "${targetServiceTime}". Proceeding to create a new note.`);
-      emit(uid, 'progress', 'Creating a new note!');
-      await sleep(200);
-      emit(uid, 'progress', 'Creating Note!');
-
-      await page.click("#addButton");
-      console.log("Clicked on New Note to create a new case note");
-
-      await page.waitForSelector("#DataModel_DateOfService", { visible: true });
-      console.log("New Note modal appeared");
-
-      await page.evaluate((formattedDate) => {
-        const dateInput = document.getElementById("DataModel_DateOfService") as HTMLInputElement;
-        if (dateInput) {
-          dateInput.value = formattedDate;
-          dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          throw new Error("Date of Service input not found");
-        }
-      }, dateOfService);
-
-      console.log(`Date of Service set to ${dateOfService}`);
+    // Check for existing note first using the search filter
+    const noteExists = await checkForExistingNote(page);
+    
+    if (!noteExists) {
+      // If no existing note found, try the table search method as fallback
+      const foundInTable = await findAndClickEdit(page, formattedDate, targetServiceTime);
       
-      await sleep(100);
-      const sanitizedStartTime = sanitizeTime(formattedStartTime);
-      const sanitizedEndTime = sanitizeTime(formattedEndTime);
-      await page.type("#DataModel_StartTime", sanitizedStartTime, { delay: 0 });
-      console.log(`Start Time set to "${sanitizedStartTime}"`);
-      await page.type("#DataModel_EndTime", sanitizedEndTime, { delay: 0 });
-      console.log(`End Time set to "${sanitizedEndTime}"`);
-      
-      await page.waitForFunction(() => {
-        const selectElement = document.getElementById("DataModel_ServiceTypeId") as HTMLSelectElement;
-        return selectElement && selectElement.options.length > 1;
-      });
-      
-      console.log("Service type options loaded");
-      await page.evaluate((serviceTypeIdentifier) => {
-        const selectElement = document.getElementById("DataModel_ServiceTypeId") as HTMLSelectElement;
-        const options = Array.from(selectElement.options);
-        const matchingOption = options.find(option =>
-          option.textContent?.toLowerCase().includes(serviceTypeIdentifier.toLowerCase())
-        );
+      if (foundInTable) {
+        console.log(`Found existing note in table for Date: "${formattedDate}" and Time: "${targetServiceTime}".`);
+        emit(uid, 'progress', 'Found existing note in table!');
+      } else {
+        console.log(`No existing note found. Proceeding to create a new note.`);
+        emit(uid, 'progress', 'Creating a new note!');
+        await sleep(200);
+        emit(uid, 'progress', 'Creating Note!');
+
+        // Create new note
+        const addButtonSelector = ".mb-3.me-1.btn.btn-sm.btn-subtle-secondary.btn-floating";
+        await page.waitForSelector(addButtonSelector, { visible: true, timeout: defaultTimeout });
+        await page.click(addButtonSelector);
+        console.log("Clicked on Add Note button to create a new case note");
+
+        await page.waitForSelector("#DataModel_DateOfService", { visible: true });
+        console.log("New Note modal appeared");
+
+        await page.evaluate((formattedDate) => {
+          const dateInput = document.getElementById("DataModel_DateOfService") as HTMLInputElement;
+          if (dateInput) {
+            dateInput.value = formattedDate;
+            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+          } else {
+            throw new Error("Date of Service input not found");
+          }
+        }, dateOfService);
+
+        console.log(`Date of Service set to ${dateOfService}`);
         
-        if (matchingOption) {
-          selectElement.value = matchingOption.value;
-          selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          throw new Error(`Service type with identifier "${serviceTypeIdentifier}" not found`);
-        }
-      }, serviceTypeIdentifier);
-      console.log(`Service type set to option containing identifier "${serviceTypeIdentifier}"`);
+        await sleep(100);
+        const sanitizedStartTime = sanitizeTime(formattedStartTime);
+        const sanitizedEndTime = sanitizeTime(formattedEndTime);
+        await page.type("#DataModel_StartTime", sanitizedStartTime, { delay: 0 });
+        console.log(`Start Time set to "${sanitizedStartTime}"`);
+        await page.type("#DataModel_EndTime", sanitizedEndTime, { delay: 0 });
+        console.log(`End Time set to "${sanitizedEndTime}"`);
+        
+        await page.waitForFunction(() => {
+          const selectElement = document.getElementById("DataModel_ServiceTypeId") as HTMLSelectElement;
+          return selectElement && selectElement.options.length > 1;
+        });
+        
+        console.log("Service type options loaded");
+        await page.evaluate((serviceTypeIdentifier) => {
+          const selectElement = document.getElementById("DataModel_ServiceTypeId") as HTMLSelectElement;
+          const options = Array.from(selectElement.options);
+          const matchingOption = options.find(option =>
+            option.textContent?.toLowerCase().includes(serviceTypeIdentifier.toLowerCase())
+          );
+          
+          if (matchingOption) {
+            selectElement.value = matchingOption.value;
+            selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+          } else {
+            throw new Error(`Service type with identifier "${serviceTypeIdentifier}" not found`);
+          }
+        }, serviceTypeIdentifier);
+        console.log(`Service type set to option containing identifier "${serviceTypeIdentifier}"`);
 
-      await page.waitForFunction(() => {
-        const selectElement = document.getElementById("DataModel_CaseApprovedHourChildId") as HTMLSelectElement;
-        return selectElement && selectElement.options.length > 1;
-      });
+        await page.waitForFunction(() => {
+          const selectElement = document.getElementById("DataModel_CaseApprovedHourChildId") as HTMLSelectElement;
+          return selectElement && selectElement.options.length > 1;
+        });
 
-      await page.evaluate((personServed) => {
-        const selectElement = document.getElementById("DataModel_CaseApprovedHourChildId") as HTMLSelectElement;
-        const options = Array.from(selectElement.options);
-        const matchingOption = options.find(option =>
-          option.textContent?.toLowerCase().includes(personServed.toLowerCase())
-        );
-        if (matchingOption) {
-          selectElement.value = matchingOption.value;
-          selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          throw new Error(`Person served "${personServed}" not found`);
-        }
-      }, personServed);
-      console.log(`Person served set to "${personServed}"`);
+        await page.evaluate((personServed) => {
+          const selectElement = document.getElementById("DataModel_CaseApprovedHourChildId") as HTMLSelectElement;
+          const options = Array.from(selectElement.options);
+          const matchingOption = options.find(option =>
+            option.textContent?.toLowerCase().includes(personServed.toLowerCase())
+          );
+          if (matchingOption) {
+            selectElement.value = matchingOption.value;
+            selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+          } else {
+            throw new Error(`Person served "${personServed}" not found`);
+          }
+        }, personServed);
+        console.log(`Person served set to "${personServed}"`);
 
-      await page.waitForSelector("#saveButton", { visible: true });
-      await page.click("#saveButton");
-      await sleep(500);
+        await page.waitForSelector("#saveButton", { visible: true });
+        await page.click("#saveButton");
+        await sleep(500);
 
-      emit(uid, 'success', 'Note Created!');
-      emit(uid, 'toast', 'Note Created!');
+        emit(uid, 'success', 'Note Created!');
+        emit(uid, 'toast', 'Note Created!');
+      }
+    } else {
+      emit(uid, 'progress', 'Found existing note! Proceeding to edit...');
     }
     
     emit(uid, 'progress', 'Proceeding to edit Note!');
@@ -859,13 +942,7 @@ export async function runPuppeteerScript(
     emit(uid, 'error', `An unexpected error occurred: ${error}`);
     console.error("An unexpected error occurred:", error);
     
-    try {
-      let screenshot3 = await page.screenshot({ encoding: 'base64', type: 'png' });
-      const mimeType = 'image/png';
-      emit(uid, 'screenshot', { mimeType, data: screenshot3 });
-    } catch (screenshotError) {
-      console.error("Failed to take error screenshot:", screenshotError);
-    }
+   
     
     isBrowserClosed = true;
     await browser.close();

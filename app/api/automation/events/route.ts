@@ -48,6 +48,9 @@ export function GET(request: NextRequest) {
 
 // Function to send events to a specific execution
 export function sendEventToExecution(executionId: string, event: string, data: unknown) {
+  console.log(`sendEventToExecution called - ExecutionId: ${executionId}, Event: ${event}, Data:`, data);
+  console.log(`Available streams:`, Array.from(eventStreams.keys()));
+  
   const controller = eventStreams.get(executionId);
   if (controller) {
     try {
@@ -56,13 +59,15 @@ export function sendEventToExecution(executionId: string, event: string, data: u
         message: typeof data === 'string' ? data : JSON.stringify(data),
         data: data
       })}\n\n`;
+      console.log(`Sending event data:`, eventData);
       controller.enqueue(new TextEncoder().encode(eventData));
-      console.log(`Sent event '${event}' to execution ${executionId}`);
+      console.log(`Successfully sent event '${event}' to execution ${executionId}`);
     } catch (error) {
       console.error(`Failed to send event to execution ${executionId}:`, error);
       eventStreams.delete(executionId);
     }
   } else {
     console.warn(`No active stream found for execution: ${executionId}`);
+    console.log(`Available streams:`, Array.from(eventStreams.keys()));
   }
 }
