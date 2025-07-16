@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 
 interface AddressAutocompleteProps {
@@ -10,6 +11,7 @@ interface AddressAutocompleteProps {
   label: string;
   readOnly?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 export default function AddressAutocomplete({
@@ -18,12 +20,23 @@ export default function AddressAutocomplete({
   placeholder,
   label,
   readOnly = false,
-  className = ""
+  className = "",
+  required = false
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string>('');
+  const [inputValue, setInputValue] = useState(value);
+  const isPlaceSelection = useRef(false);
+  const pendingSelection = useRef<string | null>(null);
+
+  // Sync internal input value with external value prop
+  useEffect(() => {
+    if (!isPlaceSelection.current && !pendingSelection.current) {
+      setInputValue(value);
+    }
+  }, [value]);
 
   useEffect(() => {
     const initializeAutocomplete = async () => {
@@ -54,7 +67,27 @@ export default function AddressAutocomplete({
           autocompleteRef.current.addListener('place_changed', () => {
             const place = autocompleteRef.current?.getPlace();
             if (place?.formatted_address) {
-              onChange(place.formatted_address);
+              const selectedAddress = place.formatted_address;
+              
+              // Set flags to prevent interference
+              isPlaceSelection.current = true;
+              pendingSelection.current = selectedAddress;
+              
+              // Use flushSync to ensure immediate state update
+              flushSync(() => {
+                setInputValue(selectedAddress);
+                onChange(selectedAddress);
+              });
+              
+              // Clean up after a short delay
+              setTimeout(() => {
+                pendingSelection.current = null;
+                isPlaceSelection.current = false;
+                
+                if (inputRef.current) {
+                  inputRef.current.blur();
+                }
+              }, 50);
             }
           });
         }
@@ -73,7 +106,24 @@ export default function AddressAutocomplete({
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [readOnly]);
+  }, [readOnly, onChange]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    
+    // Don't update if we have a pending selection or are in place selection mode
+    if (!isPlaceSelection.current && !pendingSelection.current) {
+      setInputValue(newValue);
+      onChange(newValue);
+    }
+  };
+
+  const handleInputFocus = () => {
+    // Reset flags when user focuses on input to allow normal typing
+    if (!pendingSelection.current) {
+      isPlaceSelection.current = false;
+    }
+  };
 
   const baseInputClassName = `w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-gray-50 read-only:dark:bg-gray-800 read-only:cursor-default' : ''}`;
 
@@ -85,13 +135,14 @@ export default function AddressAutocomplete({
       <div>
         {label && (
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {label}
+            {label} {required && <span className="text-red-500">*</span>}
           </label>
         )}
         <input
           type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
           readOnly={readOnly}
           className={combinedClassName}
           placeholder={placeholder}
@@ -107,15 +158,16 @@ export default function AddressAutocomplete({
     <div>
       {label && (
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {label}
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <div className="relative">
         <input
           ref={inputRef}
           type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
           readOnly={readOnly}
           className={combinedClassName}
           placeholder={placeholder || `Enter ${label?.toLowerCase() || 'address'}`}
@@ -126,11 +178,6 @@ export default function AddressAutocomplete({
           </div>
         )}
       </div>
-      {isLoaded && !readOnly && (
-        <p className="mt-1 text-xs text-green-600 dark:text-green-400">
-          ✓ Address autocomplete enabled
-        </p>
-      )}
     </div>
   );
 }

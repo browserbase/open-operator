@@ -4,12 +4,17 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
+import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFirebase } from "./firebaseTemplateService";
+import { AutoSetData } from "./AutoSet";
 
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
   isLoading: boolean;
   readOnly?: boolean;
   initialFormData?: FormData;
+  isLoggedIn?: boolean;
+  userId?: string;
+  onLoginRequested?: () => void;
 }
 
 interface SavedCredentials {
@@ -18,19 +23,20 @@ interface SavedCredentials {
   password: string;
 }
 
-interface FormTemplate {
+export interface FormTemplate {
   id: string;
   name: string;
   createdAt: string;
   formData: Omit<FormData, 'companyCode' | 'username' | 'password'>;
 }
 
-export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData }: CaseFormProps) {
+export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested }: CaseFormProps) {
   const [saveCredentials, setSaveCredentials] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<FormTemplate[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [showLoadTemplates, setShowLoadTemplates] = useState(false);
+  const [timeValidationError, setTimeValidationError] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     companyCode: "",
     username: "",
@@ -59,8 +65,10 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   });
 
   const [showMileage, setShowMileage] = useState(false);
+  const [autoSetData, setAutoSetData] = useState<AutoSetData>({ homeAddress: "", officeAddress: "" });
+  const [showAddressSelection, setShowAddressSelection] = useState(false);
 
-  // Load saved credentials on component mount
+  // Load saved credentials and templates on component mount
   useEffect(() => {
     // If initialFormData is provided, use it (read-only mode)
     if (initialFormData) {
@@ -81,12 +89,61 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       setSaveCredentials(true);
     }
 
-    // Load saved templates
+    // Load saved templates from localStorage
     const savedTemplatesData = localStorage.getItem('caseFormTemplates');
     if (savedTemplatesData) {
       setSavedTemplates(JSON.parse(savedTemplatesData));
     }
   }, [initialFormData]);
+
+  // Load Firebase templates when user logs in
+  useEffect(() => {
+    const loadFirebaseTemplates = async () => {
+      if (isLoggedIn && userId) {
+        try {
+          const firebaseTemplates = await getTemplatesFromFirebase(userId);
+          // Convert Firebase templates to local format and merge with local templates
+          const localTemplates = JSON.parse(localStorage.getItem('caseFormTemplates') || '[]');
+          const allTemplates = [...localTemplates, ...firebaseTemplates];
+          // Remove duplicates based on template name and creation time
+          const uniqueTemplates = allTemplates.filter((template, index, self) => 
+            index === self.findIndex(t => t.name === template.name && t.createdAt === template.createdAt)
+          );
+          setSavedTemplates(uniqueTemplates);
+        } catch (error) {
+          console.error('Failed to load templates from Firebase:', error);
+        }
+      }
+    };
+
+    loadFirebaseTemplates();
+  }, [isLoggedIn, userId]);
+
+  // Load auto-set data
+  useEffect(() => {
+    const savedAutoSetData = localStorage.getItem('autoSetData');
+    if (savedAutoSetData) {
+      setAutoSetData(JSON.parse(savedAutoSetData));
+    }
+  }, []);
+
+  // Handle mileage checkbox with address selection
+  const handleMileageToggle = (enabled: boolean) => {
+    if (enabled && (autoSetData.homeAddress || autoSetData.officeAddress)) {
+      setShowAddressSelection(true);
+    } else {
+      setShowMileage(enabled);
+    }
+  };
+
+  const selectStartAddress = (address: string) => {
+    setFormData(prev => ({
+      ...prev,
+      mileageStartAddress: address
+    }));
+    setShowMileage(true);
+    setShowAddressSelection(false);
+  };
 
   // Save credentials to localStorage when saveCredentials changes
   useEffect(() => {
@@ -102,11 +159,40 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     }
   }, [saveCredentials, formData.companyCode, formData.username, formData.password]);
 
+  // Function to validate time inputs
+  const validateTimeInputs = (startTime: string, endTime: string): boolean => {
+    if (!startTime || !endTime) return false;
+    
+    // Convert time strings to comparable values
+    const startTimeMinutes = timeToMinutes(startTime);
+    const endTimeMinutes = timeToMinutes(endTime);
+    
+    return startTimeMinutes >= endTimeMinutes;
+  };
+
+  // Helper function to convert time string to minutes since midnight
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   const handleInputChange = (field: keyof FormData, value: string | string[]) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Check time validation when startTime or endTime changes
+      if (field === 'startTime' || field === 'endTime') {
+        const startTime = field === 'startTime' ? value as string : prev.startTime;
+        const endTime = field === 'endTime' ? value as string : prev.endTime;
+        
+        setTimeValidationError(validateTimeInputs(startTime, endTime));
+      }
+      
+      return newFormData;
+    });
   };
 
   const handleObservationNotesChange = (field: string, value: string) => {
@@ -155,8 +241,60 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     }
   };
 
+  const [requiredError, setRequiredError] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission if there's a time validation error
+    if (timeValidationError) {
+      return;
+    }
+
+    // Validate required fields for each service type
+  const missingFields: string[] = [];
+    if (formData.serviceTypeIdentifier === "56a") {
+      if (!formData.caseNumber) missingFields.push("Case Number");
+      if (!formData.dateOfService) missingFields.push("Date of Service");
+      if (!formData.startTime) missingFields.push("Start Time");
+      if (!formData.endTime) missingFields.push("End Time");
+      if (!formData.personServed) missingFields.push("Person Served");
+      if (!formData.observationNotes56a?.pickUpAddress) missingFields.push("Pick Up Address");
+      if (!formData.observationNotes56a?.locationAddress) missingFields.push("Location Address");
+      if (!formData.observationNotes56a?.purposeOfTransportation) missingFields.push("Purpose of Transportation");
+      if (!formData.observationNotes56a?.delaysDescription) missingFields.push("Delays Description");
+      if (!formData.observationNotes56a?.interactionsWithParentGuardian) missingFields.push("Interactions With Parent/Guardian");
+      if (!formData.observationNotes56a?.interactionsWithClient) missingFields.push("Interactions With Client");
+      if (!formData.observationNotes56a?.clientDressedAppropriately) missingFields.push("Client Dressed Appropriately");
+      if (!formData.observationNotes56a?.concerns) missingFields.push("Concerns");
+      formData.endAddresses.forEach((addr, i) => {
+        if (!addr) missingFields.push(`End Address ${i + 1}`);
+      });
+      formData.additionalDropdownValues.forEach((val, i) => {
+        if (!val) missingFields.push(`Purpose for End Address ${i + 1}`);
+      });
+    } else if (formData.serviceTypeIdentifier === "47e") {
+      if (!formData.caseNumber) missingFields.push("Case Number");
+      if (!formData.dateOfService) missingFields.push("Date of Service");
+      if (!formData.startTime) missingFields.push("Start Time");
+      if (!formData.endTime) missingFields.push("End Time");
+      if (!formData.personServed) missingFields.push("Person Served");
+      if (!formData.noteSummary47e) missingFields.push("Note Summary (47e)");
+      formData.endAddresses.forEach((addr, i) => {
+        if (!addr) missingFields.push(`End Address ${i + 1}`);
+      });
+      formData.additionalDropdownValues.forEach((val, i) => {
+        if (!val) missingFields.push(`Purpose for End Address ${i + 1}`);
+      });
+    }
+
+    if (missingFields.length > 0) {
+      setRequiredError(`Please fill out all required fields: ${missingFields.join(", ")}`);
+      return;
+    } else {
+      setRequiredError("");
+    }
+
     onSubmit(formData);
   };
 
@@ -171,7 +309,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     }));
   };
 
-  const saveTemplate = () => {
+  const saveTemplate = async () => {
     if (!templateName.trim()) return;
 
     const template: FormTemplate = {
@@ -194,9 +332,22 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       }
     };
 
+    // Save to localStorage
     const updatedTemplates = [...savedTemplates, template];
     setSavedTemplates(updatedTemplates);
     localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
+
+    // Save to Firebase if logged in
+    if (isLoggedIn && userId) {
+      try {
+        await saveTemplateToFirebase(template, userId);
+        console.log('Template saved to Firebase successfully');
+      } catch (error) {
+        console.error('Failed to save template to Firebase:', error);
+        // Template is still saved locally even if Firebase fails
+      }
+    }
+
     setTemplateName("");
     setShowTemplateModal(false);
   };
@@ -211,10 +362,21 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     setShowLoadTemplates(false);
   };
 
-  const deleteTemplate = (templateId: string) => {
+  const deleteTemplate = async (templateId: string) => {
     const updatedTemplates = savedTemplates.filter(t => t.id !== templateId);
     setSavedTemplates(updatedTemplates);
     localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
+
+    // Delete from Firebase if logged in
+    if (isLoggedIn && userId) {
+      try {
+        await deleteTemplateFromFirebase(templateId, userId);
+        console.log('Template deleted from Firebase successfully');
+      } catch (error) {
+        console.error('Failed to delete template from Firebase:', error);
+        // Template is still deleted locally even if Firebase fails
+      }
+    }
   };
 
   // Helper for input styling with readonly support
@@ -222,6 +384,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   
   return (
     <div className="h-full overflow-y-auto">
+      {requiredError && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md">
+          <p className="text-sm text-red-700 dark:text-red-300">{requiredError}</p>
+        </div>
+      )}
       {/* Main Content */}
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
@@ -259,15 +426,16 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowTemplateModal(true)}
+                        onClick={() => isLoggedIn ? setShowTemplateModal(true) : onLoginRequested?.()}
                         className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                       >
-                        Save as Template
+                        Save as Template {!isLoggedIn && '(Login Required)'}
                       </button>
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Save your form data as templates for quick reuse. Templates do not include login credentials.
+                    {isLoggedIn ? ' Templates will be saved to both local storage and Firebase.' : ' Login required to save templates to Firebase.'}
                   </p>
                 </div>
               )}
@@ -350,7 +518,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       </div>
                       <div className="ml-3">
                         <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                          Credentials will be saved locally in your browser. This data is not transmitted to any external servers.
+                          Credentials will be saved locally in your browser. This data is not stored on any external servers.
                         </p>
                       </div>
                     </div>
@@ -362,7 +530,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Case Number *
+                    Case Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -376,7 +544,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Date of Service *
+                    Date of Service <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -393,31 +561,39 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Start Time *
+                    Start Time <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="time"
                     required
                     value={formData.startTime}
                     onChange={(e) => handleInputChange("startTime", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${
+                      timeValidationError 
+                        ? 'border-red-500 dark:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    End Time *
+                    End Time <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="time"
                     required
                     value={formData.endTime}
                     onChange={(e) => handleInputChange("endTime", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${
+                      timeValidationError 
+                        ? 'border-red-500 dark:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Service Type *
+                    Service Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
@@ -432,10 +608,28 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                 </div>
               </div>
 
+              {/* Time Validation Error Message */}
+              {timeValidationError && (
+                <div className="mt-2 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700 dark:text-red-300">
+                        Start time cannot be greater than or equal to end time. Please ensure end time is after start time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Person Served */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Person Served *
+                  Person Served <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -461,6 +655,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         label="Pick Up Address"
                         placeholder="Enter pickup address"
                         readOnly={readOnly}
+                        required={true}
                       />
                     </div>
 
@@ -472,16 +667,53 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         label="Location Address"
                         placeholder="Enter location address"
                         readOnly={readOnly}
+                        required={true}
                       />
                     </div>
 
-                    {/* Other observation note fields */}
+                    {/* Purpose of Transportation as select with custom input for 'Other' */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Purpose of Transportation <span className="text-red-500">*</span></label>
+                      <select
+                        value={['Client P/O', 'Client D/O'].includes(formData.observationNotes56a?.purposeOfTransportation || '') 
+                          ? formData.observationNotes56a?.purposeOfTransportation 
+                          : formData.observationNotes56a?.purposeOfTransportation ? 'Other' : ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'Other') {
+                            // Keep the current custom value when selecting "Other"
+                            return;
+                          } else {
+                            handleObservationNotesChange('purposeOfTransportation', val);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        disabled={readOnly}
+                      >
+                        <option value="">Select purpose</option>
+                        <option value="Client P/O">Client P/O</option>
+                        <option value="Client D/O">Client D/O</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {!['Client P/O', 'Client D/O', ''].includes(formData.observationNotes56a?.purposeOfTransportation || '') && (
+                        <input
+                          type="text"
+                          value={formData.observationNotes56a?.purposeOfTransportation || ''}
+                          onChange={e => handleObservationNotesChange('purposeOfTransportation', e.target.value)}
+                          className="mt-2 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          placeholder="Enter custom purpose"
+                          disabled={readOnly}
+                        />
+                      )}
+                    </div>
+
+                    {/* Other observation note fields except purposeOfTransportation, pickUpAddress, locationAddress */}
                     {Object.entries(formData.observationNotes56a || {})
-                      .filter(([key]) => key !== 'pickUpAddress' && key !== 'locationAddress')
+                      .filter(([key]) => key !== 'pickUpAddress' && key !== 'locationAddress' && key !== 'purposeOfTransportation')
                       .map(([key, value]) => (
                         <div key={key}>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} <span className="text-red-500">*</span>
                           </label>
                           <textarea
                             value={value}
@@ -501,7 +733,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               {formData.serviceTypeIdentifier === "47e" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Note Summary (47e)
+                    Note Summary (47e) <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.noteSummary47e}
@@ -521,7 +753,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     <input
                       type="checkbox"
                       checked={showMileage}
-                      onChange={(e) => setShowMileage(e.target.checked)}
+                      onChange={(e) => handleMileageToggle(e.target.checked)}
                       disabled={readOnly}
                       className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded disabled:opacity-50"
                     />
@@ -560,7 +792,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          End Addresses
+                          End Addresses <span className="text-red-500">*</span>
                         </label>
                         {!readOnly && (
                           <button
@@ -578,12 +810,16 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             <AddressAutocomplete
                               value={address}
                               onChange={(value) => handleEndAddressChange(index, value)}
-                              label=""
-                              placeholder={`End address ${index + 1}`}
+                              label={`End Address ${index + 1}`}
+                              placeholder={`Enter end address ${index + 1}`}
                               readOnly={readOnly}
+                              required={true}
                             />
                           </div>
                           <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Purpose <span className="text-red-500">*</span>
+                            </label>
                             <select
                               value={formData.additionalDropdownValues[index]}
                               onChange={(e) => handleDropdownValueChange(index, e.target.value)}
@@ -620,7 +856,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                 <div className="flex justify-end pt-6 border-t">
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || timeValidationError}
                     className="px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {isLoading ? "Processing..." : "Start Automation"}
@@ -631,6 +867,56 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
           </motion.div>
         </div>
       </div>
+
+      {/* Address Selection Modal */}
+      {showAddressSelection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Select Start Address</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Choose which saved address to use as your mileage start address:
+            </p>
+            <div className="space-y-3">
+              {autoSetData.homeAddress && (
+                <button
+                  onClick={() => selectStartAddress(autoSetData.homeAddress)}
+                  className="w-full p-3 text-left border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Home Address</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{autoSetData.homeAddress}</div>
+                </button>
+              )}
+              {autoSetData.officeAddress && (
+                <button
+                  onClick={() => selectStartAddress(autoSetData.officeAddress)}
+                  className="w-full p-3 text-left border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Office Address</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{autoSetData.officeAddress}</div>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowMileage(true);
+                  setShowAddressSelection(false);
+                }}
+                className="w-full p-3 text-left border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="font-medium text-gray-900 dark:text-gray-100">Manual Entry</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Enter address manually</div>
+              </button>
+            </div>
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowAddressSelection(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save Template Modal */}
       {showTemplateModal && (

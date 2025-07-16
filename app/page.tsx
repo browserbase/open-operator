@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import CaseForm from "./components/CaseForm";
-import ExecutionView from "./components/ExecutionView";
 import ThemeToggle from "./components/ThemeToggle";
+import AutoSet from "./components/AutoSet";
 import { FormData as CaseFormData } from "./script/automationScript";
-import { FormData } from "./script/automationScript";
+import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
+import { User } from "firebase/auth";
 
 export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -14,7 +15,66 @@ export default function Home() {
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [submittedFormData, setSubmittedFormData] = useState<CaseFormData | null>(null);
-  const [activeTab, setActiveTab] = useState<'form' | 'browser'>('form');
+  const [activeTab, setActiveTab] = useState<'form' | 'browser' | 'autoset'>('form');
+  const [user, setUser] = useState<User | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  // Listen for authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthChange((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    setAuthLoading(true);
+    setAuthError("");
+    
+    const result = await signInUser(loginEmail, loginPassword);
+    if (result.success) {
+      setShowLoginModal(false);
+      setLoginEmail("");
+      setLoginPassword("");
+    } else {
+      setAuthError(result.error || "Login failed");
+    }
+    setAuthLoading(false);
+  };
+
+  const handleSignup = async () => {
+    setAuthLoading(true);
+    setAuthError("");
+    
+    if (signupPassword !== confirmPassword) {
+      setAuthError("Passwords do not match");
+      setAuthLoading(false);
+      return;
+    }
+    
+    const result = await signUpUser(signupEmail, signupPassword);
+    if (result.success) {
+      setShowSignupModal(false);
+      setSignupEmail("");
+      setSignupPassword("");
+      setConfirmPassword("");
+    } else {
+      setAuthError(result.error || "Signup failed");
+    }
+    setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+  };
 
   const handleFormSubmit = async (formData: CaseFormData) => {
     setIsLoading(true);
@@ -74,6 +134,27 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          {!user && (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="px-4 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors font-medium"
+            >
+              Login
+            </button>
+          )}
+          {user && (
+            <div className="flex items-center gap-3">
+              <span className="text-green-600 font-medium">
+                {user.email}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          )}
           {isExecuting && (
             <button
               onClick={handleClose}
@@ -85,6 +166,124 @@ export default function Home() {
         </div>
       </nav>
 
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-sm">
+            <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Login</h2>
+            {authError && <div className="mb-2 text-red-600">{authError}</div>}
+            <input
+              type="email"
+              placeholder="Email"
+              value={loginEmail}
+              onChange={e => setLoginEmail(e.target.value)}
+              className="w-full mb-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={loginPassword}
+              onChange={e => setLoginPassword(e.target.value)}
+              className="w-full mb-4 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            
+            {/* Notification about BAWebTools account */}
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+              <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+                Please sign in with your BAWebTools account credentials
+              </p>
+            </div>
+
+            <div className="flex justify-between items-center gap-2 mb-4">
+              <button
+                onClick={() => {
+                  setShowLoginModal(false);
+                  setShowSignupModal(true);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+              >
+                Sign Up
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setAuthError("");
+                  }}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogin}
+                  disabled={authLoading}
+                  className="px-4 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] font-medium disabled:opacity-50"
+                >
+                  {authLoading ? "Signing in..." : "Login"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signup Modal */}
+      {showSignupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-sm">
+            <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Create Account</h2>
+            {authError && <div className="mb-2 text-red-600">{authError}</div>}
+            <input
+              type="email"
+              placeholder="Email"
+              value={signupEmail}
+              onChange={e => setSignupEmail(e.target.value)}
+              className="w-full mb-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={signupPassword}
+              onChange={e => setSignupPassword(e.target.value)}
+              className="w-full mb-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              className="w-full mb-4 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            
+            <div className="flex justify-between items-center gap-2 mb-4">
+              <button
+                onClick={() => window.open('https://bawebtools.com', '_blank')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-sm"
+              >
+                Visit BAWebTools
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    setAuthError("");
+                  }}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSignup}
+                  disabled={authLoading}
+                  className="px-4 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] font-medium disabled:opacity-50"
+                >
+                  {authLoading ? "Creating..." : "Sign Up"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Main Content */}
       <main className="flex-1 flex flex-col lg:flex-row">
         {/* Content Area with Tabs */}
@@ -103,6 +302,18 @@ export default function Home() {
                 >
                   {isExecuting ? 'Form Data' : 'Case Form'}
                 </button>
+                {user && (
+                  <button
+                    onClick={() => setActiveTab('autoset')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'autoset'
+                        ? 'border-[#FF3B00] text-[#FF3B00]'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    Auto-Set
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveTab('browser')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -126,9 +337,22 @@ export default function Home() {
                   onSubmit={handleFormSubmit} 
                   isLoading={isLoading}
                   readOnly={isExecuting}
+                  isLoggedIn={!!user}
+                  userId={user?.uid}
+                  onLoginRequested={() => setShowLoginModal(true)}
                 />
               </div>
             </div>
+
+            {/* Auto-Set Tab Content */}
+            {user && (
+              <div className={`h-full ${activeTab === 'autoset' ? 'block' : 'hidden'}`}>
+                <AutoSet 
+                  isLoggedIn={!!user}
+                  userId={user?.uid}
+                />
+              </div>
+            )}
 
             {/* Browser Tab Content */}
             <div className={`h-full ${activeTab === 'browser' ? 'block' : 'hidden'}`}>
