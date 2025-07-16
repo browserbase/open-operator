@@ -1100,7 +1100,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <button
                     type="submit"
                     disabled={isLoading || timeValidationError}
-                    className="px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    className="invisible px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {isLoading ? "Processing..." : "Start Automation"}
                   </button>
@@ -1334,6 +1334,39 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Floating Run Automation Button */}
+      {!readOnly && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <button
+            type="button"
+            onClick={() => {
+              // Trigger form submission programmatically
+              const form = document.querySelector('form');
+              if (form) {
+                form.requestSubmit();
+              }
+            }}
+            disabled={isLoading || timeValidationError}
+            className="px-6 py-3 bg-[#FF3B00] text-white rounded-full shadow-lg hover:bg-[#E63400] hover:shadow-xl transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M13 10V3L4 14h7v7l9-11h-7z" 
+              />
+            </svg>
+            {isLoading ? "Processing..." : "Run Automation"}
+          </button>
         </div>
       )}
     </div>
