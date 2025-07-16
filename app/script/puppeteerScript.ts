@@ -600,6 +600,7 @@ export async function runPuppeteerScript(
       }
     }, 30000); // Every 30 seconds
     
+    emit(uid, 'progress', 'Connecting to Ecasenotes...');
     await page.goto("https://portal.ecasenotes.com", { waitUntil: "networkidle2" });
 
     emit(uid, 'success', 'Ecasenotes reached');
@@ -639,6 +640,7 @@ export async function runPuppeteerScript(
     
     await page.waitForSelector(".sort-CaseNumber", { visible: true });
     console.log("Case results loaded");
+    emit(uid, 'success', 'Notes fetched successfully!');
     
     await page.evaluate((caseNumber) => {
       const caseLink = Array.from(document.querySelectorAll('.sort-CaseNumber')).find(el => el.textContent?.trim() === caseNumber) as HTMLElement;
@@ -797,6 +799,7 @@ export async function runPuppeteerScript(
       console.log('Service Type Identifier is neither "56a" nor "47e". Skipping observation notes population.');
     }
 
+    emit(uid, 'success', 'Observations completed!');
     console.log("ready to save the note");
     await saveAndReadyNote();
 
@@ -835,6 +838,7 @@ export async function runPuppeteerScript(
       
       await page.waitForSelector("#ctl00_UpdateProgressDisplay", { hidden: true, timeout: defaultTimeout });
       console.log("Mileage Successfully Saved!");
+      emit(uid, 'success', 'Mileage Saved Successfully!');
       emit(uid, 'toast', 'Mileage Saved Successfully!');
       emit(uid, 'finished', 'Process Completed!');
       emit(uid, 'toast', 'Process Completed!');
