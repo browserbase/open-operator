@@ -525,7 +525,7 @@ export async function runPuppeteerScript(
       }, searchInputSelector);
       
       // Type the search string character by character to trigger proper events
-      await page.type(searchInputSelector, searchString, { delay: 100 });
+      await page.type(searchInputSelector, searchString, { delay: 0 });
       console.log(`Typed search string: "${searchString}"`);
       
       // Trigger additional events that might be needed for the filter
@@ -541,7 +541,7 @@ export async function runPuppeteerScript(
       }, searchInputSelector);
       
       // Wait for the table to load after filtering
-      await sleep(2000);
+      await sleep(1500);
       
       // Look for the first note link matching the pattern href="/DFCS/Notes/Note?id=..."
       const noteFound = await page.evaluate(() => {
@@ -884,21 +884,7 @@ export async function runPuppeteerScript(
 
     if (mileageStartAddress && mileageStartAddress.trim() !== '') {
       emit(uid, 'progress', `Processing Mileage Trip Segments`);
-      const pageTabs = await page.$("#pageTabs");
-
-      await page.evaluate((pageTabs) => {
-        if (!pageTabs) {
-          throw new Error('pageTabs element not found');
-        }
-        const mileageTabLink = pageTabs.querySelector('a[href*="/dfcs/notes/trips"]') as HTMLElement;
-        if (mileageTabLink) {
-          mileageTabLink.click();
-        } else {
-          throw new Error('Mileage tab link not found within pageTabs');
-        }
-      }, pageTabs);
-      console.log("Navigated to Mileage Tab");
-
+      
       const mileageTabSelector = 'a[href*="/dfcs/notes/trips"]';
       await page.waitForSelector(mileageTabSelector, { visible: true, timeout: defaultTimeout });
       await page.click(mileageTabSelector);
