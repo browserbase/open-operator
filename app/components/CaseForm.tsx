@@ -530,11 +530,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       )}
       {/* Main Content */}
       <div className="p-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-none">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8"
+            className="p-8"
           >
             <div className="mb-8">
               <h1 className="text-3xl font-ppneue text-gray-900 dark:text-gray-100 mb-2">

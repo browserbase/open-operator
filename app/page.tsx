@@ -285,9 +285,9 @@ export default function Home() {
         </div>
       )}
       {/* Main Content */}
-      <main className="flex-1 flex flex-col lg:flex-row">
+      <main className="flex-1 flex relative">
         {/* Content Area with Tabs */}
-        <div className="flex-1 p-6 border-r border-gray-200 dark:border-gray-700">
+        <div className={`flex-1 p-6 ${isExecuting ? 'pr-[336px]' : ''}`}>
           {/* Tab Navigation */}
           <div className="mb-4">
             <div className="border-b border-gray-200 dark:border-gray-700">
@@ -329,7 +329,7 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-[calc(100vh-200px)]">
             {/* Form Tab Content - Always render to preserve state */}
             <div className={`h-full ${activeTab === 'form' ? 'block' : 'hidden'}`}>
               <div className="h-full overflow-y-auto">
@@ -337,6 +337,7 @@ export default function Home() {
                   onSubmit={handleFormSubmit} 
                   isLoading={isLoading}
                   readOnly={isExecuting}
+                  initialFormData={submittedFormData || undefined}
                   isLoggedIn={!!user}
                   userId={user?.uid}
                   onLoginRequested={() => setShowLoginModal(true)}
@@ -358,7 +359,7 @@ export default function Home() {
             <div className={`h-full ${activeTab === 'browser' ? 'block' : 'hidden'}`}>
               {isExecuting ? (
                 <>
-                  <div className="w-full h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4">
+                  <div className="flex-shrink-0 w-full h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-red-500" />
                       <div className="w-3 h-3 rounded-full bg-yellow-500" />
@@ -368,11 +369,11 @@ export default function Home() {
                       Browser Session
                     </div>
                   </div>
-                  <div className="p-4 h-full">
+                  <div className="flex-1 h-full min-h-[100px]">
                     {sessionUrl ? (
                       <iframe
                         src={sessionUrl}
-                        className="w-full h-full rounded-lg border border-gray-200 dark:border-gray-700"
+                        className="w-full h-full border-0"
                         sandbox="allow-same-origin allow-scripts allow-forms"
                         loading="lazy"
                         referrerPolicy="no-referrer"
@@ -413,113 +414,13 @@ export default function Home() {
 
         {/* Progress Sidebar - only show when executing */}
         {isExecuting && (
-          <ExecutionProgressSidebar 
-            executionId={executionId || ''}
-          />
+          <div className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col z-30 shadow-lg">
+            <ExecutionProgressSidebar 
+              executionId={executionId || ''}
+            />
+          </div>
         )}
       </main>
-    </div>
-  );
-}
-
-// FormDataDisplay component to show submitted form data
-interface FormDataDisplayProps {
-  formData: CaseFormData;
-}
-
-function FormDataDisplay({ formData }: FormDataDisplayProps) {
-  return (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Case Information</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Case Number</label>
-            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-              {formData.caseNumber || 'Not provided'}
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Service Type</label>
-            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-              {formData.serviceTypeIdentifier || 'Not provided'}
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Person Served</label>
-            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-              {formData.personServed || 'Not provided'}
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date of Service</label>
-            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-              {formData.dateOfService || 'Not provided'}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
-            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-              {formData.startTime || 'Not provided'}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
-            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-              {formData.endTime || 'Not provided'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {formData.noteSummary47e && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Note Summary</label>
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100 min-h-[120px] whitespace-pre-wrap">
-            {formData.noteSummary47e}
-          </div>
-        </div>
-      )}
-
-      {formData.observationNotes56a && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observation Notes</label>
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100 space-y-2">
-            {formData.observationNotes56a.pickUpAddress && (
-              <div><strong>Pick-up Address:</strong> {formData.observationNotes56a.pickUpAddress}</div>
-            )}
-            {formData.observationNotes56a.locationAddress && (
-              <div><strong>Location Address:</strong> {formData.observationNotes56a.locationAddress}</div>
-            )}
-            {formData.observationNotes56a.purposeOfTransportation && (
-              <div><strong>Purpose:</strong> {formData.observationNotes56a.purposeOfTransportation}</div>
-            )}
-            {formData.observationNotes56a.interactionsWithClient && (
-              <div><strong>Client Interactions:</strong> {formData.observationNotes56a.interactionsWithClient}</div>
-            )}
-            {formData.observationNotes56a.concerns && (
-              <div><strong>Concerns:</strong> {formData.observationNotes56a.concerns}</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {formData.endAddresses && formData.endAddresses.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Addresses</label>
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
-            {formData.endAddresses.map((address, index) => (
-              <div key={index} className="mb-1">{index + 1}. {address}</div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -606,7 +507,7 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
   }, [executionId]);
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+    <>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Progress</h3>
       </div>
@@ -665,6 +566,6 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
