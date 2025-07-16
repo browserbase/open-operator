@@ -129,8 +129,23 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
   // Handle mileage checkbox with address selection
   const handleMileageToggle = (enabled: boolean) => {
-    if (enabled && (autoSetData.homeAddress || autoSetData.officeAddress)) {
-      setShowAddressSelection(true);
+    if (enabled) {
+      // Set End Address 1 to pickup address if it exists
+      const pickupAddress = formData.observationNotes56a?.pickUpAddress;
+      if (pickupAddress && formData.endAddresses[0] === "") {
+        const newEndAddresses = [...formData.endAddresses];
+        newEndAddresses[0] = pickupAddress;
+        setFormData(prev => ({
+          ...prev,
+          endAddresses: newEndAddresses
+        }));
+      }
+      
+      if (autoSetData.homeAddress || autoSetData.officeAddress) {
+        setShowAddressSelection(true);
+      } else {
+        setShowMileage(enabled);
+      }
     } else {
       setShowMileage(enabled);
     }
@@ -671,40 +686,18 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       />
                     </div>
 
-                    {/* Purpose of Transportation as select with custom input for 'Other' */}
+                    {/* Purpose of Transportation as text input */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Purpose of Transportation <span className="text-red-500">*</span></label>
-                      <select
-                        value={['Client P/O', 'Client D/O'].includes(formData.observationNotes56a?.purposeOfTransportation || '') 
-                          ? formData.observationNotes56a?.purposeOfTransportation 
-                          : formData.observationNotes56a?.purposeOfTransportation ? 'Other' : ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          if (val === 'Other') {
-                            // Keep the current custom value when selecting "Other"
-                            return;
-                          } else {
-                            handleObservationNotesChange('purposeOfTransportation', val);
-                          }
-                        }}
+                      <input
+                        type="text"
+                        value={formData.observationNotes56a?.purposeOfTransportation || ''}
+                        onChange={e => handleObservationNotesChange('purposeOfTransportation', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="Enter purpose of transportation"
                         disabled={readOnly}
-                      >
-                        <option value="">Select purpose</option>
-                        <option value="Client P/O">Client P/O</option>
-                        <option value="Client D/O">Client D/O</option>
-                        <option value="Other">Other</option>
-                      </select>
-                      {!['Client P/O', 'Client D/O', ''].includes(formData.observationNotes56a?.purposeOfTransportation || '') && (
-                        <input
-                          type="text"
-                          value={formData.observationNotes56a?.purposeOfTransportation || ''}
-                          onChange={e => handleObservationNotesChange('purposeOfTransportation', e.target.value)}
-                          className="mt-2 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          placeholder="Enter custom purpose"
-                          disabled={readOnly}
-                        />
-                      )}
+                        required
+                      />
                     </div>
 
                     {/* Other observation note fields except purposeOfTransportation, pickUpAddress, locationAddress */}
@@ -815,6 +808,28 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                               readOnly={readOnly}
                               required={true}
                             />
+                            {!readOnly && (autoSetData.homeAddress || autoSetData.officeAddress) && (
+                              <div className="flex gap-2 mt-2">
+                                {autoSetData.homeAddress && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEndAddressChange(index, autoSetData.homeAddress)}
+                                    className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                  >
+                                    Set Home
+                                  </button>
+                                )}
+                                {autoSetData.officeAddress && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEndAddressChange(index, autoSetData.officeAddress)}
+                                    className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                  >
+                                    Set Office
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
