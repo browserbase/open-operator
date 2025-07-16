@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { FormData } from "../script/automationScript";
+import AddressAutocomplete from "./AddressAutocomplete";
 
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
   isLoading: boolean;
+  readOnly?: boolean;
+  initialFormData?: FormData;
 }
 
 interface SavedCredentials {
@@ -23,7 +25,7 @@ interface FormTemplate {
   formData: Omit<FormData, 'companyCode' | 'username' | 'password'>;
 }
 
-export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
+export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData }: CaseFormProps) {
   const [saveCredentials, setSaveCredentials] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<FormTemplate[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -60,6 +62,13 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
 
   // Load saved credentials on component mount
   useEffect(() => {
+    // If initialFormData is provided, use it (read-only mode)
+    if (initialFormData) {
+      setFormData(initialFormData);
+      setShowMileage(Boolean(initialFormData.mileageStartAddress || initialFormData.mileageStartMileage));
+      return;
+    }
+
     const savedCredentials = localStorage.getItem('caseFormCredentials');
     if (savedCredentials) {
       const credentials: SavedCredentials = JSON.parse(savedCredentials);
@@ -77,7 +86,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
     if (savedTemplatesData) {
       setSavedTemplates(JSON.parse(savedTemplatesData));
     }
-  }, []);
+  }, [initialFormData]);
 
   // Save credentials to localStorage when saveCredentials changes
   useEffect(() => {
@@ -208,79 +217,73 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
     localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
   };
 
+  // Helper for input styling with readonly support
+  const inputClassName = `w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-gray-50 read-only:dark:bg-gray-800 read-only:cursor-default' : ''}`;
+  
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Navigation */}
-      <nav className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/favicon.svg"
-            alt="Open Operator"
-            className="w-8 h-8"
-            width={32}
-            height={32}
-          />
-          <span className="font-ppsupply text-gray-900">Case Note Automation</span>
-        </div>
-      </nav>
-
+    <div className="h-full overflow-y-auto">
       {/* Main Content */}
-      <main className="flex-1 p-6">
+      <div className="p-6">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-8"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8"
           >
             <div className="mb-8">
-              <h1 className="text-3xl font-ppneue text-gray-900 mb-2">
-                Case Note Form
+              <h1 className="text-3xl font-ppneue text-gray-900 dark:text-gray-100 mb-2">
+                {readOnly ? "Submitted Case Data" : "Case Note Form"}
               </h1>
-              <p className="text-gray-600 font-ppsupply">
-                Fill out the form below to automatically create and populate case notes.
+              <p className="text-gray-600 dark:text-gray-400 font-ppsupply">
+                {readOnly 
+                  ? "Review the data that was submitted for automation." 
+                  : "Fill out the form below to automatically create and populate case notes."
+                }
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Template Management */}
-              <div className="border-b pb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Form Templates</h3>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowLoadTemplates(true)}
-                      disabled={savedTemplates.length === 0}
-                      className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Load Template ({savedTemplates.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowTemplateModal(true)}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                      Save as Template
-                    </button>
+              {/* Template Management - hide in read-only mode */}
+              {!readOnly && (
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Form Templates</h3>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowLoadTemplates(true)}
+                        disabled={savedTemplates.length === 0}
+                        className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Load Template ({savedTemplates.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowTemplateModal(true)}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        Save as Template
+                      </button>
+                    </div>
                   </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Save your form data as templates for quick reuse. Templates do not include login credentials.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600">
-                  Save your form data as templates for quick reuse. Templates do not include login credentials.
-                </p>
-              </div>
+              )}
               {/* Login Credentials */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Ecasenote Login Credentials</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Ecasenote Login Credentials</h3>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center">
                       <input
                         type="checkbox"
                         checked={saveCredentials}
                         onChange={(e) => setSaveCredentials(e.target.checked)}
-                        className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-gray-300 rounded"
+                        className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded"
                       />
-                      <span className="text-sm text-gray-700">Save credentials locally</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Save credentials locally</span>
                     </label>
                     {saveCredentials && (
                       <button
@@ -295,7 +298,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Company Code *
                     </label>
                     <input
@@ -303,12 +306,13 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                       required
                       value={formData.companyCode}
                       onChange={(e) => handleInputChange("companyCode", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                      readOnly={readOnly}
+                      className={`${inputClassName}`}
                       placeholder="Enter company code"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Username *
                     </label>
                     <input
@@ -316,12 +320,13 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                       required
                       value={formData.username}
                       onChange={(e) => handleInputChange("username", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                      readOnly={readOnly}
+                      className={`${inputClassName}`}
                       placeholder="Enter Username"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Password *
                     </label>
                     <input
@@ -329,13 +334,14 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                       required
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                      readOnly={readOnly}
+                      className={`${inputClassName}`}
                       placeholder="Enter password"
                     />
                   </div>
                 </div>
                 {saveCredentials && (
-                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
                     <div className="flex">
                       <div className="flex-shrink-0">
                         <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -343,7 +349,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-yellow-700">
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
                           Credentials will be saved locally in your browser. This data is not transmitted to any external servers.
                         </p>
                       </div>
@@ -355,7 +361,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
               {/* Case Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Case Number *
                   </label>
                   <input
@@ -363,12 +369,13 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                     required
                     value={formData.caseNumber}
                     onChange={(e) => handleInputChange("caseNumber", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    readOnly={readOnly}
+                    className={inputClassName}
                     placeholder="Enter case number"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Date of Service *
                   </label>
                   <input
@@ -376,7 +383,8 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                     required
                     value={formData.dateOfService}
                     onChange={(e) => handleInputChange("dateOfService", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    readOnly={readOnly}
+                    className={inputClassName}
                   />
                 </div>
               </div>
@@ -384,7 +392,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
               {/* Time Information */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Start Time *
                   </label>
                   <input
@@ -392,11 +400,11 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                     required
                     value={formData.startTime}
                     onChange={(e) => handleInputChange("startTime", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     End Time *
                   </label>
                   <input
@@ -404,18 +412,19 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                     required
                     value={formData.endTime}
                     onChange={(e) => handleInputChange("endTime", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Service Type *
                   </label>
                   <select
                     required
                     value={formData.serviceTypeIdentifier}
                     onChange={(e) => handleInputChange("serviceTypeIdentifier", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    disabled={readOnly}
+                    className={inputClassName}
                   >
                     <option value="56a">56a</option>
                     <option value="47e">47e</option>
@@ -425,7 +434,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
 
               {/* Person Served */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Person Served *
                 </label>
                 <input
@@ -433,7 +442,8 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                   required
                   value={formData.personServed}
                   onChange={(e) => handleInputChange("personServed", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                  readOnly={readOnly}
+                  className={inputClassName}
                   placeholder="Enter person served"
                 />
               </div>
@@ -441,22 +451,48 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
               {/* Observation Notes for 56a */}
               {formData.serviceTypeIdentifier === "56a" && (
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900">Observation Notes (56a)</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Observation Notes (56a)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.entries(formData.observationNotes56a || {}).map(([key, value]) => (
-                      <div key={key}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                        </label>
-                        <textarea
-                          value={value}
-                          onChange={(e) => handleObservationNotesChange(key, e.target.value)}
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
-                          placeholder={`Enter ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
-                        />
-                      </div>
-                    ))}
+                    {/* Pick Up Address with Autocomplete */}
+                    <div>
+                      <AddressAutocomplete
+                        value={formData.observationNotes56a?.pickUpAddress || ""}
+                        onChange={(value) => handleObservationNotesChange("pickUpAddress", value)}
+                        label="Pick Up Address"
+                        placeholder="Enter pickup address"
+                        readOnly={readOnly}
+                      />
+                    </div>
+
+                    {/* Location Address with Autocomplete */}
+                    <div>
+                      <AddressAutocomplete
+                        value={formData.observationNotes56a?.locationAddress || ""}
+                        onChange={(value) => handleObservationNotesChange("locationAddress", value)}
+                        label="Location Address"
+                        placeholder="Enter location address"
+                        readOnly={readOnly}
+                      />
+                    </div>
+
+                    {/* Other observation note fields */}
+                    {Object.entries(formData.observationNotes56a || {})
+                      .filter(([key]) => key !== 'pickUpAddress' && key !== 'locationAddress')
+                      .map(([key, value]) => (
+                        <div key={key}>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                          </label>
+                          <textarea
+                            value={value}
+                            onChange={(e) => handleObservationNotesChange(key, e.target.value)}
+                            readOnly={readOnly}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent read-only:bg-gray-50 read-only:dark:bg-gray-800"
+                            placeholder={`Enter ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
+                          />
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}
@@ -464,14 +500,14 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
               {/* Note Summary for 47e */}
               {formData.serviceTypeIdentifier === "47e" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Note Summary (47e)
                   </label>
                   <textarea
                     value={formData.noteSummary47e}
                     onChange={(e) => handleInputChange("noteSummary47e", e.target.value)}
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
                     placeholder="Enter note summary for 47e service type"
                   />
                 </div>
@@ -480,15 +516,16 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
               {/* Mileage Section */}
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Mileage Information</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Mileage Information</h3>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={showMileage}
                       onChange={(e) => setShowMileage(e.target.checked)}
-                      className="mr-2"
+                      disabled={readOnly}
+                      className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded disabled:opacity-50"
                     />
-                    <span className="text-sm text-gray-700">Include Mileage</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Include Mileage</span>
                   </label>
                 </div>
 
@@ -496,26 +533,24 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Start Address
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.mileageStartAddress}
-                          onChange={(e) => handleInputChange("mileageStartAddress", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                        <AddressAutocomplete
+                          value={formData.mileageStartAddress || ""}
+                          onChange={(value) => handleInputChange("mileageStartAddress", value)}
+                          label="Start Address"
                           placeholder="Enter start address"
+                          readOnly={readOnly}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Start Mileage
                         </label>
                         <input
                           type="text"
                           value={formData.mileageStartMileage}
                           onChange={(e) => handleInputChange("mileageStartMileage", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                          readOnly={readOnly}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent read-only:bg-gray-50 read-only:dark:bg-gray-800"
                           placeholder="Enter start mileage"
                         />
                       </div>
@@ -524,33 +559,36 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                     {/* End Addresses */}
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                           End Addresses
                         </label>
-                        <button
-                          type="button"
-                          onClick={addEndAddress}
-                          className="px-3 py-1 text-sm bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors"
-                        >
-                          Add Address
-                        </button>
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={addEndAddress}
+                            className="px-3 py-1 text-sm bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors"
+                          >
+                            Add Address
+                          </button>
+                        )}
                       </div>
                       {formData.endAddresses.map((address, index) => (
                         <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                           <div>
-                            <input
-                              type="text"
+                            <AddressAutocomplete
                               value={address}
-                              onChange={(e) => handleEndAddressChange(index, e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                              onChange={(value) => handleEndAddressChange(index, value)}
+                              label=""
                               placeholder={`End address ${index + 1}`}
+                              readOnly={readOnly}
                             />
                           </div>
                           <div>
                             <select
                               value={formData.additionalDropdownValues[index]}
                               onChange={(e) => handleDropdownValueChange(index, e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                              disabled={readOnly}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent disabled:bg-gray-50 disabled:dark:bg-gray-800"
                             >
                               <option value="">Select purpose</option>
                               <option value="transport">Transport</option>
@@ -560,7 +598,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                             </select>
                           </div>
                           <div>
-                            {formData.endAddresses.length > 1 && (
+                            {!readOnly && formData.endAddresses.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => removeEndAddress(index)}
@@ -577,35 +615,37 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                 )}
               </div>
 
-              {/* Submit Button */}
-              <div className="flex justify-end pt-6 border-t">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  {isLoading ? "Processing..." : "Start Automation"}
-                </button>
-              </div>
+              {/* Submit Button - hide in read-only mode */}
+              {!readOnly && (
+                <div className="flex justify-end pt-6 border-t">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {isLoading ? "Processing..." : "Start Automation"}
+                  </button>
+                </div>
+              )}
             </form>
           </motion.div>
         </div>
-      </main>
+      </div>
 
       {/* Save Template Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Save Template</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Save Template</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Template Name
               </label>
               <input
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter template name"
                 autoFocus
               />
@@ -617,7 +657,7 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
                   setShowTemplateModal(false);
                   setTemplateName("");
                 }}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
@@ -636,13 +676,13 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
 
       {/* Load Templates Modal */}
       {showLoadTemplates && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Load Template</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Load Template</h3>
               <button
                 onClick={() => setShowLoadTemplates(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -651,26 +691,26 @@ export default function CaseForm({ onSubmit, isLoading }: CaseFormProps) {
             </div>
             
             {savedTemplates.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 <p>No templates saved yet.</p>
                 <p className="text-sm mt-1">Fill out the form and save it as a template to get started.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {savedTemplates.map((template) => (
-                  <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div key={template.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{template.name}</h4>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           Created: {new Date(template.createdAt).toLocaleDateString()} at {new Date(template.createdAt).toLocaleTimeString()}
                         </p>
-                        <div className="mt-2 text-sm text-gray-500">
-                          <span className="inline-block bg-gray-100 px-2 py-1 rounded mr-2">
+                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mr-2">
                             Service: {template.formData.serviceTypeIdentifier}
                           </span>
                           {template.formData.personServed && (
-                            <span className="inline-block bg-gray-100 px-2 py-1 rounded mr-2">
+                            <span className="inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mr-2">
                               Person: {template.formData.personServed}
                             </span>
                           )}
