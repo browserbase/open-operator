@@ -16,6 +16,7 @@
     "@vercel/analytics": "^1.4.1",
     "ai": "^4.1.2",
     "firebase": "^11.10.0",
+    "firebase-admin": "^13.4.0",
     "framer-motion": "^11.0.3",
     "jotai": "^2.11.1",
     "lottie-react": "^2.4.1",
