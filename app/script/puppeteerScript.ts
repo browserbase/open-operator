@@ -163,10 +163,10 @@ export async function runPuppeteerScript(
 
   // Selector templates for mileage fields
   const mileageEndAddressSelectorTemplate = (index: number): string =>
-    `#DataModels_${index.toString().padStart(2, '0')}__EndAddress`;
+    `#DataModels_${index}__EndAddress`;
 
   const additionalDropdownSelectorTemplate = (index: number): string =>
-    `#DataModels_${index.toString().padStart(2, '0')}__PurposeOfTripId`;
+    `#DataModels_${index}__PurposeOfTripId`;
 
   // Function to populate the start address and mileage
   const populateStartDetails = async (
