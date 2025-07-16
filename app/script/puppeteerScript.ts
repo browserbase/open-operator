@@ -217,12 +217,45 @@ export async function runPuppeteerScript(
     let retries = 3;
     while (retries > 0) {
       try {
-        const textArea = await page.$(selector);
-        if (!textArea) {
+        const element = await page.$(selector);
+        if (!element) {
           throw new Error(`Selector "${selector}" not found.`);
         }
         
-        // Method 1: Focus, select all, and replace (fastest while still clearing properly)
+        // Check if it's a number input field
+        const elementType = await page.evaluate((selector) => {
+          const el = document.querySelector(selector) as HTMLInputElement;
+          return el ? el.type : null;
+        }, selector);
+        
+        // For number inputs, always use keyboard typing
+        if (elementType === 'number') {
+          console.log(`Detected number input for "${selector}", using keyboard typing`);
+          await element.focus();
+          
+          // Clear existing content
+          await page.keyboard.down('Control');
+          await page.keyboard.press('KeyA');
+          await page.keyboard.up('Control');
+          await page.keyboard.press('Backspace');
+          
+          // Type the number
+          await element.type(text, { delay: 50 });
+          console.log(`Typed number into "${selector}": "${text}"`);
+          
+          // Trigger change event
+          await page.evaluate((selector) => {
+            const el = document.querySelector(selector) as HTMLInputElement;
+            if (el) {
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+              el.blur();
+            }
+          }, selector);
+          
+          return;
+        }
+        
+        // For non-number inputs, try the fast method first
         await page.evaluate((selector, text) => {
           const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
           if (element) {
