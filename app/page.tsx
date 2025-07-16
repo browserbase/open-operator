@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import CaseForm from "./components/CaseForm";
 import ExecutionView from "./components/ExecutionView";
+import ThemeToggle from "./components/ThemeToggle";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { FormData } from "./script/automationScript";
 
@@ -57,9 +58,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Top Navigation */}
-      <nav className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200">
+      <nav className="flex justify-between items-center px-8 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <Image
             src="/favicon.svg"
@@ -68,47 +69,47 @@ export default function Home() {
             width={32}
             height={32}
           />
-          <span className="font-ppsupply text-gray-900">
-            {isExecuting ? "Automation in Progress" : "Case Note Automation"}
+          <span className="font-ppsupply text-gray-900 dark:text-gray-100">
+            {isExecuting ? "Automation in Progress" : "ECaseNote Automation"}
           </span>
         </div>
-        {isExecuting && (
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Close
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          {isExecuting && (
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            >
+              Close
+            </button>
+          )}
+        </div>
       </nav>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col lg:flex-row">
         {/* Content Area with Tabs */}
-        <div className="flex-1 p-6 border-r border-gray-200">
+        <div className="flex-1 p-6 border-r border-gray-200 dark:border-gray-700">
           {/* Tab Navigation */}
           <div className="mb-4">
-            <div className="border-b border-gray-200">
+            <div className="border-b border-gray-200 dark:border-gray-700">
               <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setActiveTab('form')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'form'
                       ? 'border-[#FF3B00] text-[#FF3B00]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
                   {isExecuting ? 'Form Data' : 'Case Form'}
                 </button>
                 <button
                   onClick={() => setActiveTab('browser')}
-                  disabled={!isExecuting}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'browser' && isExecuting
+                    activeTab === 'browser'
                       ? 'border-[#FF3B00] text-[#FF3B00]'
-                      : isExecuting
-                      ? 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      : 'border-transparent text-gray-400 cursor-not-allowed'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
                   Browser Session
@@ -118,7 +119,7 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-full">
             <AnimatePresence mode="wait">
               {activeTab === 'form' ? (
                 <motion.div
@@ -129,9 +130,14 @@ export default function Home() {
                   className="h-full"
                 >
                   {isExecuting && submittedFormData ? (
-                    // Show form data when executing
-                    <div className="p-6 h-full overflow-y-auto">
-                      <FormDataDisplay formData={submittedFormData} />
+                    // Show form in read-only mode when executing
+                    <div className="h-full overflow-y-auto">
+                      <CaseForm 
+                        onSubmit={handleFormSubmit} 
+                        isLoading={isLoading}
+                        readOnly={true}
+                        initialFormData={submittedFormData}
+                      />
                     </div>
                   ) : (
                     // Show form when not executing
@@ -153,13 +159,13 @@ export default function Home() {
                 >
                   {isExecuting ? (
                     <>
-                      <div className="w-full h-12 bg-white border-b border-gray-200 flex items-center px-4">
+                      <div className="w-full h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-red-500" />
                           <div className="w-3 h-3 rounded-full bg-yellow-500" />
                           <div className="w-3 h-3 rounded-full bg-green-500" />
                         </div>
-                        <div className="ml-4 text-sm text-gray-600">
+                        <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
                           Browser Session
                         </div>
                       </div>
@@ -167,16 +173,16 @@ export default function Home() {
                         {sessionUrl ? (
                           <iframe
                             src={sessionUrl}
-                            className="w-full h-full rounded-lg border border-gray-200"
+                            className="w-full h-full rounded-lg border border-gray-200 dark:border-gray-700"
                             sandbox="allow-same-origin allow-scripts allow-forms"
                             loading="lazy"
                             referrerPolicy="no-referrer"
                             title="Browser Session"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                             <div className="text-center">
-                              <div className="w-16 h-16 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                              <div className="w-16 h-16 border-4 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
                               <p>Initializing browser session...</p>
                             </div>
                           </div>
@@ -184,10 +190,10 @@ export default function Home() {
                       </div>
                     </>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-gray-500">
+                    <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
                         </div>
@@ -221,47 +227,47 @@ function FormDataDisplay({ formData }: FormDataDisplayProps) {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Case Information</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Case Information</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Case Number</label>
-            <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Case Number</label>
+            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
               {formData.caseNumber || 'Not provided'}
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Service Type</label>
-            <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Service Type</label>
+            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
               {formData.serviceTypeIdentifier || 'Not provided'}
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Person Served</label>
-            <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Person Served</label>
+            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
               {formData.personServed || 'Not provided'}
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Date of Service</label>
-            <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date of Service</label>
+            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
               {formData.dateOfService || 'Not provided'}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Start Time</label>
-            <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
+            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
               {formData.startTime || 'Not provided'}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">End Time</label>
-            <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
+            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
               {formData.endTime || 'Not provided'}
             </div>
           </div>
@@ -270,8 +276,8 @@ function FormDataDisplay({ formData }: FormDataDisplayProps) {
 
       {formData.noteSummary47e && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Note Summary</label>
-          <div className="p-4 bg-gray-50 rounded-md text-sm text-gray-900 min-h-[120px] whitespace-pre-wrap">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Note Summary</label>
+          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100 min-h-[120px] whitespace-pre-wrap">
             {formData.noteSummary47e}
           </div>
         </div>
@@ -279,8 +285,8 @@ function FormDataDisplay({ formData }: FormDataDisplayProps) {
 
       {formData.observationNotes56a && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Observation Notes</label>
-          <div className="p-4 bg-gray-50 rounded-md text-sm text-gray-900 space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observation Notes</label>
+          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100 space-y-2">
             {formData.observationNotes56a.pickUpAddress && (
               <div><strong>Pick-up Address:</strong> {formData.observationNotes56a.pickUpAddress}</div>
             )}
@@ -302,8 +308,8 @@ function FormDataDisplay({ formData }: FormDataDisplayProps) {
 
       {formData.endAddresses && formData.endAddresses.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">End Addresses</label>
-          <div className="p-4 bg-gray-50 rounded-md text-sm text-gray-900">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Addresses</label>
+          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
             {formData.endAddresses.map((address, index) => (
               <div key={index} className="mb-1">{index + 1}. {address}</div>
             ))}
@@ -392,9 +398,9 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
   }, [executionId]);
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">Progress</h3>
+    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Progress</h3>
       </div>
       
       <div className="flex-1 p-4 overflow-y-auto">
@@ -413,7 +419,7 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
                       </svg>
                     </div>
                   ) : step?.status === 'loading' ? (
-                    <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
                   ) : step?.status === 'error' ? (
                     <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -421,14 +427,14 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
                       </svg>
                     </div>
                   ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
                   )}
                 </div>
                 <span className={`text-sm ${
-                  step?.status === 'completed' ? 'text-green-700' : 
-                  step?.status === 'loading' ? 'text-blue-600' :
-                  step?.status === 'error' ? 'text-red-600' : 
-                  'text-gray-500'
+                  step?.status === 'completed' ? 'text-green-700 dark:text-green-400' : 
+                  step?.status === 'loading' ? 'text-blue-600 dark:text-blue-400' :
+                  step?.status === 'error' ? 'text-red-600 dark:text-red-400' : 
+                  'text-gray-500 dark:text-gray-400'
                 }`}>
                   {label}
                 </span>
