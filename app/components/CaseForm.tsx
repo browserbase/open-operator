@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
 import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFirebase } from "./firebaseTemplateService";
 import { AutoSetData } from "./AutoSet";
+import { dropdownOptions } from "../constants/dropdownOptions";
 
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
@@ -27,7 +28,8 @@ export interface FormTemplate {
   id: string;
   name: string;
   createdAt: string;
-  formData: Omit<FormData, 'companyCode' | 'username' | 'password'>;
+  isAutoLoad?: boolean;
+  formData: Omit<FormData, 'companyCode' | 'username' | 'password' | 'dateOfService'> & { dateOfService?: string };
 }
 
 export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested }: CaseFormProps) {
@@ -36,6 +38,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [showLoadTemplates, setShowLoadTemplates] = useState(false);
+  const [overwriteMode, setOverwriteMode] = useState(false);
+  const [existingTemplateId, setExistingTemplateId] = useState<string | null>(null);
   const [timeValidationError, setTimeValidationError] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     companyCode: "",
@@ -67,6 +71,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [showMileage, setShowMileage] = useState(false);
   const [autoSetData, setAutoSetData] = useState<AutoSetData>({ homeAddress: "", officeAddress: "" });
   const [showAddressSelection, setShowAddressSelection] = useState(false);
+  const [expandedStops, setExpandedStops] = useState<{ [key: number]: boolean }>({});
+  const hasAutoLoaded = useRef(false);
 
   // Load saved credentials and templates on component mount
   useEffect(() => {
@@ -92,7 +98,19 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     // Load saved templates from localStorage
     const savedTemplatesData = localStorage.getItem('caseFormTemplates');
     if (savedTemplatesData) {
-      setSavedTemplates(JSON.parse(savedTemplatesData));
+      const templates = JSON.parse(savedTemplatesData);
+      setSavedTemplates(templates);
+      
+      // Auto-load template if one is marked for auto-loading
+      const autoLoadTemplate = templates.find((template: FormTemplate) => template.isAutoLoad);
+      if (autoLoadTemplate && autoLoadTemplate.formData && !hasAutoLoaded.current) {
+        setFormData(prev => ({
+          ...prev,
+          ...autoLoadTemplate.formData
+        }));
+        setShowMileage(Boolean(autoLoadTemplate.formData.mileageStartAddress || autoLoadTemplate.formData.mileageStartMileage));
+        hasAutoLoaded.current = true;
+      }
     }
   }, [initialFormData]);
 
@@ -110,6 +128,19 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
             index === self.findIndex(t => t.name === template.name && t.createdAt === template.createdAt)
           );
           setSavedTemplates(uniqueTemplates);
+          
+          // Auto-load template if one is marked for auto-loading (only once)
+          if (!hasAutoLoaded.current) {
+            const autoLoadTemplate = uniqueTemplates.find((template: FormTemplate) => template.isAutoLoad);
+            if (autoLoadTemplate && autoLoadTemplate.formData) {
+              setFormData(prev => ({
+                ...prev,
+                ...autoLoadTemplate.formData
+              }));
+              setShowMileage(Boolean(autoLoadTemplate.formData.mileageStartAddress || autoLoadTemplate.formData.mileageStartMileage));
+              hasAutoLoaded.current = true;
+            }
+          }
         } catch (error) {
           console.error('Failed to load templates from Firebase:', error);
         }
@@ -239,10 +270,16 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   };
 
   const addEndAddress = () => {
+    const newIndex = formData.endAddresses.length;
     setFormData(prev => ({
       ...prev,
       endAddresses: [...prev.endAddresses, ""],
       additionalDropdownValues: [...prev.additionalDropdownValues, ""]
+    }));
+    // Expand the newly added stop
+    setExpandedStops(prev => ({
+      ...prev,
+      [newIndex]: true
     }));
   };
 
@@ -253,7 +290,32 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         endAddresses: prev.endAddresses.filter((_, i) => i !== index),
         additionalDropdownValues: prev.additionalDropdownValues.filter((_, i) => i !== index)
       }));
+      // Remove the stop from expanded state and adjust indices
+      setExpandedStops(prev => {
+        const newExpanded = { ...prev };
+        delete newExpanded[index];
+        // Adjust indices for stops after the removed one
+        Object.keys(newExpanded).forEach(key => {
+          const stopIndex = parseInt(key);
+          if (stopIndex > index) {
+            newExpanded[stopIndex - 1] = newExpanded[stopIndex];
+            delete newExpanded[stopIndex];
+          }
+        });
+        return newExpanded;
+      });
     }
+  };
+
+  const toggleStopExpansion = (index: number) => {
+    setExpandedStops(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  const isStopExpanded = (index: number) => {
+    return expandedStops[index] ?? (index === 0); // First stop expanded by default
   };
 
   const [requiredError, setRequiredError] = useState("");
@@ -283,11 +345,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       if (!formData.observationNotes56a?.clientDressedAppropriately) missingFields.push("Client Dressed Appropriately");
       if (!formData.observationNotes56a?.concerns) missingFields.push("Concerns");
       formData.endAddresses.forEach((addr, i) => {
-        if (!addr) missingFields.push(`End Address ${i + 1}`);
+        if (!addr) missingFields.push(`Stop ${i + 1} Address`);
       });
       formData.additionalDropdownValues.forEach((val, i) => {
-        if (!val) missingFields.push(`Purpose for End Address ${i + 1}`);
+        if (!val) missingFields.push(`Purpose for Stop ${i + 1}`);
       });
+      // Check mileage fields if mileage is enabled
+      if (showMileage) {
+        if (!formData.mileageStartMileage) missingFields.push("Start Mileage");
+      }
     } else if (formData.serviceTypeIdentifier === "47e") {
       if (!formData.caseNumber) missingFields.push("Case Number");
       if (!formData.dateOfService) missingFields.push("Date of Service");
@@ -296,11 +362,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       if (!formData.personServed) missingFields.push("Person Served");
       if (!formData.noteSummary47e) missingFields.push("Note Summary (47e)");
       formData.endAddresses.forEach((addr, i) => {
-        if (!addr) missingFields.push(`End Address ${i + 1}`);
+        if (!addr) missingFields.push(`Stop ${i + 1} Address`);
       });
       formData.additionalDropdownValues.forEach((val, i) => {
-        if (!val) missingFields.push(`Purpose for End Address ${i + 1}`);
+        if (!val) missingFields.push(`Purpose for Stop ${i + 1}`);
       });
+      // Check mileage fields if mileage is enabled
+      if (showMileage) {
+        if (!formData.mileageStartMileage) missingFields.push("Start Mileage");
+      }
     }
 
     if (missingFields.length > 0) {
@@ -327,13 +397,22 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const saveTemplate = async () => {
     if (!templateName.trim()) return;
 
+    // Check if a template with this name already exists
+    const existingTemplate = savedTemplates.find(t => t.name.toLowerCase() === templateName.trim().toLowerCase());
+    
+    if (existingTemplate && !overwriteMode) {
+      // If template exists and we're not in overwrite mode, prompt for overwrite
+      setOverwriteMode(true);
+      setExistingTemplateId(existingTemplate.id);
+      return;
+    }
+
     const template: FormTemplate = {
-      id: Math.random().toString(36).substring(2, 15),
+      id: overwriteMode && existingTemplateId ? existingTemplateId : Math.random().toString(36).substring(2, 15),
       name: templateName.trim(),
-      createdAt: new Date().toISOString(),
+      createdAt: overwriteMode ? existingTemplate?.createdAt || new Date().toISOString() : new Date().toISOString(),
       formData: {
         caseNumber: formData.caseNumber,
-        dateOfService: formData.dateOfService,
         startTime: formData.startTime,
         endTime: formData.endTime,
         serviceTypeIdentifier: formData.serviceTypeIdentifier,
@@ -347,8 +426,16 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       }
     };
 
-    // Save to localStorage
-    const updatedTemplates = [...savedTemplates, template];
+    let updatedTemplates: FormTemplate[];
+    
+    if (overwriteMode && existingTemplateId) {
+      // Replace the existing template
+      updatedTemplates = savedTemplates.map(t => t.id === existingTemplateId ? template : t);
+    } else {
+      // Add as new template
+      updatedTemplates = [...savedTemplates, template];
+    }
+
     setSavedTemplates(updatedTemplates);
     localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
 
@@ -363,11 +450,25 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       }
     }
 
+    // Reset states
     setTemplateName("");
     setShowTemplateModal(false);
+    setOverwriteMode(false);
+    setExistingTemplateId(null);
+  };
+
+  const cancelOverwrite = () => {
+    setOverwriteMode(false);
+    setExistingTemplateId(null);
+    // Keep the modal open and template name so user can change the name
   };
 
   const loadTemplate = (template: FormTemplate) => {
+    if (!template.formData) {
+      console.error('Template formData is undefined:', template);
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       ...template.formData
@@ -390,6 +491,29 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       } catch (error) {
         console.error('Failed to delete template from Firebase:', error);
         // Template is still deleted locally even if Firebase fails
+      }
+    }
+  };
+
+  const setAutoLoadTemplate = async (templateId: string) => {
+    const updatedTemplates = savedTemplates.map(template => ({
+      ...template,
+      isAutoLoad: template.id === templateId
+    }));
+    
+    setSavedTemplates(updatedTemplates);
+    localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
+
+    // Update Firebase if logged in
+    if (isLoggedIn && userId) {
+      try {
+        // Update all templates in Firebase to reflect auto-load changes
+        for (const template of updatedTemplates) {
+          await saveTemplateToFirebase(template, userId);
+        }
+        console.log('Auto-load template setting updated in Firebase successfully');
+      } catch (error) {
+        console.error('Failed to update auto-load setting in Firebase:', error);
       }
     }
   };
@@ -451,6 +575,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Save your form data as templates for quick reuse. Templates do not include login credentials.
                     {isLoggedIn ? ' Templates will be saved to both local storage and Firebase.' : ' Login required to save templates to Firebase.'}
+                    {savedTemplates.some(t => t.isAutoLoad) && (
+                      <span className="block mt-1 text-green-600 dark:text-green-400">
+                        Auto-load template: <strong>{savedTemplates.find(t => t.isAutoLoad)?.name}</strong> will load automatically when you visit this page.
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
@@ -756,6 +885,20 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
                 {showMileage && (
                   <div className="space-y-6">
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            <strong>Note:</strong> Mileage will be calculated automatically by Ecasenotes based on the addresses provided. You only need to enter the starting mileage reading from your vehicle.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <AddressAutocomplete
@@ -768,7 +911,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Start Mileage
+                          Start Mileage <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -781,86 +924,171 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       </div>
                     </div>
 
-                    {/* End Addresses */}
+                    {/* Stops */}
                     <div>
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          End Addresses <span className="text-red-500">*</span>
+                          Stops <span className="text-red-500">*</span>
                         </label>
-                        {!readOnly && (
-                          <button
-                            type="button"
-                            onClick={addEndAddress}
-                            className="px-3 py-1 text-sm bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors"
-                          >
-                            Add Address
-                          </button>
-                        )}
                       </div>
-                      {formData.endAddresses.map((address, index) => (
-                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <div>
-                            <AddressAutocomplete
-                              value={address}
-                              onChange={(value) => handleEndAddressChange(index, value)}
-                              label={`End Address ${index + 1}`}
-                              placeholder={`Enter end address ${index + 1}`}
-                              readOnly={readOnly}
-                              required={true}
-                            />
-                            {!readOnly && (autoSetData.homeAddress || autoSetData.officeAddress) && (
-                              <div className="flex gap-2 mt-2">
-                                {autoSetData.homeAddress && (
+                      {formData.endAddresses.map((address, index) => {
+                        const isExpanded = isStopExpanded(index);
+                        const purpose = formData.additionalDropdownValues[index];
+                        const purposeLabel = dropdownOptions.find(opt => opt.value === purpose)?.label || purpose || 'No purpose selected';
+                        
+                        return (
+                          <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg mb-4">
+                            {/* Accordion Header */}
+                            <div 
+                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                              onClick={() => toggleStopExpansion(index)}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    Stop {index + 1}
+                                  </span>
+                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="truncate max-w-48">
+                                      {address || 'No address entered'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    <span className="truncate max-w-32">
+                                      {purposeLabel}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {!readOnly && formData.endAddresses.length > 1 && (
                                   <button
                                     type="button"
-                                    onClick={() => handleEndAddressChange(index, autoSetData.homeAddress)}
-                                    className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeEndAddress(index);
+                                    }}
+                                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                    title="Remove Stop"
                                   >
-                                    Set Home
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
                                   </button>
                                 )}
-                                {autoSetData.officeAddress && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEndAddressChange(index, autoSetData.officeAddress)}
-                                    className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                <button
+                                  type="button"
+                                  className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                >
+                                  <svg 
+                                    className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
                                   >
-                                    Set Office
-                                  </button>
-                                )}
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* Accordion Content */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 space-y-4">
+                                {/* Address Fields Row */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                      Stop {index + 1} Start Address
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={index === 0 ? (formData.mileageStartAddress || "") : (formData.endAddresses[index - 1] || "")}
+                                      readOnly={true}
+                                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+                                      placeholder={index === 0 ? "Mileage start address" : "Previous stop address"}
+                                    />
+                                  </div>
+                                  <div>
+                                    <AddressAutocomplete
+                                      value={address}
+                                      onChange={(value) => handleEndAddressChange(index, value)}
+                                      label={`Stop ${index + 1} End Address`}
+                                      placeholder={`Enter stop ${index + 1} end address`}
+                                      readOnly={readOnly}
+                                      required={true}
+                                    />
+                                    {!readOnly && (autoSetData.homeAddress || autoSetData.officeAddress) && (
+                                      <div className="flex gap-2 mt-2">
+                                        {autoSetData.homeAddress && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEndAddressChange(index, autoSetData.homeAddress)}
+                                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                          >
+                                            Set Home
+                                          </button>
+                                        )}
+                                        {autoSetData.officeAddress && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEndAddressChange(index, autoSetData.officeAddress)}
+                                            className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                          >
+                                            Set Office
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Purpose Field */}
+                                <div className="grid grid-cols-1 gap-4">
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                      Purpose <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                      value={formData.additionalDropdownValues[index]}
+                                      onChange={(e) => handleDropdownValueChange(index, e.target.value)}
+                                      disabled={readOnly}
+                                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent disabled:bg-gray-50 disabled:dark:bg-gray-800"
+                                    >
+                                      <option value="">Select purpose</option>
+                                      {dropdownOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Purpose <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                              value={formData.additionalDropdownValues[index]}
-                              onChange={(e) => handleDropdownValueChange(index, e.target.value)}
-                              disabled={readOnly}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent disabled:bg-gray-50 disabled:dark:bg-gray-800"
-                            >
-                              <option value="">Select purpose</option>
-                              <option value="transport">Transport</option>
-                              <option value="visit">Visit</option>
-                              <option value="pickup">Pickup</option>
-                              <option value="dropoff">Drop-off</option>
-                            </select>
-                          </div>
-                          <div>
-                            {!readOnly && formData.endAddresses.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeEndAddress(index)}
-                                className="px-3 py-2 text-sm text-red-600 border border-red-300 rounded-md hover:bg-red-50 transition-colors"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
+                        );
+                      })}
+                      
+                      {/* Add Stop Button */}
+                      {!readOnly && (
+                        <div className="flex justify-center mt-4">
+                          <button
+                            type="button"
+                            onClick={addEndAddress}
+                            className="px-4 py-2 text-sm bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors"
+                          >
+                            Add Stop
+                          </button>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 )}
@@ -937,39 +1165,88 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       {showTemplateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Save Template</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Template Name
-              </label>
-              <input
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter template name"
-                autoFocus
-              />
-            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+              {overwriteMode ? "Template Already Exists" : "Save Template"}
+            </h3>
+            
+            {overwriteMode ? (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  A template with the name &ldquo;{templateName}&rdquo; already exists. Do you want to overwrite it?
+                </p>
+                <div className="bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md p-3">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        This will replace the existing template with the current form data.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Template Name
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter template name"
+                  autoFocus
+                />
+              </div>
+            )}
+            
             <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTemplateModal(false);
-                  setTemplateName("");
-                }}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={saveTemplate}
-                disabled={!templateName.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Save Template
-              </button>
+              {overwriteMode ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={cancelOverwrite}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Change Name
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveTemplate}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+                  >
+                    Overwrite Template
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTemplateModal(false);
+                      setTemplateName("");
+                      setOverwriteMode(false);
+                      setExistingTemplateId(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveTemplate}
+                    disabled={!templateName.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Save Template
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1002,33 +1279,53 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <div key={template.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
+                          {template.isAutoLoad && (
+                            <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs font-medium">
+                              Auto-Load
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           Created: {new Date(template.createdAt).toLocaleDateString()} at {new Date(template.createdAt).toLocaleTimeString()}
                         </p>
                         <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                           <span className="inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mr-2">
-                            Service: {template.formData.serviceTypeIdentifier}
+                            Service: {template.formData?.serviceTypeIdentifier || 'Unknown'}
                           </span>
-                          {template.formData.personServed && (
+                          {template.formData?.personServed && (
                             <span className="inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mr-2">
                               Person: {template.formData.personServed}
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex flex-col gap-2 ml-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => loadTemplate(template)}
+                            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Load
+                          </button>
+                          <button
+                            onClick={() => deleteTemplate(template.id)}
+                            className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
                         <button
-                          onClick={() => loadTemplate(template)}
-                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          onClick={() => setAutoLoadTemplate(template.id)}
+                          className={`px-3 py-1 text-sm rounded transition-colors ${
+                            template.isAutoLoad 
+                              ? 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed' 
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                          }`}
+                          disabled={template.isAutoLoad}
                         >
-                          Load
-                        </button>
-                        <button
-                          onClick={() => deleteTemplate(template.id)}
-                          className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                        >
-                          Delete
+                          {template.isAutoLoad ? 'Auto-Loading' : 'Set Auto-Load'}
                         </button>
                       </div>
                     </div>

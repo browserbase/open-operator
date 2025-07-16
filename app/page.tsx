@@ -523,27 +523,12 @@ interface ExecutionProgressSidebarProps {
 }
 
 function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps) {
-  const [events, setEvents] = useState<Array<{ type: string; message?: string; data?: any }>>([]);
-  const [progressSteps, setProgressSteps] = useState<{ [key: string]: ProgressStep }>({});
-
-  // Define progress steps with proper state management
-  const stepOrder = [
-    'login',
-    'navigation', 
-    'search',
-    'extract',
-    'note-creation',
-    'complete'
-  ];
-
-  const stepLabels = {
-    'login': 'Signing in',
-    'navigation': 'Navigating to workspace', 
-    'search': 'Searching for case',
-    'extract': 'Extracting case data',
-    'note-creation': 'Creating case note',
-    'complete': 'Automation complete'
-  };
+  // Track actual progress messages instead of predefined steps
+  const [progressMessages, setProgressMessages] = useState<Array<{
+    message: string;
+    type: 'progress' | 'success' | 'error';
+    timestamp: number;
+  }>>([]);
 
   useEffect(() => {
     const eventSource = new EventSource(`/api/automation/events?executionId=${executionId}`);
@@ -551,33 +536,29 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
     eventSource.onmessage = (event) => {
       try {
         const eventData = JSON.parse(event.data);
-        setEvents(prev => [...prev, eventData]);
+        console.log('Received event:', eventData);
 
-        // Update progress steps based on events
+        // Update progress messages based on events
         if (eventData.type === 'progress') {
-          const stepKey = eventData.data?.step || eventData.message?.toLowerCase().replace(/[^a-z]/g, '');
-          if (stepKey) {
-            setProgressSteps(prev => ({
-              ...prev,
-              [stepKey]: { status: 'loading', timestamp: Date.now() }
-            }));
-          }
+          setProgressMessages(prev => [...prev, {
+            message: eventData.message || eventData.data || 'Processing...',
+            type: 'progress',
+            timestamp: Date.now()
+          }]);
         } else if (eventData.type === 'success') {
-          const stepKey = eventData.data?.step || eventData.message?.toLowerCase().replace(/[^a-z]/g, '');
-          if (stepKey) {
-            setProgressSteps(prev => ({
-              ...prev,
-              [stepKey]: { status: 'completed', timestamp: Date.now() }
-            }));
-          }
+          setProgressMessages(prev => [...prev, {
+            message: eventData.message || eventData.data || 'Success',
+            type: 'success',
+            timestamp: Date.now()
+          }]);
         } else if (eventData.type === 'error') {
-          const stepKey = eventData.data?.step || eventData.message?.toLowerCase().replace(/[^a-z]/g, '');
-          if (stepKey) {
-            setProgressSteps(prev => ({
-              ...prev,
-              [stepKey]: { status: 'error', timestamp: Date.now() }
-            }));
-          }
+          setProgressMessages(prev => [...prev, {
+            message: eventData.message || eventData.data || 'Error occurred',
+            type: 'error',
+            timestamp: Date.now()
+          }]);
+        } else if (eventData.type === 'connected') {
+          console.log('Connected to automation events');
         }
       } catch (e) {
         console.error('Error parsing event data:', e);
@@ -602,49 +583,49 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
       
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-3">
-          {stepOrder.map((stepKey) => {
-            const step = progressSteps[stepKey];
-            const label = stepLabels[stepKey as keyof typeof stepLabels];
-            
-            return (
-              <div key={stepKey} className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  {step?.status === 'completed' ? (
-                    <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  ) : step?.status === 'loading' ? (
-                    <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
-                  ) : step?.status === 'error' ? (
-                    <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
-                  )}
-                </div>
-                <span className={`text-sm ${
-                  step?.status === 'completed' ? 'text-green-700 dark:text-green-400' : 
-                  step?.status === 'loading' ? 'text-blue-600 dark:text-blue-400' :
-                  step?.status === 'error' ? 'text-red-600 dark:text-red-400' : 
+          {progressMessages.map((progressMessage, index) => (
+            <div key={index} className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                {progressMessage.type === 'success' ? (
+                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                ) : progressMessage.type === 'progress' ? (
+                  <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+                ) : progressMessage.type === 'error' ? (
+                  <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-sm block ${
+                  progressMessage.type === 'success' ? 'text-green-700 dark:text-green-400' : 
+                  progressMessage.type === 'progress' ? 'text-blue-600 dark:text-blue-400' :
+                  progressMessage.type === 'error' ? 'text-red-600 dark:text-red-400' : 
                   'text-gray-500 dark:text-gray-400'
                 }`}>
-                  {label}
+                  {progressMessage.message}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {new Date(progressMessage.timestamp).toLocaleTimeString()}
                 </span>
               </div>
-            );
-          })}
+            </div>
+          ))}
+          {progressMessages.length === 0 && (
+            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+              <p>Waiting for automation to start...</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-}
-
-interface ProgressStep {
-  status: 'loading' | 'completed' | 'error';
-  timestamp: number;
 }
