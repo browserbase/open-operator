@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access to users collection and subcollections
+    // Note: This is for development/testing only. In production, add proper authentication
+    match /users/{userId} {
+      // Allow read and write for now (you should add authentication later)
+      allow read, write: if true;
+      
+      // Allow access to subcollections like mileageHistory
+      match /mileageHistory/{executionId} {
+        allow read, write: if true;
+      }
+      
+      // If you add other subcollections later
+      match /{document=**} {
+        allow read, write: if true;
+      }
+    }
+    
+    // If you need to store execution data at root level
+    match /executions/{executionId} {
+      allow read, write: if true;
+    }
+  }
+}
