@@ -58,3 +58,49 @@ body {
   stroke-linecap: round;
   animation: google-spinner-dash 1.5s ease-in-out infinite;
 }
+
+/* Custom scrollbar styling for light and dark modes */
+/* Webkit-based browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9; /* Light mode track */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Light mode thumb */
+  border-radius: 4px;
+  border: 1px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* Light mode thumb hover */
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b; /* Dark mode track */
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569; /* Dark mode thumb */
+  border: 1px solid #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* Dark mode thumb hover */
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9; /* Light mode: thumb track */
+}
+
+.dark * {
+  scrollbar-color: #475569 #1e293b; /* Dark mode: thumb track */
+}
