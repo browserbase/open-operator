@@ -50,8 +50,19 @@ export async function POST(request: NextRequest) {
     
     // Run the script in the background
     console.log("Starting Puppeteer script with session:", sessionData.sessionId);
+    console.log("ExecutionId for events:", executionId);
+    
+    // Send initial status
+    sendEventToExecution(executionId, 'progress', 'Starting automation...');
+    
+    // Send a test event after a short delay
+    setTimeout(() => {
+      sendEventToExecution(executionId, 'progress', 'Test event - connection working');
+    }, 2000);
+    
     runPuppeteerScript(formData, executionId, sessionData.sessionId, (uid, event, data) => {
-      console.log(`Event for ${uid}: ${event}`, data);
+      console.log(`Event callback - UID: ${uid}, Event: ${event}, Data:`, data);
+      console.log(`Sending event to executionId: ${uid}`);
       // Send real-time updates to the frontend via SSE
       sendEventToExecution(uid, event, data);
     }).catch((error) => {

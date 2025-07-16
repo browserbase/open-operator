@@ -528,18 +528,29 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
     message: string;
     type: 'progress' | 'success' | 'error';
     timestamp: number;
-  }>>([]);
+  }>>([{
+    message: 'Initializing automation...',
+    type: 'progress',
+    timestamp: Date.now()
+  }]);
 
   useEffect(() => {
+    console.log('Setting up EventSource for executionId:', executionId);
     const eventSource = new EventSource(`/api/automation/events?executionId=${executionId}`);
     
+    eventSource.onopen = () => {
+      console.log('EventSource connection opened');
+    };
+    
     eventSource.onmessage = (event) => {
+      console.log('Raw event received:', event);
       try {
         const eventData = JSON.parse(event.data);
-        console.log('Received event:', eventData);
+        console.log('Parsed event data:', eventData);
 
         // Update progress messages based on events
         if (eventData.type === 'progress') {
+          console.log('Adding progress message:', eventData.message || eventData.data);
           setProgressMessages(prev => [...prev, {
             message: eventData.message || eventData.data || 'Processing...',
             type: 'progress',
@@ -559,18 +570,29 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
           }]);
         } else if (eventData.type === 'connected') {
           console.log('Connected to automation events');
+          setProgressMessages(prev => [...prev, {
+            message: 'Connected to automation service',
+            type: 'success',
+            timestamp: Date.now()
+          }]);
         }
       } catch (e) {
-        console.error('Error parsing event data:', e);
+        console.error('Error parsing event data:', e, 'Raw data:', event.data);
       }
     };
 
     eventSource.onerror = (error) => {
       console.error('EventSource failed:', error);
-      eventSource.close();
+      console.log('EventSource readyState:', eventSource.readyState);
+      setProgressMessages(prev => [...prev, {
+        message: 'Connection error - retrying...',
+        type: 'error',
+        timestamp: Date.now()
+      }]);
     };
 
     return () => {
+      console.log('Closing EventSource connection');
       eventSource.close();
     };
   }, [executionId]);
