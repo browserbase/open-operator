@@ -295,9 +295,9 @@ export async function runPuppeteerScript(
       await sleep(4500);
 
       const raceResult = await Promise.race([
-        page.waitForSelector(tableSelector, { visible: true, timeout: 3000 }).then(() => 'table'),
-        page.waitForSelector(noTripsMessageSelector, { visible: true, timeout: 3000 }).then(() => 'message'),
-        new Promise<string>(resolve => setTimeout(() => resolve('timeout'), 3000))
+        page.waitForSelector(tableSelector, { visible: true, timeout: 8000 }).then(() => 'table'),
+        page.waitForSelector(noTripsMessageSelector, { visible: true, timeout: 8000 }).then(() => 'message'),
+        new Promise<string>(resolve => setTimeout(() => resolve('timeout'), 8000))
       ]);
 
       if (raceResult === 'table') {
