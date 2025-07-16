@@ -518,6 +518,17 @@ export async function runPuppeteerScript(
         await page.waitForSelector(getMapButtonSelector, { visible: true, timeout: defaultTimeout });
         await page.click(getMapButtonSelector);
         console.log(`Clicked on the "Get Map" button for End Address (${i})`);
+        // Click the mileage confirmation modal continue button only on the first Get Map attempt
+        const mileageContinueSelector = "#getMileageContinueButton";
+        if (i === 0) {
+          try {
+            await page.waitForSelector(mileageContinueSelector, { visible: true, timeout: 2000 });
+            await page.click(mileageContinueSelector);
+            console.log("Clicked 'Continue' on mileage confirmation modal");
+          } catch {
+            // Skip if the confirmation button did not appear
+          }
+        }
 
         await sleep(1500);
         try {
@@ -536,10 +547,16 @@ export async function runPuppeteerScript(
         if (i === endAddresses.length - 1) {
           const endMileageValue = await getLastEndMileageValue(page);
           if (endMileageValue !== null) {
-         
+            const captureTimestamp = new Date().toISOString();
             console.log(`End Mileage value for the last entry is: "${endMileageValue}"`);
-            // Note: upsertProcessedNoteHistory would need to be implemented separately
-            emit(uid, 'miles', ` [${dateOfService}] [${startTime}] [${endTime}] [${endMileageValue}]`);
+            // Send mileage data with date, time, and capture timestamp for Firebase storage
+            emit(uid, 'miles', {
+              dateOfService,
+              startTime,
+              endTime,
+              endMileage: endMileageValue,
+              capturedAt: captureTimestamp
+            });
           } else {
             console.log(`End Mileage input not found for the last entry.`);
           }
@@ -677,7 +694,14 @@ export async function runPuppeteerScript(
 
   const findAndClickEdit = async (page: Page, targetDate: string, targetTime: string): Promise<boolean> => {
     console.log(`Searching for Date: "${targetDate}" and Time: "${targetTime}"...`);
-    await page.waitForSelector("#data-models-table-body tr", { timeout: defaultTimeout });
+    // Attempt to find any data rows; if none appear, click 'New Note' to proceed
+    try {
+      await page.waitForSelector("#data-models-table-body tr", { timeout: defaultTimeout });
+    } catch {
+      console.log("No data rows found, proceeding to create a new note");
+      emit(uid, 'progress', 'No existing entries found, will create new note');
+      return false;
+    }
 
     const found = await page.evaluate((targetDate, targetTime) => {
       const convertDate = (dateStr: string): string => dateStr.slice(0, 6) + dateStr.slice(-2);
@@ -687,7 +711,7 @@ export async function runPuppeteerScript(
       const normalizedTargetTime = normalizeTime(targetTime.trim());
 
       const rows = Array.from(document.querySelectorAll("#data-models-table-body tr"));
-      for (let row of rows) {
+      for (const row of rows) {
         const dateCell = row.querySelector("td.sort-DateOfService") as HTMLElement;
         const timeCell = row.querySelector("td.sort-TimeDisplay") as HTMLElement;
         if (dateCell && timeCell) {
@@ -727,7 +751,7 @@ export async function runPuppeteerScript(
         await page.waitForSelector(saveNoteModalSelector, { visible: true, timeout: 1000 });
         isSaveNoteModalVisible = true;
         console.log("Save Note modal is visible");
-      } catch (modalError) {
+      } catch {
         console.log("Save Note modal did not appear");
       }
 
@@ -748,7 +772,7 @@ export async function runPuppeteerScript(
         console.log("Save confirmation received: 'Saved Successfully!'");
         emit(uid, 'success', 'Note Saved Successfully!');
         emit(uid, 'toast', 'Note Saved Successfully!');
-      } catch (toastError) {
+      } catch {
         console.log("Toast message did not appear.");
       }
     } catch (error) {
