@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import CaseForm from "./components/CaseForm";
 import ThemeToggle from "./components/ThemeToggle";
 import AutoSet from "./components/AutoSet";
+import LottieLoading from "./components/LottieLoading";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
@@ -14,6 +15,7 @@ export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [submittedFormData, setSubmittedFormData] = useState<CaseFormData | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'browser' | 'autoset'>('form');
@@ -94,6 +96,7 @@ export default function Home() {
 
       if (result.success) {
         setSessionUrl(result.sessionUrl);
+        setSessionId(result.sessionId);
         setExecutionId(result.executionId);
         setIsExecuting(true);
         setActiveTab('browser'); // Switch to browser tab when automation starts
@@ -109,9 +112,26 @@ export default function Home() {
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    // End the Browserbase session if one exists
+    if (sessionId) {
+      try {
+        await fetch("/api/session", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+        console.log("Session ended successfully");
+      } catch (error) {
+        console.error("Error ending session:", error);
+      }
+    }
+    
     setIsExecuting(false);
     setSessionUrl(null);
+    setSessionId(null);
     setExecutionId(null);
     setSubmittedFormData(null);
     setActiveTab('form'); // Reset to form tab
@@ -385,14 +405,7 @@ export default function Home() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                         <div className="text-center">
-                          <svg viewBox="25 25 50 50" className="w-16 h-16 google-spinner-container mx-auto mb-4">
-                            <circle 
-                              cx="50" 
-                              cy="50" 
-                              r="20" 
-                              className="google-spinner-circle stroke-blue-500 dark:stroke-blue-400" 
-                            />
-                          </svg>
+                          <LottieLoading size="w-16 h-16" className="mx-auto mb-4" />
                           <p>Initializing browser session...</p>
                         </div>
                       </div>
@@ -477,18 +490,25 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
         // Update progress messages based on events
         if (eventData.type === 'progress') {
           console.log('Adding progress message:', eventData.message || eventData.data);
-          setProgressMessages(prev => [...prev, {
-            message: eventData.message || eventData.data || 'Processing...',
-            type: 'progress',
-            timestamp: Date.now()
-          }]);
+          // On new progress, keep previous success/error messages but clear old progress messages
+          setProgressMessages(prev => [
+            ...prev.filter(msg => msg.type !== 'progress'),
+            {
+              message: eventData.message || eventData.data || 'Processing...',
+              type: 'progress',
+              timestamp: Date.now()
+            }
+          ]);
         } else if (eventData.type === 'success') {
-          // On success, clear previous messages and show only the success
-          setProgressMessages([{
-            message: eventData.message || eventData.data || 'Success',
-            type: 'success',
-            timestamp: Date.now()
-          }]);
+          // On success, keep previous success/error messages but clear progress messages
+          setProgressMessages(prev => [
+            ...prev.filter(msg => msg.type !== 'progress'),
+            {
+              message: eventData.message || eventData.data || 'Success',
+              type: 'success',
+              timestamp: Date.now()
+            }
+          ]);
         } else if (eventData.type === 'error') {
           setProgressMessages(prev => [...prev, {
             message: eventData.message || eventData.data || 'Error occurred',
@@ -541,7 +561,19 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-3">
           {progressMessages.map((progressMessage, index) => (
-            <div key={index} className="flex items-start gap-3">
+            <motion.div 
+              key={index} 
+              className="flex items-start gap-3"
+              initial={{ opacity: 0, x: 20, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ 
+                delay: progressMessage.type === 'success' ? 0.2 : 0,
+                duration: progressMessage.type === 'success' ? 0.5 : 0.3,
+                type: "spring",
+                stiffness: progressMessage.type === 'success' ? 200 : 300,
+                damping: progressMessage.type === 'success' ? 20 : 25
+              }}
+            >
               <div className="flex-shrink-0 mt-0.5">
                 {progressMessage.type === 'success' ? (
                   <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
@@ -551,14 +583,7 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
                   </div>
                 ) : progressMessage.type === 'progress' ? (
                   <div className="w-5 h-5 flex items-center justify-center">
-                    <svg viewBox="25 25 50 50" className="w-4 h-4 google-spinner-container">
-                      <circle 
-                        cx="50" 
-                        cy="50" 
-                        r="20" 
-                        className="google-spinner-circle stroke-blue-500 dark:stroke-blue-400" 
-                      />
-                    </svg>
+                    <LottieLoading size="w-4 h-4" />
                   </div>
                 ) : progressMessage.type === 'error' ? (
                   <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
@@ -583,7 +608,7 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
                   {new Date(progressMessage.timestamp).toLocaleTimeString()}
                 </span>
               </div>
-            </div>
+            </motion.div>
           ))}
           {progressMessages.length === 0 && (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">
