@@ -329,7 +329,6 @@ export async function runPuppeteerScript(
 
       if (noTripsAlert.found) {
         console.log(`Found "no trips" message: "${noTripsAlert.text}"`);
-        emit(uid, 'progress', 'Found "no trips" message, proceeding to add new mileage.');
         return;
       }
 
@@ -408,7 +407,6 @@ export async function runPuppeteerScript(
               const text = await page.evaluate(el => el.textContent?.toLowerCase() || '', element);
               if (text.includes('no trips') || text.includes('no data') || text.includes('empty')) {
                 console.log(`Found alternative "no trips" message with selector: ${selector}`);
-                emit(uid, 'progress', 'Found "no trips" message, proceeding to add new mileage.');
                 foundAlternative = true;
                 return;
               }
@@ -958,7 +956,6 @@ export async function runPuppeteerScript(
     await saveAndReadyNote();
 
     if (mileageStartAddress && mileageStartAddress.trim() !== '') {
-      emit(uid, 'progress', `Processing Mileage Trip Segments`);
       
       const mileageTabSelector = 'a[href*="/dfcs/notes/trips"]';
       await page.waitForSelector(mileageTabSelector, { visible: true, timeout: defaultTimeout });

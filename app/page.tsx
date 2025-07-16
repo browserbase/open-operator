@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import CaseForm from "./components/CaseForm";
 import ThemeToggle from "./components/ThemeToggle";
 import AutoSet from "./components/AutoSet";
@@ -287,7 +288,7 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 flex relative">
         {/* Content Area with Tabs */}
-        <div className={`flex-1 p-6 ${isExecuting ? 'pr-[336px]' : ''}`}>
+        <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting ? 'pr-[336px]' : ''}`}>
           {/* Tab Navigation */}
           <div className="mb-4">
             <div className="border-b border-gray-200 dark:border-gray-700">
@@ -341,6 +342,8 @@ export default function Home() {
                   isLoggedIn={!!user}
                   userId={user?.uid}
                   onLoginRequested={() => setShowLoginModal(true)}
+                  isExecuting={isExecuting}
+                  onStopAutomation={handleClose}
                 />
               </div>
             </div>
@@ -413,13 +416,27 @@ export default function Home() {
         </div>
 
         {/* Progress Sidebar - only show when executing */}
-        {isExecuting && (
-          <div className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col z-30 shadow-lg">
-            <ExecutionProgressSidebar 
-              executionId={executionId || ''}
-            />
-          </div>
-        )}
+        <AnimatePresence>
+          {isExecuting && (
+            <motion.div 
+              className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col z-30 shadow-lg"
+              initial={{ x: 320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 320, opacity: 0 }}
+              transition={{ 
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                duration: 0.3
+              }}
+            >
+              <ExecutionProgressSidebar 
+                executionId={executionId || ''}
+                onStop={handleClose}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
@@ -428,9 +445,10 @@ export default function Home() {
 // ExecutionProgressSidebar component to show progress in the sidebar
 interface ExecutionProgressSidebarProps {
   executionId: string;
+  onStop: () => void;
 }
 
-function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps) {
+function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSidebarProps) {
   // Track actual progress messages instead of predefined steps
   const [progressMessages, setProgressMessages] = useState<Array<{
     message: string;
@@ -509,7 +527,15 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
   return (
     <>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Progress</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Progress</h3>
+          <button
+            onClick={onStop}
+            className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Stop
+          </button>
+        </div>
       </div>
       
       <div className="flex-1 p-4 overflow-y-auto">
