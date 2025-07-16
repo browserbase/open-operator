@@ -16,6 +16,8 @@ interface CaseFormProps {
   isLoggedIn?: boolean;
   userId?: string;
   onLoginRequested?: () => void;
+  isExecuting?: boolean;
+  onStopAutomation?: () => void;
 }
 
 interface SavedCredentials {
@@ -32,7 +34,7 @@ export interface FormTemplate {
   formData: Omit<FormData, 'companyCode' | 'username' | 'password' | 'dateOfService'> & { dateOfService?: string };
 }
 
-export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested }: CaseFormProps) {
+export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation }: CaseFormProps) {
   const [saveCredentials, setSaveCredentials] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<FormTemplate[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -276,11 +278,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       endAddresses: [...prev.endAddresses, ""],
       additionalDropdownValues: [...prev.additionalDropdownValues, ""]
     }));
-    // Expand the newly added stop
-    setExpandedStops(prev => ({
-      ...prev,
-      [newIndex]: true
-    }));
+    // Collapse all previous stops and expand only the newly added stop
+    setExpandedStops({ [newIndex]: true });
   };
 
   const removeEndAddress = (index: number) => {
@@ -1337,38 +1336,77 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         </div>
       )}
 
-      {/* Floating Run Automation Button */}
-      {!readOnly && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <button
-            type="button"
-            onClick={() => {
+      {/* Floating Run/Stop Automation Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => {
+            if (isExecuting && onStopAutomation) {
+              onStopAutomation();
+            } else {
               // Trigger form submission programmatically
               const form = document.querySelector('form');
               if (form) {
                 form.requestSubmit();
               }
-            }}
-            disabled={isLoading || timeValidationError}
-            className="px-6 py-3 bg-[#FF3B00] text-white rounded-full shadow-lg hover:bg-[#E63400] hover:shadow-xl transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg 
-              className="w-5 h-5" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M13 10V3L4 14h7v7l9-11h-7z" 
-              />
-            </svg>
-            {isLoading ? "Processing..." : "Run Automation"}
-          </button>
-        </div>
-      )}
+            }
+          }}
+          disabled={!isExecuting && (isLoading || timeValidationError)}
+          className={`px-6 py-3 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+            isExecuting 
+              ? 'bg-red-600 hover:bg-red-700' 
+              : 'bg-[#FF3B00] hover:bg-[#E63400]'
+          }`}
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                  className="opacity-25"
+                />
+                <path
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  className="opacity-75"
+                />
+              </svg>
+              <span>Processing...</span>
+            </div>
+          ) : (
+            <>
+              <svg 
+                className="w-5 h-5" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                {isExecuting ? (
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M6 6h12v12H6z" 
+                  />
+                ) : (
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M13 10V3L4 14h7v7l9-11h-7z" 
+                  />
+                )}
+              </svg>
+              {isExecuting ? "Stop Automation" : "Run Automation"}
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
