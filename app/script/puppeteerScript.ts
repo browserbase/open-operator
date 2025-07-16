@@ -657,10 +657,6 @@ export async function runPuppeteerScript(
   try {
     console.log("addresses", endAddresses);
     
-    // Test emit function first
-    emit(uid, 'progress', 'Puppeteer script started - testing emit function');
-    console.log('Emitted test message');
-    
     keepAliveInterval = setInterval(async () => {
       try {
         if (!isBrowserClosed && page) {

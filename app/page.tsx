@@ -381,7 +381,14 @@ export default function Home() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                         <div className="text-center">
-                          <div className="w-16 h-16 border-4 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                          <svg viewBox="25 25 50 50" className="w-16 h-16 google-spinner-container mx-auto mb-4">
+                            <circle 
+                              cx="50" 
+                              cy="50" 
+                              r="20" 
+                              className="google-spinner-circle stroke-blue-500 dark:stroke-blue-400" 
+                            />
+                          </svg>
                           <p>Initializing browser session...</p>
                         </div>
                       </div>
@@ -557,7 +564,8 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
             timestamp: Date.now()
           }]);
         } else if (eventData.type === 'success') {
-          setProgressMessages(prev => [...prev, {
+          // On success, clear previous messages and show only the success
+          setProgressMessages([{
             message: eventData.message || eventData.data || 'Success',
             type: 'success',
             timestamp: Date.now()
@@ -570,7 +578,7 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
           }]);
         } else if (eventData.type === 'connected') {
           console.log('Connected to automation events');
-          setProgressMessages(prev => [...prev, {
+          setProgressMessages([{
             message: 'Connected to automation service',
             type: 'success',
             timestamp: Date.now()
@@ -615,7 +623,16 @@ function ExecutionProgressSidebar({ executionId }: ExecutionProgressSidebarProps
                     </svg>
                   </div>
                 ) : progressMessage.type === 'progress' ? (
-                  <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    <svg viewBox="25 25 50 50" className="w-4 h-4 google-spinner-container">
+                      <circle 
+                        cx="50" 
+                        cy="50" 
+                        r="20" 
+                        className="google-spinner-circle stroke-blue-500 dark:stroke-blue-400" 
+                      />
+                    </svg>
+                  </div>
                 ) : progressMessage.type === 'error' ? (
                   <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
