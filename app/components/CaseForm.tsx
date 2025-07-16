@@ -1359,25 +1359,52 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
           }`}
         >
           {isLoading ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
+            <>
+              <svg 
+                viewBox="25 25 50 50" 
+                className="w-5 h-5"
+                style={{
+                  transformOrigin: 'center',
+                  animation: 'rotate4 2s linear infinite',
+                }}
+              >
+                <circle 
+                  cx={50} 
+                  cy={50} 
+                  r={20} 
                   fill="none"
-                  className="opacity-25"
-                />
-                <path
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  className="opacity-75"
+                  stroke="currentColor"
+                  strokeWidth={5}
+                  strokeDasharray="2, 200"
+                  strokeDashoffset={0}
+                  strokeLinecap="round"
+                  style={{
+                    animation: 'dash4 1.5s ease-in-out infinite',
+                  }}
                 />
               </svg>
               <span>Processing...</span>
-            </div>
+              <style jsx>{`
+                @keyframes rotate4 {
+                  100% {
+                    transform: rotate(360deg);
+                  }
+                }
+                @keyframes dash4 {
+                  0% {
+                    stroke-dasharray: 1, 200;
+                    stroke-dashoffset: 0;
+                  }
+                  50% {
+                    stroke-dasharray: 90, 200;
+                    stroke-dashoffset: -35px;
+                  }
+                  100% {
+                    stroke-dashoffset: -125px;
+                  }
+                }
+              `}</style>
+            </>
           ) : (
             <>
               <svg 
