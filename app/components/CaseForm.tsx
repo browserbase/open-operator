@@ -307,14 +307,21 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   };
 
   const toggleStopExpansion = (index: number) => {
-    setExpandedStops(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+    setExpandedStops(prev => {
+      const hasExpandedStops = Object.keys(prev).length > 0;
+      const currentlyExpanded = hasExpandedStops ? (prev[index] ?? false) : (index === 0);
+      
+      return {
+        ...prev,
+        [index]: !currentlyExpanded
+      };
+    });
   };
 
   const isStopExpanded = (index: number) => {
-    return expandedStops[index] ?? (index === 0); // First stop expanded by default
+    // If expandedStops has any keys, use only those; otherwise default first stop to expanded
+    const hasExpandedStops = Object.keys(expandedStops).length > 0;
+    return hasExpandedStops ? (expandedStops[index] ?? false) : (index === 0);
   };
 
   const [requiredError, setRequiredError] = useState("");
@@ -999,7 +1006,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             </div>
                             
                             {/* Accordion Content */}
-                            {isExpanded && (
+                            <div 
+                              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                              }`}
+                            >
                               <div className="px-4 pb-4 space-y-4">
                                 {/* Address Fields Row */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1071,7 +1082,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                   </div>
                                 </div>
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })}
