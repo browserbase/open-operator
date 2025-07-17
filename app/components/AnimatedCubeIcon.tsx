@@ -11,13 +11,13 @@ const AnimatedCubeIcon = ({ size = 24 }) => (
   >
     <defs>
       <linearGradient id="circuitGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#2fc14c" stopOpacity="0">
+        <stop offset="0%" stopColor="var(--primary)" stopOpacity="0">
           <animate attributeName="stop-opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
         </stop>
-        <stop offset="50%" stopColor="#43e97b" stopOpacity="1">
+        <stop offset="50%" stopColor="var(--primary-hover)" stopOpacity="1">
           <animate attributeName="stop-opacity" values="1;0;1" dur="2s" repeatCount="indefinite" />
         </stop>
-        <stop offset="100%" stopColor="#2fc14c" stopOpacity="0">
+        <stop offset="100%" stopColor="var(--primary)" stopOpacity="0">
           <animate attributeName="stop-opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
         </stop>
       </linearGradient>
@@ -28,7 +28,7 @@ const AnimatedCubeIcon = ({ size = 24 }) => (
       <polygon
         points="16,4 28,10 28,22 16,28 4,22 4,10"
         fill="none"
-        stroke="#1a7f37"
+        stroke="var(--primary)"
         strokeWidth="1.5"
         opacity="0.3"
       >
@@ -43,7 +43,7 @@ const AnimatedCubeIcon = ({ size = 24 }) => (
       {/* Top face */}
       <polygon
         points="16,4 28,10 16,16 4,10"
-        fill="#43e97b"
+        fill="var(--primary)"
         opacity="0.1"
       >
         <animate
@@ -57,7 +57,7 @@ const AnimatedCubeIcon = ({ size = 24 }) => (
       {/* Right face */}
       <polygon
         points="16,16 28,10 28,22 16,28"
-        fill="#1a7f37"
+        fill="var(--primary)"
         opacity="0.1"
       >
         <animate
@@ -71,7 +71,7 @@ const AnimatedCubeIcon = ({ size = 24 }) => (
       {/* Left face */}
       <polygon
         points="16,16 4,10 4,22 16,28"
-        fill="#43e97b"
+        fill="var(--primary-hover)"
         opacity="0.1"
       >
         <animate
@@ -158,16 +158,16 @@ const AnimatedCubeIcon = ({ size = 24 }) => (
       
       {/* Glowing nodes */}
       <g>
-        <circle cx="16" cy="4" r="1.5" fill="#2fc14c" opacity="0.6">
+        <circle cx="16" cy="4" r="1.5" fill="var(--primary)" opacity="0.6">
           <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
         </circle>
-        <circle cx="4" cy="10" r="1.5" fill="#43e97b" opacity="0.6">
+        <circle cx="4" cy="10" r="1.5" fill="var(--primary-hover)" opacity="0.6">
           <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" begin="0.3s" />
         </circle>
-        <circle cx="28" cy="10" r="1.5" fill="#2fc14c" opacity="0.6">
+        <circle cx="28" cy="10" r="1.5" fill="var(--primary)" opacity="0.6">
           <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" begin="0.6s" />
         </circle>
-        <circle cx="16" cy="28" r="1.5" fill="#43e97b" opacity="0.6">
+        <circle cx="16" cy="28" r="1.5" fill="var(--primary-hover)" opacity="0.6">
           <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" begin="0.9s" />
         </circle>
       </g>

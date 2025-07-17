@@ -7,8 +7,9 @@
   --foreground: #171717;
   --background-transparent: rgba(255, 255, 255, 0);
   /* Theme colors */
-  --primary: #2fc14c;
-  --primary-hover: #69e644;
+
+   --primary: #c15d2f;
+  --primary-hover: #e66a44;
   --primary-light: #FF5722;
   --accent: #0070f3;
   --accent-hover: #0051a5;
@@ -74,7 +75,8 @@
   --bg-tertiary: #1a1a1a;
   --bg-modal: rgba(26, 26, 26, 0.8);
   --bg-overlay: rgba(0, 0, 0, 0.8);
-  
+    --primary: #5dc12f;
+  --primary-hover: #69e644;
   /* Border colors - Next.js style */
   --border: #333333;
   --border-light: #2a2a2a;
@@ -439,8 +441,8 @@ body {
 
 .textarea-underline:focus {
   outline: none;
-  border-bottom-color: var(--border-focus);
-  box-shadow: 0 2px 0 0 var(--border-focus);
+  border-bottom-color: var(--primary);
+  box-shadow: 0 2px 0 0 var(--primary);
   transform: translateY(-1px);
 }
 
