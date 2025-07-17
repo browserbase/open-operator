@@ -443,7 +443,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
         </div>
 
         {/* Progress Sidebar */}
-        <div className="w-full lg:w-96 p-6 bg-white border-t lg:border-t-0 lg:border-l border-gray-200">
+        <div className="w-full lg:w-96 p-6 bg-white lg:border-t-0 lg:border-l border-gray-200">
           <div className="h-full flex flex-col">
             <div className="mb-6">
               <h2 className="text-xl font-ppneue text-gray-900 mb-2">
