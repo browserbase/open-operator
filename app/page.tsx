@@ -54,21 +54,35 @@ export default function Home() {
           
           if (runningJob) {
             // If there's a running job and we're not already executing, sync the state
-            if (!isExecuting && runningJob.sessionUrl) {
-              setSessionUrl(runningJob.sessionUrl);
-              setSessionId(runningJob.sessionUrl.split('/').pop() || null);
-              setExecutionId(runningJob.executionId || null);
+            if (!isExecuting) {
+              console.log('Found running job, switching to execution mode:', runningJob);
+              setExecutionId(runningJob.executionId || runningJob.id);
               setIsExecuting(true);
               setActiveTab('browser');
+              
+              // Set session URL if available
+              if (runningJob.sessionUrl) {
+                setSessionUrl(runningJob.sessionUrl);
+                setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+              }
+            } else if (isExecuting && runningJob.sessionUrl && !sessionUrl) {
+              // If we're already executing but didn't have session URL, update it
+              console.log('Updating session URL for running job:', runningJob.sessionUrl);
+              setSessionUrl(runningJob.sessionUrl);
+              setSessionId(runningJob.sessionUrl.split('/').pop() || null);
             }
           } else if (isExecuting) {
             // If no running job but we think we're executing, check if the last job completed/failed
             const lastJob = jobs.length > 0 ? jobs[jobs.length - 1] : null;
             if (lastJob && (lastJob.status === 'completed' || lastJob.status === 'failed')) {
-              // Only stop executing if the session matches
+              // Only stop executing if the session matches or if no sessionId is set
               const lastJobSessionId = lastJob.sessionUrl?.split('/').pop();
               if (!sessionId || lastJobSessionId === sessionId) {
+                console.log('Job completed/failed, stopping execution mode');
                 setIsExecuting(false);
+                setSessionUrl(null);
+                setSessionId(null);
+                setExecutionId(null);
               }
             }
           }
