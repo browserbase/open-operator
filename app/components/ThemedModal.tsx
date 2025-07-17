@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, useCallback, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type ModalType = 'info' | 'warning' | 'error' | 'success';
@@ -24,6 +24,15 @@ const typeStyles = {
     bgVar: '--info-bg',
     borderVar: '--info-border',
     colorVar: '--info',
+    backdropClass: 'backdrop-blur-sm',
+    backdropStyle: {
+      backgroundColor: 'var(--bg-overlay)'
+    },
+    containerStyle: {
+      backgroundColor: 'var(--bg-modal)',
+      borderColor: 'var(--border)',
+      boxShadow: 'var(--shadow-xl)'
+    },
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -34,6 +43,15 @@ const typeStyles = {
     bgVar: '--warning-bg',
     borderVar: '--warning-border',
     colorVar: '--warning',
+    backdropClass: 'backdrop-blur-md',
+    backdropStyle: {
+      backgroundColor: 'var(--bg-overlay)'
+    },
+    containerStyle: {
+      backgroundColor: 'var(--bg-modal)',
+      borderColor: 'var(--warning-border)',
+      boxShadow: 'var(--shadow-xl)'
+    },
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -44,6 +62,15 @@ const typeStyles = {
     bgVar: '--error-bg',
     borderVar: '--error-border',
     colorVar: '--error',
+    backdropClass: 'backdrop-blur-md',
+    backdropStyle: {
+      backgroundColor: 'var(--bg-overlay)'
+    },
+    containerStyle: {
+      backgroundColor: 'var(--bg-modal)',
+      borderColor: 'var(--error-border)',
+      boxShadow: 'var(--shadow-xl)'
+    },
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -54,6 +81,15 @@ const typeStyles = {
     bgVar: '--success-bg',
     borderVar: '--success-border',
     colorVar: '--success',
+    backdropClass: 'backdrop-blur-md',
+    backdropStyle: {
+      backgroundColor: 'var(--bg-overlay)'
+    },
+    containerStyle: {
+      backgroundColor: 'var(--bg-modal)',
+      borderColor: 'var(--success-border)',
+      boxShadow: 'var(--shadow-xl)'
+    },
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -87,6 +123,22 @@ export default function ThemedModal({
   const [isClosing, setIsClosing] = useState(false);
   const typeStyle = typeStyles[type];
 
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 150);
+  }, [onClose]);
+
+  const handleConfirm = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onConfirm?.();
+    }, 150);
+  }, [onConfirm]);
+
   // Close modal on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -105,23 +157,7 @@ export default function ThemedModal({
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isVisible]);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsClosing(false);
-      onClose();
-    }, 150);
-  };
-
-  const handleConfirm = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsClosing(false);
-      onConfirm?.();
-    }, 150);
-  };
+  }, [isVisible, handleClose]);
 
   if (!isVisible && !isClosing) return null;
 
@@ -131,8 +167,8 @@ export default function ThemedModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0"
-            style={{ backgroundColor: 'var(--bg-overlay)' }}
+            className={`fixed inset-0 ${typeStyle.backdropClass}`}
+            style={typeStyle.backdropStyle}
             initial={{ opacity: 0 }}
             animate={{ opacity: isClosing ? 0 : 1 }}
             exit={{ opacity: 0 }}
@@ -158,11 +194,8 @@ export default function ThemedModal({
             }}
           >
             <div 
-              className="bg-modal border border-theme rounded-lg shadow-theme-xl overflow-hidden"
-              style={{ 
-                backgroundColor: 'var(--bg-modal)',
-                borderColor: 'var(--border)'
-              }}
+              className="rounded-lg overflow-hidden border"
+              style={typeStyle.containerStyle}
             >
               {/* Header */}
               <div className="flex items-center gap-3 p-6 pb-4">

@@ -1442,29 +1442,37 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
       {/* Address Selection Modal */}
       {showAddressSelection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-background-primary rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4 text-text-primary">Select Start Address</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+          <div className="rounded-lg shadow-xl border p-8 w-full max-w-md" style={{ backgroundColor: 'var(--bg-modal)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-xl)' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Select Start Address</h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
               Choose which saved address to use as your mileage start address:
             </p>
             <div className="space-y-3">
               {autoSetData.homeAddress && (
                 <button
                   onClick={() => selectStartAddress(autoSetData.homeAddress)}
-                  className="w-full p-3 text-left border border-border rounded-md hover:bg-background-secondary transition-colors"
+                  className="w-full p-3 text-left border rounded-md transition-colors"
+                  style={{ 
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--bg-secondary)'
+                  }}
                 >
-                  <div className="font-medium text-text-primary">Home Address</div>
-                  <div className="text-sm text-text-secondary">{autoSetData.homeAddress}</div>
+                  <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Home Address</div>
+                  <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{autoSetData.homeAddress}</div>
                 </button>
               )}
               {autoSetData.officeAddress && (
                 <button
                   onClick={() => selectStartAddress(autoSetData.officeAddress)}
-                  className="w-full p-3 text-left border border-border rounded-md hover:bg-background-secondary transition-colors"
+                  className="w-full p-3 text-left border rounded-md transition-colors"
+                  style={{ 
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--bg-secondary)'
+                  }}
                 >
-                  <div className="font-medium text-text-primary">Office Address</div>
-                  <div className="text-sm text-text-secondary">{autoSetData.officeAddress}</div>
+                  <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Office Address</div>
+                  <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{autoSetData.officeAddress}</div>
                 </button>
               )}
               <button
@@ -1472,16 +1480,21 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   setShowMileage(true);
                   setShowAddressSelection(false);
                 }}
-                className="w-full p-3 text-left border border-border rounded-md hover:bg-background-secondary transition-colors"
+                className="w-full p-3 text-left border rounded-md transition-colors"
+                style={{ 
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-secondary)'
+                }}
               >
-                <div className="font-medium text-text-primary">Manual Entry</div>
-                <div className="text-sm text-text-secondary">Enter address manually</div>
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Manual Entry</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Enter address manually</div>
               </button>
             </div>
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setShowAddressSelection(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                className="px-4 py-2 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 Cancel
               </button>
@@ -1492,26 +1505,26 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
       {/* Save Template Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-background-primary rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-medium text-text-primary mb-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+          <div className="rounded-lg p-6 w-full max-w-md mx-4" style={{ backgroundColor: 'var(--bg-modal)', boxShadow: 'var(--shadow-xl)' }}>
+            <h3 className="text-lg font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
               {overwriteMode ? "Template Already Exists" : "Save Template"}
             </h3>
             
             {overwriteMode ? (
               <div className="mb-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                   A template with the name &ldquo;{templateName}&rdquo; already exists. Do you want to overwrite it?
                 </p>
-                <div className="bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md p-3">
+                <div className="border rounded-md p-3" style={{ backgroundColor: 'var(--warning-bg)', borderColor: 'var(--warning-border)' }}>
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style={{ color: 'var(--warning)' }}>
                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      <p className="text-sm" style={{ color: 'var(--warning)' }}>
                         This will replace the existing template with the current form data.
                       </p>
                     </div>
@@ -1520,14 +1533,20 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               </div>
             ) : (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                   Template Name
                 </label>
                 <input
                   type="text"
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  style={{ 
+                    backgroundColor: 'var(--bg-modal)',
+                    color: 'var(--text-primary)',
+                    borderColor: 'var(--border)',
+                    '--tw-ring-color': 'var(--primary)'
+                  }}
                   placeholder="Enter template name"
                   autoFocus
                 />
@@ -1540,14 +1559,23 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <button
                     type="button"
                     onClick={cancelOverwrite}
-                    className="px-4 py-2 text-text-secondary border border-border rounded-md hover:bg-background-secondary transition-colors"
+                    className="px-4 py-2 border rounded-md transition-colors"
+                    style={{ 
+                      color: 'var(--text-secondary)',
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--button-secondary)'
+                    }}
                   >
                     Change Name
                   </button>
                   <button
                     type="button"
                     onClick={saveTemplate}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+                    className="px-4 py-2 rounded-md transition-colors"
+                    style={{ 
+                      backgroundColor: 'var(--warning)',
+                      color: 'var(--text-inverse)'
+                    }}
                   >
                     Overwrite Template
                   </button>
@@ -1562,7 +1590,12 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       setOverwriteMode(false);
                       setExistingTemplateId(null);
                     }}
-                    className="px-4 py-2 text-text-secondary border border-border rounded-md hover:bg-background-secondary transition-colors"
+                    className="px-4 py-2 border rounded-md transition-colors"
+                    style={{ 
+                      color: 'var(--text-secondary)',
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--button-secondary)'
+                    }}
                   >
                     Cancel
                   </button>
@@ -1570,7 +1603,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     type="button"
                     onClick={saveTemplate}
                     disabled={!templateName.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    style={{ 
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--text-inverse)'
+                    }}
                   >
                     Save Template
                   </button>
@@ -1583,13 +1620,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
       {/* Load Templates Modal */}
       {showLoadTemplates && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-background-primary rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+          <div className="rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto" style={{ backgroundColor: 'var(--bg-modal)', boxShadow: 'var(--shadow-xl)' }}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-text-primary">Load Template</h3>
+              <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Load Template</h3>
               <button
                 onClick={() => setShowLoadTemplates(false)}
-                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                className="transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1598,28 +1636,28 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
             </div>
             
             {savedTemplates.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
                 <p>No templates saved yet.</p>
                 <p className="text-sm mt-1">Fill out the form and save it as a template to get started.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {savedTemplates.map((template) => (
-                  <div key={template.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <div key={template.id} className="border rounded-lg p-4 transition-colors" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-text-primary">{template.name}</h4>
+                          <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>{template.name}</h4>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
                           Created: {new Date(template.createdAt).toLocaleDateString()} at {new Date(template.createdAt).toLocaleTimeString()}
                         </p>
-                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mr-2">
+                        <div className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="inline-block px-2 py-1 rounded mr-2" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                             Service: {template.formData?.serviceTypeIdentifier || 'Unknown'}
                           </span>
                           {template.formData?.personServed && (
-                            <span className="inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mr-2">
+                            <span className="inline-block px-2 py-1 rounded mr-2" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                               Person: {template.formData.personServed}
                             </span>
                           )}
@@ -1629,13 +1667,21 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         <div className="flex gap-2">
                           <button
                             onClick={() => loadTemplate(template)}
-                            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            className="px-3 py-1 text-sm rounded transition-colors"
+                            style={{ 
+                              backgroundColor: 'var(--primary)',
+                              color: 'var(--text-inverse)'
+                            }}
                           >
                             Load
                           </button>
                           <button
                             onClick={() => deleteTemplate(template.id)}
-                            className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                            className="px-3 py-1 text-sm rounded transition-colors"
+                            style={{ 
+                              backgroundColor: 'var(--error)',
+                              color: 'var(--text-inverse)'
+                            }}
                           >
                             Delete
                           </button>
