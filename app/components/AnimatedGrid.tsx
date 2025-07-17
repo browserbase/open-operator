@@ -114,7 +114,7 @@ const AnimatedGrid = () => {
 
           {/* Circuit path 6: Down, left, up, right - 3 turns */}
           <path
-            className="circuit-pulse circuit-6"
+            className="circuit-pulse circuit-3"
             d="M 316 0 L 316 79.5 L 188 79.5 L 188 143.5 L 252 143.5 L 252 258"
             fill="none"
             stroke="url(#pulseGradient)"
@@ -123,10 +123,18 @@ const AnimatedGrid = () => {
 
           {/* Circuit path 8: Up, left, down, right - 3 turns */}
           <path
-            className="circuit-pulse circuit-8"
+            className="circuit-pulse circuit-4"
             d="M 364 258 L 364 175.5 L 284 175.5 L 284 95.5 L 188 95.5 L 188 31.5 L 392 31.5"
             fill="none"
             stroke="url(#verticalPulseGradient)"
+            filter="url(#strongGlow)"
+          />
+          {/* Circuit path 9: New path, avoids all others */}
+          <path
+            className="circuit-pulse circuit-5"
+            d="M 40 0 L 40 60 L 100 60 L 100 200 L 180 200 L 180 258"
+            fill="none"
+            stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
         </g>
