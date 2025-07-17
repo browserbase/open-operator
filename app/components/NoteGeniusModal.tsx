@@ -17,6 +17,22 @@ export default function NoteGeniusModal({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedContent, setStreamedContent] = useState('');
   const [error, setError] = useState('');
+  const [streamCompleted, setStreamCompleted] = useState(false);
+
+  // Function to clean formatting for display
+  const cleanFormatting = (text: string) => {
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markers
+      .replace(/--\s*/g, '') // Remove bullet dashes
+      .replace(/\*/g, '') // Remove any remaining asterisks
+      // Add proper line breaks before section headers
+      .replace(/(Observations of the Session:|Behavioral Observations:|Support and Intervention:|Goals for Future Sessions:|Summary:)/g, '\n\n$1\n')
+      // Add line breaks after content blocks
+      .replace(/\.(Behavioral|Support|Goals|Summary)/g, '.\n\n$1')
+      // Clean up multiple line breaks
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
 
   const handleOptimize = async () => {
     if (!originalText.trim()) {
@@ -27,6 +43,7 @@ export default function NoteGeniusModal({
     setIsStreaming(true);
     setStreamedContent('');
     setError('');
+    setStreamCompleted(false);
 
     try {
       const response = await fetch('/api/generateNote', {
@@ -53,12 +70,16 @@ export default function NoteGeniusModal({
       eventSource.addEventListener('end', () => {
         eventSource.close();
         setIsStreaming(false);
+        setStreamCompleted(true);
       });
 
-      eventSource.onerror = () => {
+      eventSource.onerror = (error) => {
+        // Only show error if stream hasn't completed successfully
+        if (!streamCompleted && eventSource.readyState === EventSource.CLOSED && !streamedContent) {
+          setError('Connection lost. Please try again.');
+        }
         eventSource.close();
         setIsStreaming(false);
-        setError('Error occurred during streaming');
       };
 
     } catch (error) {
@@ -69,7 +90,33 @@ export default function NoteGeniusModal({
   };
 
   const handleAccept = () => {
-    onAccept(streamedContent);
+    // Format the content for better textarea display by removing special characters
+    let formattedContent = streamedContent;
+    
+    // Remove markdown formatting and clean up the text
+    formattedContent = formattedContent
+      // Remove bold markers (**text**) and keep just the text
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      // Remove bullet point dashes (-- ) and replace with clean format
+      .replace(/--\s*/g, '')
+      // Clean up any remaining asterisks
+      .replace(/\*/g, '')
+      // Add proper line breaks before section headers
+      .replace(/(Observations of the Session:|Behavioral Observations:|Support and Intervention:|Goals for Future Sessions:|Summary:)/g, '\n\n$1\n')
+      // Add line breaks after content blocks that run together
+      .replace(/\.(Behavioral|Support|Goals|Summary)/g, '.\n\n$1')
+      // Fix specific patterns where text runs together
+      .replace(/session\.(Behavioral|Support|Goals)/g, 'session.\n\n$1')
+      .replace(/activities\.(Support|Goals)/g, 'activities.\n\n$1')
+      .replace(/questions\.(Strategy|Goals)/g, 'questions.\n\n$1')
+      .replace(/participation\.(Goals|Summary)/g, 'participation.\n\n$1')
+      .replace(/exercises\.(Summary)/g, 'exercises.\n\n$1')
+      // Normalize multiple line breaks to max 2
+      .replace(/\n{3,}/g, '\n\n')
+      // Remove leading/trailing whitespace
+      .trim();
+    
+    onAccept(formattedContent);
     handleClose();
   };
 
@@ -77,6 +124,7 @@ export default function NoteGeniusModal({
     setStreamedContent('');
     setError('');
     setIsStreaming(false);
+    setStreamCompleted(false);
     onClose();
   };
 
@@ -150,8 +198,8 @@ export default function NoteGeniusModal({
             )}
             
             {streamedContent && (
-              <div className="whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
-                {streamedContent}
+              <div className="whitespace-pre-line text-sm leading-relaxed" style={{ color: 'var(--text-primary)', fontFamily: 'inherit' }}>
+                {cleanFormatting(streamedContent)}
               </div>
             )}
             
@@ -166,7 +214,7 @@ export default function NoteGeniusModal({
         {/* Character count info */}
         {streamedContent && (
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Optimized note: {streamedContent.length} characters
+            Optimized note: {cleanFormatting(streamedContent).length} characters (formatted)
           </div>
         )}
       </div>

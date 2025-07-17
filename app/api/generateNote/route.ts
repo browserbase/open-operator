@@ -17,29 +17,39 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = `
-input: "${text}"
-Instructions: Do not use the word I instead use the word Provider and speak in third person.
-If no client name is found use "client"
-Do not add any information to the response that was not included in the user input.
-Format the response as a detailed service note including all "-" and "**" formatting:
+Transform the following text into a professional case note with proper formatting and structure. 
+
+Original text: "${text}"
+
+Requirements:
+- Use "Provider" instead of "I" (third person perspective)
+- Use "client" if no specific client name is mentioned
+- Do not add information not present in the original text
+- Each section must be separated by a blank line
+- Use the exact formatting structure shown below
+- Maintain professional tone throughout
+
+IMPORTANT: Format exactly as shown with section headers and content, ensuring proper line breaks:
 
 **Observations of the Session:**
--- [Details of the session] 
+-- Detailed observations about what occurred during the session
 
--- **Behavioral Observations:**
--- **Behavior 1:** [Details]
--- **Behavior 2:** [Details]
+**Behavioral Observations:**
+-- **Behavior 1:** Specific behavioral observation with clear details
+-- **Behavior 2:** Additional behavioral observation if applicable
 
--- **Support and Intervention:**
--- **Strategy 1:** [Provider's verbal intervention details]
--- **Strategy 2:** [Provider's verbal intervention details]
+**Support and Intervention:**
+-- **Strategy 1:** Specific Provider intervention or support provided
+-- **Strategy 2:** Additional strategy implemented if applicable
 
--- **Goals for Future Sessions:**
--- **Goal 1:** [Details on coping skills or behavior strategies]
--- **Goal 2:** [Details on coping skills or behavior strategies]
+**Goals for Future Sessions:**
+-- **Goal 1:** Specific goal for upcoming sessions
+-- **Goal 2:** Additional goal if applicable
 
--- **Summary:**
--- [Summary of the session]
+**Summary:**
+-- Comprehensive summary of the entire session and outcomes
+
+CRITICAL: Each major section (starting with **) should have blank lines before and after it. Use line breaks to separate different points within sections.
 `;
 
     // Log the prompt to the console
