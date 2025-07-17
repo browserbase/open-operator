@@ -718,20 +718,41 @@ body {
     stroke-dasharray: 0 400;
     stroke-dashoffset: 0;
   }
-  5% {
+  7% {
     opacity: 1;
-    stroke-dasharray: 60 400;
+    stroke-dasharray: 80 400;
     stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 12px var(--primary));
+  }
+  15% {
+    opacity: 1;
+    stroke-dasharray: 80 400;
+    stroke-dashoffset: -20;
+    filter: drop-shadow(0 0 16px var(--primary));
+  }
+  60% {
+    opacity: 0.8;
+    stroke-dasharray: 60 400;
+    stroke-dashoffset: -200;
+    filter: drop-shadow(0 0 8px var(--primary));
+  }
+  80% {
+    opacity: 0.5;
+    stroke-dasharray: 40 400;
+    stroke-dashoffset: -320;
+    filter: drop-shadow(0 0 4px var(--primary));
   }
   95% {
-    opacity: 1;
-    stroke-dasharray: 60 400;
-    stroke-dashoffset: -340;
+    opacity: 0.2;
+    stroke-dasharray: 10 400;
+    stroke-dashoffset: -390;
+    filter: none;
   }
   100% {
     opacity: 0;
-    stroke-dasharray: 60 400;
+    stroke-dasharray: 0 400;
     stroke-dashoffset: -400;
+    filter: none;
   }
 }
 
