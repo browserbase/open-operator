@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { QueuedJob } from '../types/jobQueue';
+import { makeAuthenticatedRequest } from '../utils/apiClient';
+import { User } from 'firebase/auth';
 
 interface QueueManagerProps {
   isVisible: boolean;
   onClose: () => void;
   onRerunJob?: (formData: any) => void;
+  user?: User | null;
 }
 
-export default function QueueManager({ isVisible, onClose, onRerunJob }: QueueManagerProps) {
+export default function QueueManager({ isVisible, onClose, onRerunJob, user }: QueueManagerProps) {
   const [jobs, setJobs] = useState<QueuedJob[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +25,7 @@ export default function QueueManager({ isVisible, onClose, onRerunJob }: QueueMa
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('/api/queue');
+      const response = await makeAuthenticatedRequest('/api/queue', {}, user);
       const data = await response.json();
       if (data.success) {
         setJobs(data.jobs);
@@ -35,11 +38,10 @@ export default function QueueManager({ isVisible, onClose, onRerunJob }: QueueMa
   const clearCompleted = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/queue', {
+      const response = await makeAuthenticatedRequest('/api/queue', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'clear-completed' })
-      });
+      }, user);
       
       if (response.ok) {
         await fetchJobs();
@@ -54,11 +56,10 @@ export default function QueueManager({ isVisible, onClose, onRerunJob }: QueueMa
   const removeJob = async (jobId: string) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/queue', {
+      const response = await makeAuthenticatedRequest('/api/queue', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'remove', jobId })
-      });
+      }, user);
       
       if (response.ok) {
         await fetchJobs();
@@ -73,11 +74,10 @@ export default function QueueManager({ isVisible, onClose, onRerunJob }: QueueMa
   const rerunJob = async (jobId: string) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/queue', {
+      const response = await makeAuthenticatedRequest('/api/queue', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'rerun', jobId })
-      });
+      }, user);
       
       if (response.ok) {
         const result = await response.json();

@@ -9,4 +9,5 @@ export interface QueuedJob {
   error?: string;
   sessionUrl?: string;
   executionId?: string;
+  userId: string; // Add userId for user-specific job isolation
 }
