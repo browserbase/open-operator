@@ -8,19 +8,25 @@ class JobQueue {
   private isProcessing = false;
   private subscribers = new Set<(jobs: QueuedJob[]) => void>();
   private executionToJobMap = new Map<string, string>(); // Maps executionId to jobId
+  private userId: string;
+
+  constructor(userId: string) {
+    this.userId = userId;
+  }
 
   addJob(formData: any): QueuedJob {
     const job: QueuedJob = {
       id: this.generateId(),
       formData,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userId: this.userId
     };
 
     this.jobs.push(job);
     this.notifySubscribers();
     
-    console.log(`Added job ${job.id} to queue. Current queue status:`, {
+    console.log(`Added job ${job.id} to queue for user ${this.userId}. Current queue status:`, {
       total: this.jobs.length,
       pending: this.jobs.filter(j => j.status === 'pending').length,
       running: this.jobs.filter(j => j.status === 'running').length,
@@ -71,7 +77,8 @@ class JobQueue {
       id: this.generateId(),
       formData: existingJob.formData,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userId: this.userId
     };
 
     this.jobs.push(newJob);
@@ -150,7 +157,7 @@ class JobQueue {
     try {
       // Call the automation function directly instead of making HTTP requests
       const { startAutomation } = await import('./automation');
-      const result = await startAutomation(job.formData);
+      const result = await startAutomation(job.formData, undefined, job.userId);
 
       if (result.success) {
         // Update job with session information immediately
@@ -215,5 +222,36 @@ class JobQueue {
   }
 }
 
-// Singleton instance
-export const jobQueue = new JobQueue();
+// User-specific job queue manager
+class JobQueueManager {
+  private static instance: JobQueueManager;
+  private userQueues = new Map<string, JobQueue>();
+
+  static getInstance(): JobQueueManager {
+    if (!JobQueueManager.instance) {
+      JobQueueManager.instance = new JobQueueManager();
+    }
+    return JobQueueManager.instance;
+  }
+
+  getOrCreateQueue(userId: string): JobQueue {
+    if (!this.userQueues.has(userId)) {
+      this.userQueues.set(userId, new JobQueue(userId));
+    }
+    return this.userQueues.get(userId)!;
+  }
+
+  getUserQueue(userId: string): JobQueue | undefined {
+    return this.userQueues.get(userId);
+  }
+
+  removeUserQueue(userId: string): void {
+    this.userQueues.delete(userId);
+  }
+}
+
+// Export the manager instance
+export const jobQueueManager = JobQueueManager.getInstance();
+
+// Legacy compatibility - default to anonymous user for backwards compatibility
+export const jobQueue = jobQueueManager.getOrCreateQueue('anonymous');

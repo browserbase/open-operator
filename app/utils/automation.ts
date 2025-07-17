@@ -11,7 +11,7 @@ export interface AutomationResult {
   details?: string;
 }
 
-export async function startAutomation(formData: FormData, baseUrl?: string): Promise<AutomationResult> {
+export async function startAutomation(formData: FormData, baseUrl?: string, userId?: string): Promise<AutomationResult> {
   try {
     console.log("Starting automation with form data:", {
       companyCode: formData.companyCode,
@@ -77,16 +77,16 @@ export async function startAutomation(formData: FormData, baseUrl?: string): Pro
     console.log("ExecutionId for events:", executionId);
     
     // Send initial status
-    sendEventToExecution(executionId, 'progress', 'Starting automation...');
+    sendEventToExecution(executionId, 'progress', 'Starting automation...', userId);
     
     runPuppeteerScript(formData, executionId, sessionData.sessionId, (uid, event, data) => {
       console.log(`Event callback - UID: ${uid}, Event: ${event}, Data:`, data);
       console.log(`Sending event to executionId: ${uid}`);
       // Send real-time updates to the frontend via SSE
-      sendEventToExecution(uid, event, data);
+      sendEventToExecution(uid, event, data, userId);
     }).catch((error) => {
       console.error("Puppeteer script failed:", error);
-      sendEventToExecution(executionId, 'error', `Script failed: ${error.message}`);
+      sendEventToExecution(executionId, 'error', `Script failed: ${error.message}`, userId);
     });
 
     // Return the session information

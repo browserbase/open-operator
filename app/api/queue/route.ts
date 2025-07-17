@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jobQueue, QueuedJob } from "../../utils/jobQueue";
+import { jobQueueManager, QueuedJob } from "../../utils/jobQueue";
+import { getUserIdFromRequest } from "../../utils/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const jobs = jobQueue.getJobs();
+    const userId = await getUserIdFromRequest(request);
+    const userQueue = jobQueueManager.getOrCreateQueue(userId);
+    const jobs = userQueue.getJobs();
     return NextResponse.json({ success: true, jobs });
   } catch (error) {
     console.error('Error getting queue:', error);
@@ -16,6 +19,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(request);
+    const userQueue = jobQueueManager.getOrCreateQueue(userId);
     const body = await request.json();
     const { action, jobId } = body;
 
@@ -29,7 +34,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const job = jobQueue.addJob(formData);
+        const job = userQueue.addJob(formData);
         return NextResponse.json({ success: true, job });
       }
 
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        jobQueue.removeJob(jobId);
+        userQueue.removeJob(jobId);
         return NextResponse.json({ success: true });
       }
 
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const newJob = jobQueue.rerunJob(jobId);
+        const newJob = userQueue.rerunJob(jobId);
         if (!newJob) {
           return NextResponse.json(
             { success: false, error: 'Job not found' },
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'clear-completed': {
-        jobQueue.removeCompletedJobs();
+        userQueue.removeCompletedJobs();
         return NextResponse.json({ success: true });
       }
 

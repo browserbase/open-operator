@@ -9,6 +9,7 @@ import AutoSet from "./components/AutoSet";
 import LottieLoading from "./components/LottieLoading";
 import QueueManager from "./components/QueueManager";
 import { ToastContainer, useToast } from "./components/Toast";
+import { makeAuthenticatedRequest } from "./utils/apiClient";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
@@ -48,7 +49,7 @@ export default function Home() {
   useEffect(() => {
     const pollJobQueue = async () => {
       try {
-        const response = await fetch('/api/queue');
+        const response = await makeAuthenticatedRequest('/api/queue', {}, user);
         if (response.ok) {
           const data = await response.json();
           const jobs = data.jobs || []; // Extract jobs array from response
@@ -167,19 +168,16 @@ export default function Home() {
     
     try {
       // Always add jobs to the queue for consistent tracking
-      const response = await fetch("/api/queue", {
+      const response = await makeAuthenticatedRequest("/api/queue", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ action: 'add', formData }),
-      });
+      }, user);
 
       const result = await response.json();
 
       if (result.success) {
         // Check if this is the first job (will start immediately)
-        const queueResponse = await fetch("/api/queue");
+        const queueResponse = await makeAuthenticatedRequest("/api/queue", {}, user);
         const queueData = await queueResponse.json();
         const runningJobs = queueData.success ? queueData.jobs.filter((job: any) => job.status === 'running') : [];
 
@@ -560,6 +558,7 @@ export default function Home() {
         isVisible={showQueueManager}
         onClose={() => setShowQueueManager(false)}
         onRerunJob={handleJobRerun}
+        user={user}
       />
       
       {/* Toast Container */}
@@ -618,86 +617,117 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
 
   useEffect(() => {
     console.log('Setting up EventSource for executionId:', executionId);
-    const eventSource = new EventSource(`/api/automation/events?executionId=${executionId}`);
     
-    eventSource.onopen = () => {
-      console.log('EventSource connection opened');
+    // Create SSE URL with user authentication
+    const createSSEUrl = async () => {
+      let sseUrl = `/api/automation/events?executionId=${executionId}`;
+      
+      // Add user authentication if available
+      if (user) {
+        try {
+          const idToken = await user.getIdToken();
+          sseUrl += `&token=${encodeURIComponent(idToken)}`;
+        } catch (error) {
+          console.error('Failed to get ID token for SSE:', error);
+        }
+      }
+      
+      return sseUrl;
     };
     
-    eventSource.onmessage = (event) => {
-      console.log('Raw event received:', event);
-      try {
-        const eventData = JSON.parse(event.data);
-        console.log('Parsed event data:', eventData);
+    const setupEventSource = async () => {
+      const sseUrl = await createSSEUrl();
+      const eventSource = new EventSource(sseUrl);
+    
+      eventSource.onopen = () => {
+        console.log('EventSource connection opened');
+      };
+      
+      eventSource.onmessage = (event) => {
+        console.log('Raw event received:', event);
+        try {
+          const eventData = JSON.parse(event.data);
+          console.log('Parsed event data:', eventData);
 
-        // Update progress messages based on events
-        if (eventData.type === 'progress') {
-          console.log('Adding progress message:', eventData.message || eventData.data);
-          // On new progress, keep previous success/error messages but clear old progress messages
-          setProgressMessages(prev => [
-            ...prev.filter(msg => msg.type !== 'progress'),
-            {
-              message: eventData.message || eventData.data || 'Processing...',
-              type: 'progress',
-              timestamp: Date.now()
-            }
-          ]);
-        } else if (eventData.type === 'miles') {
-          // Handle mileage data - save to Firebase if user is logged in
-          console.log('Received mileage data:', eventData.data);
-          if (eventData.data && typeof eventData.data === 'object') {
-            saveMileageDataToFirebase(eventData.data, user);
+          // Update progress messages based on events
+          if (eventData.type === 'progress') {
+            console.log('Adding progress message:', eventData.message || eventData.data);
+            // On new progress, keep previous success/error messages but clear old progress messages
             setProgressMessages(prev => [
               ...prev.filter(msg => msg.type !== 'progress'),
               {
-                message: `Mileage recorded: ${eventData.data.endMileage} miles`,
+                message: eventData.message || eventData.data || 'Processing...',
+                type: 'progress',
+                timestamp: Date.now()
+              }
+            ]);
+          } else if (eventData.type === 'miles') {
+            // Handle mileage data - save to Firebase if user is logged in
+            console.log('Received mileage data:', eventData.data);
+            if (eventData.data && typeof eventData.data === 'object') {
+              saveMileageDataToFirebase(eventData.data, user);
+              setProgressMessages(prev => [
+                ...prev.filter(msg => msg.type !== 'progress'),
+                {
+                  message: `Mileage recorded: ${eventData.data.endMileage} miles`,
+                  type: 'success',
+                  timestamp: Date.now()
+                }
+              ]);
+            }
+          } else if (eventData.type === 'success') {
+            // On success, keep previous success/error messages but clear progress messages
+            setProgressMessages(prev => [
+              ...prev.filter(msg => msg.type !== 'progress'),
+              {
+                message: eventData.message || eventData.data || 'Success',
                 type: 'success',
                 timestamp: Date.now()
               }
             ]);
-          }
-        } else if (eventData.type === 'success') {
-          // On success, keep previous success/error messages but clear progress messages
-          setProgressMessages(prev => [
-            ...prev.filter(msg => msg.type !== 'progress'),
-            {
-              message: eventData.message || eventData.data || 'Success',
+          } else if (eventData.type === 'error') {
+            setProgressMessages(prev => [...prev, {
+              message: eventData.message || eventData.data || 'Error occurred',
+              type: 'error',
+              timestamp: Date.now()
+            }]);
+          } else if (eventData.type === 'connected') {
+            console.log('Connected to automation events');
+            setProgressMessages([{
+              message: 'Connected to automation service',
               type: 'success',
               timestamp: Date.now()
-            }
-          ]);
-        } else if (eventData.type === 'error') {
-          setProgressMessages(prev => [...prev, {
-            message: eventData.message || eventData.data || 'Error occurred',
-            type: 'error',
-            timestamp: Date.now()
-          }]);
-        } else if (eventData.type === 'connected') {
-          console.log('Connected to automation events');
-          setProgressMessages([{
-            message: 'Connected to automation service',
-            type: 'success',
-            timestamp: Date.now()
-          }]);
+            }]);
+          }
+        } catch (e) {
+          console.error('Error parsing event data:', e, 'Raw data:', event.data);
         }
-      } catch (e) {
-        console.error('Error parsing event data:', e, 'Raw data:', event.data);
-      }
-    };
+      };
 
-    eventSource.onerror = (error) => {
-      console.error('EventSource failed:', error);
-      console.log('EventSource readyState:', eventSource.readyState);
-      setProgressMessages(prev => [...prev, {
-        message: 'Connection error - retrying...',
-        type: 'error',
-        timestamp: Date.now()
-      }]);
+      eventSource.onerror = (error) => {
+        console.error('EventSource failed:', error);
+        console.log('EventSource readyState:', eventSource.readyState);
+        setProgressMessages(prev => [...prev, {
+          message: 'Connection error - retrying...',
+          type: 'error',
+          timestamp: Date.now()
+        }]);
+      };
+
+      return eventSource;
     };
+    
+    let eventSource: EventSource;
+    
+    setupEventSource().then(es => {
+      eventSource = es;
+    });
 
     return () => {
-      console.log('Closing EventSource connection');
-      eventSource.close();
+      if (eventSource) {
+        console.log('Closing EventSource connection');
+        eventSource.close();
+      }
     };
   }, [executionId]);
 
