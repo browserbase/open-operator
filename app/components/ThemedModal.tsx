@@ -15,6 +15,7 @@ interface ThemedModalProps {
   cancelText?: string;
   showCancel?: boolean;
   showConfirm?: boolean;
+  confirmDisabled?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
@@ -80,6 +81,7 @@ export default function ThemedModal({
   cancelText = 'Cancel',
   showCancel = true,
   showConfirm = true,
+  confirmDisabled = false,
   size = 'md'
 }: ThemedModalProps) {
   const [isClosing, setIsClosing] = useState(false);
@@ -223,13 +225,19 @@ export default function ThemedModal({
                   )}
                   {showConfirm && (
                     <button
-                      onClick={handleConfirm}
-                      className="flex-1 px-4 py-2 text-sm font-medium rounded-md btn-primary"
+                      onClick={confirmDisabled ? undefined : handleConfirm}
+                      disabled={confirmDisabled}
+                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-md btn-primary flex items-center justify-center gap-2 ${
+                        confirmDisabled ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                       style={{
                         backgroundColor: 'var(--primary)',
                         color: 'var(--text-inverse)'
                       }}
                     >
+                      {confirmDisabled && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      )}
                       {confirmText}
                     </button>
                   )}

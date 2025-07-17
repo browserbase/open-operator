@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
@@ -117,7 +117,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
   // Function to check for mileage warning
   const checkMileageWarning = useCallback(() => {
-    if (lastProcessedMileage && formData.mileageStartMileage) {
+    if (showMileage && lastProcessedMileage && formData.mileageStartMileage) {
       const lastMileage = parseInt(lastProcessedMileage.replace(/,/g, ''));
       const currentStartMileage = parseInt(formData.mileageStartMileage.replace(/,/g, ''));
       
@@ -129,14 +129,21 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     } else {
       setShowMileageWarning(false);
     }
-  }, [lastProcessedMileage, formData.mileageStartMileage]);
+  }, [showMileage, lastProcessedMileage, formData.mileageStartMileage]);
 
   // Load saved credentials and templates on component mount
   useEffect(() => {
     // If initialFormData is provided, use it (read-only mode)
     if (initialFormData) {
       setFormData(initialFormData);
-      setShowMileage(Boolean(initialFormData.mileageStartAddress || initialFormData.mileageStartMileage));
+      // Only enable mileage in read-only mode if it was explicitly enabled
+      // For read-only mode, show mileage if there's mileage data AND it's meaningful
+      // Don't auto-enable mileage for empty mileage fields
+      const hasMeaningfulMileageData = Boolean(
+        (initialFormData.mileageStartAddress && initialFormData.mileageStartAddress.trim()) ||
+        (initialFormData.mileageStartMileage && initialFormData.mileageStartMileage.trim())
+      );
+      setShowMileage(hasMeaningfulMileageData);
       return;
     }
 
@@ -198,7 +205,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   // Check for mileage warning when start mileage changes
   useEffect(() => {
     checkMileageWarning();
-  }, [formData.mileageStartMileage, lastProcessedMileage]);
+  }, [formData.mileageStartMileage, lastProcessedMileage, showMileage, checkMileageWarning]);
 
   // Load auto-set data from Firebase when user logs in
   useEffect(() => {
@@ -242,6 +249,18 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       }
     } else {
       setShowMileage(enabled);
+      // Clear mileage warning when mileage is disabled
+      setShowMileageWarning(false);
+      // Clear all mileage-related data and reset addresses when mileage is disabled
+      setFormData(prev => ({
+        ...prev,
+        mileageStartAddress: "",
+        mileageStartMileage: "",
+        endAddresses: [""],
+        additionalDropdownValues: [""]
+      }));
+      // Reset expanded stops state
+      setExpandedStops({ 0: true });
     }
   };
 
@@ -390,8 +409,17 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   // Handlers for mileage confirmation modal
   const handleMileageConfirm = () => {
     setShowMileageConfirmation(false);
-    // Continue with form submission
-    onSubmit(formData);
+    // Continue with form submission with cleaned data
+    const cleanedFormData = { ...formData };
+    if (!showMileage) {
+      // Remove mileage-related data when mileage is disabled
+      cleanedFormData.mileageStartAddress = "";
+      cleanedFormData.mileageStartMileage = "";
+      // Reset addresses to just one empty address when mileage is disabled
+      cleanedFormData.endAddresses = [""];
+      cleanedFormData.additionalDropdownValues = [""];
+    }
+    onSubmit(cleanedFormData);
   };
 
   const handleMileageCancel = () => {
@@ -473,7 +501,18 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       return;
     }
 
-    onSubmit(formData);
+    // Clean up form data before submission based on mileage checkbox state
+    const cleanedFormData = { ...formData };
+    if (!showMileage) {
+      // Remove mileage-related data when mileage is disabled
+      cleanedFormData.mileageStartAddress = "";
+      cleanedFormData.mileageStartMileage = "";
+      // Reset addresses to just one empty address when mileage is disabled
+      cleanedFormData.endAddresses = [""];
+      cleanedFormData.additionalDropdownValues = [""];
+    }
+
+    onSubmit(cleanedFormData);
   };
 
   const clearSavedCredentials = () => {
@@ -585,8 +624,9 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       };
     });
     
-    // Update mileage visibility based on template data
-    setShowMileage(Boolean(template.formData.mileageStartAddress || template.formData.mileageStartMileage));
+    // Don't automatically enable mileage when loading templates
+    // User must manually enable mileage checkbox if they want to include mileage
+    // setShowMileage(Boolean(template.formData.mileageStartAddress || template.formData.mileageStartMileage));
     setShowLoadTemplates(false);
   };
 

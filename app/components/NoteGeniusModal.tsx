@@ -76,7 +76,7 @@ export default function NoteGeniusModal({
       eventSource.onerror = (error) => {
         // Only show error if stream hasn't completed successfully
         if (!streamCompleted && eventSource.readyState === EventSource.CLOSED && !streamedContent) {
-          setError('Connection lost. Please try again.');
+          setError(`Connection lost. Please try again. ${error}`);
         }
         eventSource.close();
         setIsStreaming(false);
@@ -143,9 +143,17 @@ export default function NoteGeniusModal({
       subtitle="Optimizing your note with professional formatting and structure"
       type="info"
       size="lg"
-      confirmText={streamedContent ? "Accept & Replace" : undefined}
+      confirmText={
+        isStreaming 
+          ? "Generating..." 
+          : streamedContent 
+            ? "Accept & Replace" 
+            : undefined
+      }
       cancelText="Cancel"
-      onConfirm={streamedContent ? handleAccept : undefined}
+      onConfirm={streamedContent && !isStreaming ? handleAccept : undefined}
+      confirmDisabled={isStreaming}
+      showConfirm={isStreaming || !!streamedContent}
     >
       <div className="space-y-4">
         {/* Original Text Preview */}

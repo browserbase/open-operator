@@ -99,7 +99,7 @@ export async function runPuppeteerScript(
   };
 
   const defaultTimeout = 15000; // Reduced from 30s to 15s
-  const shortTimeout = 5000; // For quick operations
+  const shortTimeout = 4000; // For quick operations
   const mediumTimeout = 10000; // For medium operations
   const orderedObservationNotes56a = reorderObjectKeys(observationNotes56a, desiredOrder);
   const observationNotesArray: ObservationNotesEntry[] = Object.entries(orderedObservationNotes56a).map(
@@ -695,7 +695,7 @@ export async function runPuppeteerScript(
       
       // Click on the filter/search input
       const searchInputSelector = '.form-control.search-input.search';
-      await page.waitForSelector(searchInputSelector, { visible: true, timeout: defaultTimeout });
+      await page.waitForSelector(searchInputSelector, { visible: true, timeout: shortTimeout });
       await page.click(searchInputSelector);
       console.log('Clicked on search filter input');
       
@@ -723,9 +723,6 @@ export async function runPuppeteerScript(
           input.dispatchEvent(new Event('search', { bubbles: true }));
         }
       }, searchInputSelector);
-      
-      // Wait for the table to load after filtering
-      await sleep(800); // Reduced from 1500ms
       
       // Look for the first note link matching the pattern href="/DFCS/Notes/Note?id=..."
       const noteFound = await page.evaluate(() => {
