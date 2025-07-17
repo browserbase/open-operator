@@ -48,6 +48,34 @@ export interface ProgressEmitter {
   emit: (uid: string, event: string, data: unknown) => void;
 }
 
+// Helper function to close Browserbase session
+async function closeBrowserbaseSession(sessionId: string): Promise<void> {
+  try {
+    console.log(`Attempting to close Browserbase session: ${sessionId}`);
+    const response = await fetch('/api/session', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sessionId }),
+    });
+    
+    if (response.ok) {
+      console.log(`Successfully closed Browserbase session: ${sessionId}`);
+    } else {
+      console.warn(`Failed to close Browserbase session: ${sessionId}`, await response.text());
+    }
+  } catch (error) {
+    console.error(`Error closing Browserbase session: ${sessionId}`, error);
+  }
+}
+
+// Helper function to close only the Browserbase session (not the browser)
+async function closeSessionOnly(sessionId: string): Promise<void> {
+  console.log("Closing Browserbase session only (keeping browser alive)");
+  await closeBrowserbaseSession(sessionId);
+}
+
 export async function runPuppeteerScript(
   formData: FormData, 
   uid: string,
@@ -259,7 +287,7 @@ export async function runPuppeteerScript(
       emit(uid, 'error', `Error populating Start Address and Start Mileage: ${error}`);
       console.error("Error populating Start Address and Start Mileage:", error);
       isBrowserClosed = true;
-      await browser.close();
+      await closeSessionOnly(sessionId);
       throw error;
     }
   };
@@ -610,7 +638,7 @@ export async function runPuppeteerScript(
           if (endMileageValue !== null) {
             const captureTimestamp = new Date().toISOString();
             console.log(`End Mileage value for the last entry is: "${endMileageValue}"`);
-            // Send mileage data with date, time, and capture timestamp for Firebase storage
+            // Send updated mileage data with date, time, mileage, and capture timestamp for Firebase storage
             emit(uid, 'miles', {
               dateOfService,
               startTime,
@@ -625,7 +653,7 @@ export async function runPuppeteerScript(
       } catch (error) {
         console.error(`Error populating mileage entry (${i}):`, error);
         isBrowserClosed = true;
-        await browser.close();
+        await closeSessionOnly(sessionId);
         throw error;
       }
     }
@@ -875,7 +903,7 @@ export async function runPuppeteerScript(
       emit(uid, 'error', `An error occurred while saving and readying the note: ${error}`);
       console.error("An error occurred while saving and readying the note:", error);
       isBrowserClosed = true;
-      await browser.close();
+      await closeSessionOnly(sessionId);
       throw error;
     }
   };
@@ -1084,7 +1112,7 @@ export async function runPuppeteerScript(
           emit(uid, 'error', `Failed to populate ${field} with selector "${textareaSelector}": ${error}`);
           console.error(`Failed to populate ${field} with selector "${textareaSelector}":`, error);
           isBrowserClosed = true;
-          await browser.close();
+          await closeSessionOnly(sessionId);
           throw error;
         }
       }
@@ -1101,7 +1129,7 @@ export async function runPuppeteerScript(
         emit(uid, 'error', `Failed to populate Note Summary with selector "${textareaSelector}": ${error}`);
         console.error(`Failed to populate Note Summary with selector "${textareaSelector}":`, error);
         isBrowserClosed = true;
-        await browser.close();
+        await closeSessionOnly(sessionId);
         throw error;
       }
     } else {
@@ -1137,11 +1165,21 @@ export async function runPuppeteerScript(
       emit(uid, 'toast', 'Process Completed!');
     } else {
       console.log('Include Mileage is false. Skipping mileage processing.');
+      // Emit note data without mileage for history tracking, but preserve existing endMileage values
+      const noteData = {
+        dateOfService,
+        startTime,
+        endTime,
+        capturedAt: new Date().toISOString()
+      };
+      emit(uid, 'noteProcessed', noteData);
+      console.log("Note data emitted for history update (no mileage):", noteData);
+      
       emit(uid, 'finished', 'Process Completed!');
       emit(uid, 'toast', 'Process Completed!');
     }
     
-    await browser.close();
+    await closeSessionOnly(sessionId);
 
   } catch (error) {
     // Clear the keep-alive interval
@@ -1155,7 +1193,7 @@ export async function runPuppeteerScript(
    
     
     isBrowserClosed = true;
-    await browser.close();
+    await closeSessionOnly(sessionId);
     throw error;
 
   } finally {
@@ -1166,9 +1204,9 @@ export async function runPuppeteerScript(
     
     isBrowserClosed = true;
     if (browser && !isBrowserClosed) {
-      await browser.close();
+      await closeSessionOnly(sessionId);
     }
-    console.log("Browser closed");
+    console.log("Session closed");
   }
 }
 
