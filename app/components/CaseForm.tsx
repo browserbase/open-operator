@@ -1459,7 +1459,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                    e.currentTarget.style.borderColor = 'var(--border-focus)';
+                    e.currentTarget.style.borderColor = 'var(--primary)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
@@ -1480,7 +1480,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                    e.currentTarget.style.borderColor = 'var(--border-focus)';
+                    e.currentTarget.style.borderColor = 'var(--primary)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
@@ -1503,7 +1503,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                  e.currentTarget.style.borderColor = 'var(--border-focus)';
+                  e.currentTarget.style.borderColor = 'var(--primary)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
