@@ -9,6 +9,7 @@ import { AutoSetData } from "./AutoSet";
 import { dropdownOptions } from "../constants/dropdownOptions";
 import { db } from "../firebaseConfig";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import MileageWarningModal from "./MileageWarningModal";
 
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
@@ -78,6 +79,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [expandedStops, setExpandedStops] = useState<{ [key: number]: boolean }>({});
   const [lastProcessedMileage, setLastProcessedMileage] = useState<string | null>(null);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
+  const [showMileageConfirmation, setShowMileageConfirmation] = useState(false);
   const [isLoadingMileage, setIsLoadingMileage] = useState(false);
   const hasAutoLoaded = useRef(false);
 
@@ -407,6 +409,17 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
   const [requiredError, setRequiredError] = useState("");
 
+  // Handlers for mileage confirmation modal
+  const handleMileageConfirm = () => {
+    setShowMileageConfirmation(false);
+    // Continue with form submission
+    onSubmit(formData);
+  };
+
+  const handleMileageCancel = () => {
+    setShowMileageConfirmation(false);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -469,12 +482,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
     // Check for mileage warning and confirm with user
     if (showMileageWarning) {
-      const confirmSubmit = window.confirm(
-        `Warning: Your start mileage (${formData.mileageStartMileage}) is lower than your last processed mileage (${lastProcessedMileage}). Are you sure you want to continue?`
-      );
-      if (!confirmSubmit) {
-        return;
-      }
+      setShowMileageConfirmation(true);
+      return;
     }
 
     onSubmit(formData);
@@ -1209,7 +1218,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         );
                       })}
                       
-                      {/* Add Stop Button */}
+                      {/* Add Stop Button - hide in read-only mode */}
                       {!readOnly && (
                         <div className="flex justify-center mt-4">
                           <button
@@ -1599,6 +1608,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
           )}
         </button>
       </div>
+
+      {/* Mileage Warning Confirmation Modal */}
+      <MileageWarningModal
+        isVisible={showMileageConfirmation}
+        onClose={handleMileageCancel}
+        onConfirm={handleMileageConfirm}
+        currentMileage={formData.mileageStartMileage ? parseInt(formData.mileageStartMileage) : undefined}
+        lastMileage={lastProcessedMileage ? parseInt(lastProcessedMileage) : undefined}
+      />
     </div>
   );
 }

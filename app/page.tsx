@@ -8,6 +8,8 @@ import ThemeToggle from "./components/ThemeToggle";
 import AutoSet from "./components/AutoSet";
 import LottieLoading from "./components/LottieLoading";
 import QueueManager from "./components/QueueManager";
+import MileageWarningModal from "./components/MileageWarningModal";
+import ThemedModal from "./components/ThemedModal";
 import { ToastContainer, useToast } from "./components/Toast";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
@@ -36,6 +38,12 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [showQueueManager, setShowQueueManager] = useState(false);
+  const [showMileageWarning, setShowMileageWarning] = useState(false);
+  const [mileageData, setMileageData] = useState<{
+    current?: number;
+    last?: number;
+    message?: string;
+  }>({});
 
   // Listen for authentication state changes
   useEffect(() => {
@@ -576,6 +584,20 @@ export default function Home() {
         onClose={() => setShowQueueManager(false)}
         onRerunJob={handleJobRerun}
         user={user}
+      />
+
+      {/* Mileage Warning Modal */}
+      <MileageWarningModal
+        isVisible={showMileageWarning}
+        onClose={() => setShowMileageWarning(false)}
+        onConfirm={() => {
+          setShowMileageWarning(false);
+          // Continue with automation here
+          console.log('User confirmed to continue with mileage warning');
+        }}
+        currentMileage={mileageData.current}
+        lastMileage={mileageData.last}
+        warningMessage={mileageData.message}
       />
       
       {/* Toast Container */}
