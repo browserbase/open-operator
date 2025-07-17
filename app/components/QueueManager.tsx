@@ -124,25 +124,25 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'text-yellow-600 dark:text-yellow-400';
+        return { color: 'var(--warning)' };
       case 'running':
-        return 'text-blue-600 dark:text-blue-400';
+        return { color: 'var(--primary)' };
       case 'completed':
-        return 'text-green-600 dark:text-green-400';
+        return { color: 'var(--success)' };
       case 'failed':
-        return 'text-red-600 dark:text-red-400';
+        return { color: 'var(--error)' };
       default:
-        return 'text-gray-600 dark:text-gray-400';
+        return { color: 'var(--text-secondary)' };
     }
   };
 
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-background-primary rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+      <div className="rounded-lg shadow-2xl border max-w-4xl w-full max-h-[80vh] overflow-hidden" style={{ backgroundColor: 'var(--bg-modal)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-xl)' }}>
+        <div className="flex items-center justify-between p-6 border-b" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+          <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
             Job Queue ({jobs.length} jobs)
           </h2>
           <div className="flex gap-2">
@@ -150,153 +150,192 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
               <button
                 onClick={clearCompleted}
                 disabled={loading}
-                className="px-3 py-1 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded disabled:opacity-50"
+                className="px-3 py-1 text-sm border rounded disabled:opacity-50 transition-colors"
+                style={{
+                  backgroundColor: 'var(--button-secondary)',
+                  color: 'var(--text-primary)',
+                  borderColor: 'var(--border)'
+                }}
               >
                 Clear Completed
               </button>
             )}
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+              className="px-4 py-2 rounded transition-colors"
+              style={{
+                backgroundColor: 'var(--primary)',
+                color: 'var(--text-inverse)'
+              }}
             >
               Close
             </button>
           </div>
         </div>
         
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        <div className="p-6 overflow-y-auto max-h-[60vh]" style={{ backgroundColor: 'var(--bg-modal)' }}>
           {jobs.length === 0 ? (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+            <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
               No jobs in queue
             </div>
           ) : (
             <div className="space-y-4">
-              {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className={`border rounded-lg p-4 transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    job.status === 'running' 
-                      ? 'border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900' 
-                      : job.status === 'completed'
-                      ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900'
-                      : job.status === 'failed'
-                      ? 'border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900'
-                      : 'border-border bg-background-secondary'
-                  }`}
-                  onClick={() => loadJobToForm(job)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">{getStatusIcon(job.status)}</span>
-                        <span className={`font-medium ${getStatusColor(job.status)}`}>
+              {jobs.map((job) => {
+                const getJobStyle = () => {
+                  switch (job.status) {
+                    case 'running':
+                      return {
+                        borderColor: 'var(--primary)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        boxShadow: 'var(--shadow-md)'
+                      };
+                    case 'completed':
+                      return {
+                        borderColor: 'var(--success)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        boxShadow: 'var(--shadow-md)'
+                      };
+                    case 'failed':
+                      return {
+                        borderColor: 'var(--error)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        boxShadow: 'var(--shadow-md)'
+                      };
+                    default:
+                      return {
+                        borderColor: 'var(--border)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        boxShadow: 'var(--shadow-sm)'
+                      };
+                  }
+                };
+                
+                return (
+                  <div
+                    key={job.id}
+                    className="border rounded-lg p-4 transition-all duration-200 cursor-pointer hover:shadow-md"
+                    style={getJobStyle()}
+                    onClick={() => loadJobToForm(job)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">{getStatusIcon(job.status)}</span>
+                        <span className="font-medium" style={getStatusColor(job.status)}>
                           {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                           {job.status === 'running' && ' (Current)'}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          #{job.id.slice(-8)}
-                        </span>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Case:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {job.formData.caseNumber || 'Not specified'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Service Type:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {job.formData.serviceTypeIdentifier || 'Not specified'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Pickup:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {job.formData.observationNotes56a?.pickUpAddress || 'Not specified'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Destination:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {job.formData.observationNotes56a?.locationAddress || 'Not specified'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Created:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {new Date(job.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        {job.completedAt && (
-                          <div>
-                            <span className="font-medium text-gray-700 dark:text-gray-300">
-                              {job.status === 'completed' ? 'Completed:' : 'Failed:'}
-                            </span>
-                            <p className="text-gray-600 dark:text-gray-400">
-                              {new Date(job.completedAt).toLocaleString()}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {job.error && (
-                        <div className="mb-3 p-2 bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded">
-                          <span className="text-sm text-red-700 dark:text-red-300">
-                            Error: {job.error}
+                        </span>                          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                            #{job.id.slice(-8)}
                           </span>
                         </div>
-                      )}
-
-                      {job.sessionUrl && (
-                        <div className="mb-3 p-2 bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800 rounded">
-                          <a 
-                            href={job.sessionUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-700 dark:text-blue-300 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            View Browser Session →
-                          </a>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                          <div>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Case:</span>
+                            <p style={{ color: 'var(--text-secondary)' }}>
+                              {job.formData.caseNumber || 'Not specified'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Service Type:</span>
+                            <p style={{ color: 'var(--text-secondary)' }}>
+                              {job.formData.serviceTypeIdentifier || 'Not specified'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Pickup:</span>
+                            <p style={{ color: 'var(--text-secondary)' }}>
+                              {job.formData.observationNotes56a?.pickUpAddress || 'Not specified'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Destination:</span>
+                            <p style={{ color: 'var(--text-secondary)' }}>
+                              {job.formData.observationNotes56a?.locationAddress || 'Not specified'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Created:</span>
+                            <p style={{ color: 'var(--text-secondary)' }}>
+                              {new Date(job.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          {job.completedAt && (
+                            <div>
+                              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                {job.status === 'completed' ? 'Completed:' : 'Failed:'}
+                              </span>
+                              <p style={{ color: 'var(--text-secondary)' }}>
+                                {new Date(job.completedAt).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      
-                      <div className="text-xs text-gray-500 dark:text-gray-400 border-t pt-2">
-                        Click to load this job's data to the form
-                      </div>
-                    </div>
-                    
-                    <div className="ml-4 flex flex-col gap-2">
-                      {(job.status === 'completed' || job.status === 'failed') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            rerunJob(job.id);
-                          }}
-                          disabled={loading}
-                          className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
-                        >
-                          Rerun
-                        </button>
-                      )}
-                      {job.status !== 'running' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeJob(job.id);
-                          }}
-                          disabled={loading}
-                          className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50"
-                        >
-                          Remove
-                        </button>
-                      )}
+                        
+                        {job.error && (
+                          <div className="mb-3 p-2 border rounded" style={{ backgroundColor: 'var(--error-bg)', borderColor: 'var(--error-border)' }}>
+                            <span className="text-sm" style={{ color: 'var(--error)' }}>
+                              Error: {job.error}
+                            </span>
+                          </div>
+                        )}
+
+                        {job.sessionUrl && (
+                          <div className="mb-3 p-2 border rounded" style={{ backgroundColor: 'var(--info-bg)', borderColor: 'var(--info-border)' }}>
+                            <a 
+                              href={job.sessionUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm hover:underline"
+                              style={{ color: 'var(--info)' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View Browser Session →
+                            </a>
+                          </div>
+                        )}
+                        
+                        <div className="text-xs border-t pt-2" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
+                          Click to load this job&apos;s data to the form
+                        </div>
+                    </div>                        <div className="ml-4 flex flex-col gap-2">
+                          {(job.status === 'completed' || job.status === 'failed') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                rerunJob(job.id);
+                              }}
+                              disabled={loading}
+                              className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors"
+                              style={{
+                                backgroundColor: 'var(--primary)',
+                                color: 'var(--text-inverse)'
+                              }}
+                            >
+                              Rerun
+                            </button>
+                          )}
+                          {job.status !== 'running' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeJob(job.id);
+                              }}
+                              disabled={loading}
+                              className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors"
+                              style={{
+                                backgroundColor: 'var(--error)',
+                                color: 'var(--text-inverse)'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
