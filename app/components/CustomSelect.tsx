@@ -12,7 +12,6 @@ interface CustomSelectProps {
   options: Option[];
   value: string;
   onChange: (value: string) => void;
-  placeholder?: string;
   label?: string;
   required?: boolean;
   disabled?: boolean;
@@ -23,7 +22,6 @@ export default function CustomSelect({
   options,
   value,
   onChange,
-  placeholder = "Select an option",
   label,
   required = false,
   disabled = false,
@@ -121,6 +119,7 @@ export default function CustomSelect({
 
     return createPortal(
       <div 
+        id="custom-select-dropdown"
         className="fixed z-[9999] bg-background-primary/80 backdrop-blur-md border border-border rounded-md shadow-lg max-h-60 overflow-auto"
         style={{
           top: `${dropdownPosition.top}px`,
@@ -158,6 +157,7 @@ export default function CustomSelect({
           role="combobox"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
+          aria-controls="custom-select-dropdown"
           tabIndex={disabled ? -1 : 0}
         >
           {displayValue || " "}

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
 import CustomDatePicker from "./CustomDatePicker";
+import CustomSelect from "./CustomSelect";
 import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFirebase } from "./firebaseTemplateService";
 import { getAutoSetDataFromFirebase, AutoSetData } from "./firebaseAutoSetService";
 import { dropdownOptions } from "../constants/dropdownOptions";
@@ -749,7 +750,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   // Helper for input styling with readonly support
   const inputClassName = `input-underline ${readOnly ? 'read-only' : ''}`;
   const textareaClassName = `textarea-underline ${readOnly ? 'read-only' : ''}`;
-  const selectClassName = `select-underline ${readOnly ? 'disabled' : ''}`;
   const timeInputClassName = `time-input-underline ${readOnly ? 'read-only' : ''}`;
   
   return (
@@ -990,21 +990,17 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     End Time <span className="text-red-500">*</span>
                   </label>
                 </div>
-                <div className="input-group">
-                  <select
-                    required
-                    value={formData.serviceTypeIdentifier}
-                    onChange={(e) => handleInputChange("serviceTypeIdentifier", e.target.value)}
-                    disabled={readOnly}
-                    className={selectClassName}
-                  >
-                    <option value="56a">56a</option>
-                    <option value="47e">47e</option>
-                  </select>
-                  <label className="input-label">
-                    Service Type <span className="text-red-500">*</span>
-                  </label>
-                </div>
+                <CustomSelect
+                  options={[
+                    { value: "56a", label: "56a" },
+                    { value: "47e", label: "47e" }
+                  ]}
+                  value={formData.serviceTypeIdentifier}
+                  onChange={(value) => handleInputChange("serviceTypeIdentifier", value)}
+                  label="Service Type"
+                  required={true}
+                  disabled={readOnly}
+                />
               </div>
 
               {/* Time Validation Error Message */}
@@ -1172,7 +1168,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               )}
 
               {/* Mileage Section */}
-              <div className="border-t pt-6">
+              <div className="pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-text-primary">Mileage Information</h3>
                   <label className="flex items-center">
@@ -1392,24 +1388,17 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                 
                                 {/* Purpose Field */}
                                 <div className="grid grid-cols-1 gap-4">
-                                  <div className="input-group">
-                                    <select
-                                      value={formData.additionalDropdownValues[index]}
-                                      onChange={(e) => handleDropdownValueChange(index, e.target.value)}
-                                      disabled={readOnly}
-                                      className={selectClassName}
-                                    >
-                                      <option value="">Select purpose</option>
-                                      {dropdownOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <label className="input-label">
-                                      Purpose <span className="text-red-500">*</span>
-                                    </label>
-                                  </div>
+                                  <CustomSelect
+                                    options={[
+                                      { value: "", label: "Select purpose" },
+                                      ...dropdownOptions.map(option => ({ value: option.value, label: option.label }))
+                                    ]}
+                                    value={formData.additionalDropdownValues[index]}
+                                    onChange={(value) => handleDropdownValueChange(index, value)}
+                                    label="Purpose"
+                                    required={true}
+                                    disabled={readOnly}
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -1436,7 +1425,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
               {/* Submit Button - hide in read-only mode */}
               {!readOnly && (
-                <div className="flex justify-end pt-6 border-t">
+                <div className="flex justify-end pt-6">
                   <button
                     type="submit"
                     disabled={isLoading || timeValidationError}
