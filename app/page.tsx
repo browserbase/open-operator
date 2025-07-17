@@ -8,6 +8,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import AutoSet from "./components/AutoSet";
 import LottieLoading from "./components/LottieLoading";
 import QueueManager from "./components/QueueManager";
+import { ToastContainer, useToast } from "./components/Toast";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
@@ -27,6 +28,7 @@ export default function Home() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const toast = useToast();
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -65,11 +67,28 @@ export default function Home() {
                 setSessionUrl(runningJob.sessionUrl);
                 setSessionId(runningJob.sessionUrl.split('/').pop() || null);
               }
-            } else if (isExecuting && runningJob.sessionUrl && !sessionUrl) {
-              // If we're already executing but didn't have session URL, update it
-              console.log('Updating session URL for running job:', runningJob.sessionUrl);
-              setSessionUrl(runningJob.sessionUrl);
-              setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+            } else if (isExecuting) {
+              // If we're already executing, check if this is a different job
+              const currentRunningExecutionId = runningJob.executionId || runningJob.id;
+              if (currentRunningExecutionId !== executionId) {
+                console.log('New job started, updating execution context:', {
+                  old: executionId,
+                  new: currentRunningExecutionId,
+                  job: runningJob
+                });
+                setExecutionId(currentRunningExecutionId);
+                
+                // Update session URL if available
+                if (runningJob.sessionUrl) {
+                  setSessionUrl(runningJob.sessionUrl);
+                  setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+                }
+              } else if (runningJob.sessionUrl && !sessionUrl) {
+                // If we're already executing the same job but didn't have session URL, update it
+                console.log('Updating session URL for running job:', runningJob.sessionUrl);
+                setSessionUrl(runningJob.sessionUrl);
+                setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+              }
             }
           } else if (isExecuting) {
             // If no running job but we think we're executing, check if the last job completed/failed
@@ -166,11 +185,11 @@ export default function Home() {
 
         if (runningJobs.length > 0) {
           // If a job is already running, show queue manager
-          alert(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
+          toast.showSuccess(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
           setShowQueueManager(true);
         } else {
           // If this is the first job, it will start running soon
-          alert(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
+          toast.showSuccess(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
           setShowQueueManager(true);
         }
       } else {
@@ -178,7 +197,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Error submitting job:", error);
-      alert("Failed to submit job: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.showError("Failed to submit job: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsLoading(false);
     }
@@ -542,6 +561,9 @@ export default function Home() {
         onClose={() => setShowQueueManager(false)}
         onRerunJob={handleJobRerun}
       />
+      
+      {/* Toast Container */}
+      <ToastContainer messages={toast.messages} onClose={toast.removeToast} />
     </div>
   );
 }
