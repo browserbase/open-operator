@@ -10,6 +10,7 @@ import { dropdownOptions } from "../constants/dropdownOptions";
 import { db } from "../firebaseConfig";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import MileageWarningModal from "./MileageWarningModal";
+import NoteGeniusModal from "./NoteGeniusModal";
 
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
@@ -80,6 +81,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [lastProcessedMileage, setLastProcessedMileage] = useState<string | null>(null);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
   const [showMileageConfirmation, setShowMileageConfirmation] = useState(false);
+  const [showNoteGeniusModal, setShowNoteGeniusModal] = useState(false);
   const [isLoadingMileage, setIsLoadingMileage] = useState(false);
   const hasAutoLoaded = useRef(false);
 
@@ -409,6 +411,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
   const handleMileageCancel = () => {
     setShowMileageConfirmation(false);
+  };
+
+  // Handler for Note Genius modal
+  const handleNoteGeniusAccept = (optimizedText: string) => {
+    setFormData(prev => ({
+      ...prev,
+      noteSummary47e: optimizedText
+    }));
+    setShowNoteGeniusModal(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -962,13 +973,47 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Note Summary (47e) <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    value={formData.noteSummary47e}
-                    onChange={(e) => handleInputChange("noteSummary47e", e.target.value)}
-                    rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
-                    placeholder="Enter note summary for 47e service type"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={formData.noteSummary47e}
+                      onChange={(e) => handleInputChange("noteSummary47e", e.target.value)}
+                      rows={6}
+                      maxLength={400}
+                      className="w-full px-3 py-2 pb-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
+                      placeholder="Enter note summary for 47e service type"
+                      readOnly={readOnly}
+                    />
+                    {/* Character Counter */}
+                    <div className={`absolute bottom-2 right-2 text-xs ${
+                      (formData.noteSummary47e || '').length > 380 
+                        ? 'text-red-500 dark:text-red-400' 
+                        : (formData.noteSummary47e || '').length > 350
+                        ? 'text-yellow-600 dark:text-yellow-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {(formData.noteSummary47e || '').length}/400
+                    </div>
+                  </div>
+                  
+                  {/* Note Genius Button */}
+                  {!readOnly && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowNoteGeniusModal(true)}
+                        disabled={!(formData.noteSummary47e || '').trim()}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 rounded-md hover:from-purple-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        Optimize with Note Genius
+                      </button>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        AI will format and optimize your note with professional structure
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1615,6 +1660,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         onConfirm={handleMileageConfirm}
         currentMileage={formData.mileageStartMileage ? parseInt(formData.mileageStartMileage.replace(/,/g, '')) : undefined}
         lastMileage={lastProcessedMileage ? parseInt(lastProcessedMileage.replace(/,/g, '')) : undefined}
+      />
+
+      {/* Note Genius Modal */}
+      <NoteGeniusModal
+        isVisible={showNoteGeniusModal}
+        onClose={() => setShowNoteGeniusModal(false)}
+        onAccept={handleNoteGeniusAccept}
+        originalText={formData.noteSummary47e || ''}
       />
     </div>
   );
