@@ -40,7 +40,7 @@ export default function Home() {
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true); // Start with true to show loading while checking auth
   const [showQueueManager, setShowQueueManager] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
@@ -54,6 +54,7 @@ export default function Home() {
   useEffect(() => {
     const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
+      setAuthLoading(false); // Stop loading once we get the auth state
       if (currentUser) {
         // Check subscription status when user logs in
         checkUserSubscription(currentUser);
@@ -391,7 +392,15 @@ export default function Home() {
       )}
       {/* Main Content */}
       <main className="flex-1 flex relative">
-        {!user ? (
+        {authLoading ? (
+          /* Loading authentication state */
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <LottieLoading size={64} className="mx-auto mb-4" />
+              <p className="text-text-secondary">Loading...</p>
+            </div>
+          </div>
+        ) : !user ? (
           /* Login Card - displayed when user is not logged in */
           <div className="flex-1 flex items-center justify-center p-6">
             <div className="w-full max-w-md">
@@ -418,6 +427,11 @@ export default function Home() {
                       placeholder="Password"
                       value={loginPassword}
                       onChange={e => setLoginPassword(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !authLoading) {
+                          handleLogin();
+                        }
+                      }}
                       className="w-full input-underline"
                     />
                   </div>
@@ -433,9 +447,16 @@ export default function Home() {
                     <button
                       onClick={handleLogin}
                       disabled={authLoading}
-                      className="w-full px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50 hover:bg-primary-hover transition-colors"
+                      className="w-full px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50 hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
                     >
-                      {authLoading ? "Signing in..." : "Sign In"}
+                      {authLoading ? (
+                        <>
+                          <LottieLoading size={20} color="#ffffff" />
+                          <span>Signing in...</span>
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
                     </button>
                     
                     <div className="flex gap-2">          
@@ -488,7 +509,7 @@ export default function Home() {
                     </button>
                     
                     <p className="text-sm text-text-muted text-center">
-                      Go to BAWebTools.com → Menu → My Plan
+                      Login to BAWebTools.com {'>'} Menu {'>'} My Plan
                     </p>
                     
                     <div className="flex gap-2">
