@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 
 // Declare the custom element for TypeScript
@@ -42,6 +43,32 @@ export default function AddressAutocomplete({
   const [inputValue, setInputValue] = useState(value);
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client side for portal rendering
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Handle window resize and scroll to reposition dropdown
+  useEffect(() => {
+    const handleReposition = () => {
+      if (showSuggestions) {
+        updateDropdownPosition();
+      }
+    };
+
+    if (showSuggestions) {
+      window.addEventListener('resize', handleReposition);
+      window.addEventListener('scroll', handleReposition);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition);
+    };
+  }, [showSuggestions]);
 
   // Sync internal input value with external value prop
   useEffect(() => {
@@ -94,6 +121,7 @@ export default function AddressAutocomplete({
       }, (predictions, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
           setSuggestions(predictions);
+          updateDropdownPosition();
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
@@ -118,9 +146,22 @@ export default function AddressAutocomplete({
     }
   };
 
+  // Calculate dropdown position based on input position
+  const updateDropdownPosition = () => {
+    if (autocompleteElementRef.current) {
+      const rect = autocompleteElementRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
+
   const handleInputFocus = () => {
     // Show suggestions when input is focused if there's text
     if (inputValue.length > 2 && suggestions.length > 0) {
+      updateDropdownPosition();
       setShowSuggestions(true);
     }
   };
@@ -130,6 +171,36 @@ export default function AddressAutocomplete({
     setTimeout(() => {
       setShowSuggestions(false);
     }, 150);
+  };
+
+  // Dropdown portal component
+  const DropdownPortal = () => {
+    if (!isClient || !showSuggestions || suggestions.length === 0) return null;
+
+    return createPortal(
+      <div 
+        className="fixed z-[9999] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
+        style={{
+          top: `${dropdownPosition.top}px`,
+          left: `${dropdownPosition.left}px`,
+          width: `${dropdownPosition.width}px`,
+          marginTop: '4px'
+        }}
+      >
+        {suggestions.map((suggestion) => (
+          <button
+            key={suggestion.place_id}
+            type="button"
+            className="w-full px-3 py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none"
+            onClick={() => handleSuggestionClick(suggestion)}
+          >
+            <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{suggestion.structured_formatting.secondary_text}</div>
+          </button>
+        ))}
+      </div>,
+      document.body
+    );
   };
 
   const baseInputClassName = `w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-gray-50 read-only:dark:bg-gray-800 read-only:cursor-default' : ''}`;
@@ -185,22 +256,8 @@ export default function AddressAutocomplete({
             <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-[#FF3B00] rounded-full animate-spin"></div>
           </div>
         )}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion.place_id}
-                type="button"
-                className="w-full px-3 py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none"
-                onClick={() => handleSuggestionClick(suggestion)}
-              >
-                <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">{suggestion.structured_formatting.secondary_text}</div>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
+      <DropdownPortal />
     </div>
   );
 }
