@@ -120,10 +120,22 @@ async function endSession(sessionId: string) {
   const bb = new Browserbase({
     apiKey: process.env.BROWSERBASE_API_KEY!,
   });
-  await bb.sessions.update(sessionId, {
-    projectId: process.env.BROWSERBASE_PROJECT_ID!,
-    status: "REQUEST_RELEASE",
-  });
+  
+  try {
+    await bb.sessions.update(sessionId, {
+      projectId: process.env.BROWSERBASE_PROJECT_ID!,
+      status: "REQUEST_RELEASE",
+    });
+    console.log('Session ended successfully:', sessionId);
+  } catch (error: any) {
+    // Log the specific error but don't throw - session might already be ended
+    console.warn('Failed to end session (may already be terminated):', {
+      sessionId,
+      error: error.message,
+      status: error.status
+    });
+    throw error; // Re-throw to be handled by the caller
+  }
 }
 
 async function getDebugUrl(sessionId: string) {
@@ -146,7 +158,7 @@ export async function POST(request: Request) {
     const liveUrl = await getDebugUrl(session.id);
     return NextResponse.json({
       success: true,
-      sessionId: session.id,
+      sessionId: session.id, // Return the actual session ID
       sessionUrl: liveUrl,
       contextId,
     });
@@ -160,8 +172,26 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const body = await request.json();
-  const sessionId = body.sessionId as string;
-  await endSession(sessionId);
-  return NextResponse.json({ success: true });
+  try {
+    const body = await request.json();
+    const sessionId = body.sessionId as string;
+    
+    if (!sessionId) {
+      return NextResponse.json(
+        { success: false, error: "Session ID is required" },
+        { status: 400 }
+      );
+    }
+    
+    console.log('Attempting to end session:', sessionId);
+    await endSession(sessionId);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error ending session:", error);
+    // Return success even if ending session fails, as the session might already be terminated
+    return NextResponse.json({ 
+      success: true, 
+      warning: "Session may have already ended"
+    });
+  }
 }

@@ -214,10 +214,14 @@ class JobQueue {
         // Update job with session information immediately
         this.updateJob(job.id, {
           sessionUrl: result.sessionUrl,
+          sessionId: result.sessionId, // Store the actual session ID
           executionId: result.executionId
         });
         
-        console.log(`Job ${job.id} started successfully with session:`, result.sessionUrl);
+        console.log(`Job ${job.id} started successfully with session:`, {
+          sessionId: result.sessionId,
+          sessionUrl: result.sessionUrl
+        });
         
         // Store the mapping between executionId and jobId for completion tracking
         this.executionToJobMap.set(result.executionId!, job.id);
