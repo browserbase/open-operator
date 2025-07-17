@@ -140,7 +140,7 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+      <div className="bg-background-primary rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Job Queue ({jobs.length} jobs)

@@ -224,14 +224,14 @@ export default function CustomDatePicker({
     return (
       <div 
         ref={calendarRef}
-        className="fixed bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 p-3 min-w-[280px]"
+        className="fixed bg-modal border border-border rounded-lg shadow-theme-lg z-50 p-4 min-w-[300px]"
         style={{
           top: calendarPosition.top,
           left: calendarPosition.left
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <button
             type="button"
             onClick={() => {
@@ -243,14 +243,14 @@ export default function CustomDatePicker({
               currentSelected.setFullYear(newDate.getFullYear());
               handleDateChange(formatDateForInput(currentSelected));
             }}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-secondary rounded-md transition-colors text-text-primary"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <h3 className="text-lg font-semibold text-text-primary">
             {monthNames[displayMonth]} {displayYear}
           </h3>
           
@@ -265,18 +265,18 @@ export default function CustomDatePicker({
               currentSelected.setFullYear(newDate.getFullYear());
               handleDateChange(formatDateForInput(currentSelected));
             }}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-secondary rounded-md transition-colors text-text-primary"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
 
         {/* Days of week */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-1 mb-3">
           {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-            <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 p-1">
+            <div key={day} className="text-center text-sm font-medium text-text-muted p-2">
               {day}
             </div>
           ))}
@@ -290,10 +290,10 @@ export default function CustomDatePicker({
               type="button"
               onClick={() => handleDateChange(formatDateForInput(date))}
               className={`
-                text-sm p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
-                ${isSelected(date) ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}
-                ${isToday(date) && !isSelected(date) ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''}
-                ${!isCurrentMonth(date) ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}
+                calendar-day
+                ${isSelected(date) ? 'calendar-day-selected' : ''}
+                ${isToday(date) && !isSelected(date) ? 'calendar-day-today' : ''}
+                ${!isCurrentMonth(date) ? 'calendar-day-other-month' : 'calendar-day-current-month'}
               `}
             >
               {date.getDate()}
@@ -302,18 +302,18 @@ export default function CustomDatePicker({
         </div>
 
         {/* Quick actions */}
-        <div className="flex justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+        <div className="flex justify-between mt-4 pt-3 border-t border-border">
           <button
             type="button"
             onClick={() => handleDateChange(formatDateForInput(today))}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+            className="text-sm text-accent hover:text-accent-hover transition-colors font-medium"
           >
             Today
           </button>
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            className="text-sm text-text-muted hover:text-text-secondary transition-colors"
           >
             Cancel
           </button>
@@ -333,12 +333,12 @@ export default function CustomDatePicker({
           onClick={handleInputClick}
           className={`
             ${className}
-            cursor-pointer
+            input-underline cursor-pointer
             ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}
           `}
         />
         <svg 
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none"
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"

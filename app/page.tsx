@@ -257,9 +257,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-secondary flex flex-col">
       {/* Top Navigation */}
-      <nav className="flex justify-between items-center px-8 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <nav className="flex justify-between items-center px-8 py-4 bg-background border-b border-border">
         <div className="flex items-center gap-3">
           <Image
             src="/favicon.svg"
@@ -268,14 +268,14 @@ export default function Home() {
             width={32}
             height={32}
           />
-          <span className="font-ppsupply text-gray-900 dark:text-gray-100">
+          <span className="font-ppsupply text-foreground">
             {isExecuting ? "E-Automate" : "E-Automate"}
           </span>
         </div>
         <div className="flex items-center gap-4">
           <button
             onClick={() => setShowQueueManager(true)}
-            className="relative px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+            className="relative px-3 py-2 text-sm bg-secondary text-text-secondary rounded-md hover:bg-secondary/80 transition-colors font-medium"
           >
             Queue
             {jobs.length > 0 && (
@@ -300,7 +300,7 @@ export default function Home() {
               </span>
               <button
                 onClick={handleLogout}
-                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                className="px-3 py-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
                 Logout
               </button>
@@ -309,7 +309,7 @@ export default function Home() {
           {isExecuting && (
             <button
               onClick={handleClose}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
             >
               Close
             </button>
@@ -319,28 +319,28 @@ export default function Home() {
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-sm">
-            <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Login</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay">
+          <div className="bg-modal rounded-lg shadow-theme-lg p-8 w-full max-w-sm">
+            <h2 className="text-lg font-bold mb-4 text-text-primary">Login</h2>
             {authError && <div className="mb-2 text-red-600">{authError}</div>}
             <input
               type="email"
               placeholder="Email"
               value={loginEmail}
               onChange={e => setLoginEmail(e.target.value)}
-              className="w-full mb-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full mb-3 input-underline"
             />
             <input
               type="password"
               placeholder="Password"
               value={loginPassword}
               onChange={e => setLoginPassword(e.target.value)}
-              className="w-full mb-4 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full mb-4 input-underline"
             />
             
             {/* Notification about BAWebTools account */}
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-              <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+            <div className="mb-4 p-3 bg-info-bg border border-info-border rounded-md">
+              <p className="text-sm text-info text-center">
                 Please sign in with your BAWebTools account credentials
               </p>
             </div>
@@ -380,30 +380,30 @@ export default function Home() {
 
       {/* Signup Modal */}
       {showSignupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-sm">
-            <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Create Account</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay">
+          <div className="bg-modal rounded-lg shadow-theme-lg p-8 w-full max-w-sm">
+            <h2 className="text-lg font-bold mb-4 text-text-primary">Create Account</h2>
             {authError && <div className="mb-2 text-red-600">{authError}</div>}
             <input
               type="email"
               placeholder="Email"
               value={signupEmail}
               onChange={e => setSignupEmail(e.target.value)}
-              className="w-full mb-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full mb-3 input-underline"
             />
             <input
               type="password"
               placeholder="Password"
               value={signupPassword}
               onChange={e => setSignupPassword(e.target.value)}
-              className="w-full mb-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full mb-3 input-underline"
             />
             <input
               type="password"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              className="w-full mb-4 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full mb-4 input-underline"
             />
             
             <div className="flex justify-between items-center gap-2 mb-4">
@@ -480,7 +480,7 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-[calc(100vh-200px)]">
+          <div className="bg-background rounded-lg shadow-theme-sm border border-border h-[calc(100vh-200px)]">
             {/* Form Tab Content - Always render to preserve state */}
             <div className={`h-full ${activeTab === 'form' ? 'block' : 'hidden'}`}>
               <div className="h-full overflow-y-auto">
@@ -512,7 +512,7 @@ export default function Home() {
             <div className={`h-full ${activeTab === 'browser' ? 'block' : 'hidden'}`}>
               {isExecuting ? (
                 <>
-                  <div className="flex-shrink-0 w-full h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4">
+                  <div className="flex-shrink-0 w-full h-12 bg-background border-b border-border flex items-center px-4">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-red-500" />
                       <div className="w-3 h-3 rounded-full bg-yellow-500" />
@@ -562,7 +562,7 @@ export default function Home() {
         <AnimatePresence>
           {isExecuting && (
             <motion.div 
-              className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col z-30 shadow-lg"
+              className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-background border-l border-border flex flex-col z-30 shadow-theme-lg"
               initial={{ x: 320, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 320, opacity: 0 }}

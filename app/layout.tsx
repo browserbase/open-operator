@@ -51,7 +51,7 @@ export default function RootLayout({
         <link rel="alternate icon" href="/favicon.ico" />
       </head>
       <body
-        className={`${inter.variable} ${ppNeue.variable} ${ppSupply.variable} font-sans antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors`}
+        className={`${inter.variable} ${ppNeue.variable} ${ppSupply.variable} font-sans antialiased bg-theme text-theme transition-colors`}
       >
         <ThemeProvider>
           <PostHogProvider>{children}</PostHogProvider>
