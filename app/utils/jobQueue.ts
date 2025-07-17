@@ -7,6 +7,7 @@ class JobQueue {
   private jobs: QueuedJob[] = [];
   private isProcessing = false;
   private subscribers = new Set<(jobs: QueuedJob[]) => void>();
+  private executionToJobMap = new Map<string, string>(); // Maps executionId to jobId
 
   addJob(formData: any): QueuedJob {
     const job: QueuedJob = {
@@ -18,6 +19,14 @@ class JobQueue {
 
     this.jobs.push(job);
     this.notifySubscribers();
+    
+    console.log(`Added job ${job.id} to queue. Current queue status:`, {
+      total: this.jobs.length,
+      pending: this.jobs.filter(j => j.status === 'pending').length,
+      running: this.jobs.filter(j => j.status === 'running').length,
+      completed: this.jobs.filter(j => j.status === 'completed').length,
+      failed: this.jobs.filter(j => j.status === 'failed').length
+    });
     
     // Start processing if not already running
     if (!this.isProcessing) {
@@ -96,12 +105,18 @@ class JobQueue {
   private async processQueue() {
     if (this.isProcessing) return;
     
+    // Check if there's already a running job
+    const runningJob = this.jobs.find(job => job.status === 'running');
+    if (runningJob) {
+      console.log(`Job ${runningJob.id} is already running, not processing queue`);
+      return;
+    }
+    
     this.isProcessing = true;
 
-    while (true) {
-      const nextJob = this.jobs.find(job => job.status === 'pending');
-      if (!nextJob) break;
-
+    // Only process one job at a time
+    const nextJob = this.jobs.find(job => job.status === 'pending');
+    if (nextJob) {
       try {
         await this.processJob(nextJob);
       } catch (error) {
@@ -120,6 +135,13 @@ class JobQueue {
   private async processJob(job: QueuedJob) {
     console.log(`Starting job ${job.id}`);
     
+    // Double-check that no other job is running
+    const runningJobs = this.jobs.filter(j => j.status === 'running');
+    if (runningJobs.length > 0) {
+      console.log(`Cannot start job ${job.id} - other jobs are already running:`, runningJobs.map(j => j.id));
+      return;
+    }
+    
     this.updateJob(job.id, {
       status: 'running',
       startedAt: new Date().toISOString()
@@ -131,13 +153,17 @@ class JobQueue {
       const result = await startAutomation(job.formData);
 
       if (result.success) {
+        // Update job with session information immediately
         this.updateJob(job.id, {
-          status: 'completed',
           sessionUrl: result.sessionUrl,
-          executionId: result.executionId,
-          completedAt: new Date().toISOString()
+          executionId: result.executionId
         });
-        console.log(`Job ${job.id} completed successfully`);
+        
+        console.log(`Job ${job.id} started successfully with session:`, result.sessionUrl);
+        
+        // Store the mapping between executionId and jobId for completion tracking
+        this.executionToJobMap.set(result.executionId!, job.id);
+        
       } else {
         throw new Error(result.error || result.details || 'Automation failed');
       }
@@ -148,6 +174,39 @@ class JobQueue {
         completedAt: new Date().toISOString()
       });
       console.error(`Job ${job.id} failed:`, error);
+    }
+  }
+
+  // Method to be called when automation completes
+  public markJobCompleted(executionId: string) {
+    const jobId = this.executionToJobMap.get(executionId);
+    if (jobId) {
+      this.updateJob(jobId, {
+        status: 'completed',
+        completedAt: new Date().toISOString()
+      });
+      this.executionToJobMap.delete(executionId);
+      console.log(`Job ${jobId} marked as completed for execution ${executionId}`);
+      
+      // Process the next job in the queue
+      this.processQueue();
+    }
+  }
+
+  // Method to be called when automation fails
+  public markJobFailed(executionId: string, error: string) {
+    const jobId = this.executionToJobMap.get(executionId);
+    if (jobId) {
+      this.updateJob(jobId, {
+        status: 'failed',
+        error: error,
+        completedAt: new Date().toISOString()
+      });
+      this.executionToJobMap.delete(executionId);
+      console.log(`Job ${jobId} marked as failed for execution ${executionId}`);
+      
+      // Process the next job in the queue
+      this.processQueue();
     }
   }
 

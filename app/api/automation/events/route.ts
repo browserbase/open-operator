@@ -120,6 +120,19 @@ export function sendEventToExecution(executionId: string, event: string, data: u
     }
   }
   
+  // Handle job completion events
+  if (event === 'finished') {
+    // Import and notify job queue that automation completed
+    import('../../../utils/jobQueue').then(({ jobQueue }) => {
+      jobQueue.markJobCompleted(executionId);
+    }).catch(console.error);
+  } else if (event === 'error') {
+    // Import and notify job queue that automation failed
+    import('../../../utils/jobQueue').then(({ jobQueue }) => {
+      jobQueue.markJobFailed(executionId, typeof data === 'string' ? data : JSON.stringify(data));
+    }).catch(console.error);
+  }
+  
   const controller = eventStreams.get(executionId);
   if (controller) {
     try {
