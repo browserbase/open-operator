@@ -819,7 +819,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         type="checkbox"
                         checked={saveCredentials}
                         onChange={(e) => setSaveCredentials(e.target.checked)}
-                        className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-border bg-background-secondary rounded"
+                        className="mr-2 h-4 w-4 text-primary-color focus:ring-primary border-border bg-background-secondary rounded"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Save credentials locally</span>
                     </label>
@@ -1177,7 +1177,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       checked={showMileage}
                       onChange={(e) => handleMileageToggle(e.target.checked)}
                       disabled={readOnly}
-                      className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-border bg-background-secondary rounded disabled:opacity-50"
+                      className="mr-2 h-4 w-4 text-primary-color focus:ring-primary border-border bg-background-secondary rounded disabled:opacity-50"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Include Mileage</span>
                   </label>
@@ -1412,7 +1412,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                           <button
                             type="button"
                             onClick={addEndAddress}
-                            className="px-4 py-2 text-sm bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors"
+                            className="px-4 py-2 text-sm bg-primary text-white rounded-md transition-colors"
                           >
                             Add Stop
                           </button>
@@ -1429,7 +1429,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <button
                     type="submit"
                     disabled={isLoading || timeValidationError}
-                    className="invisible px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    className="invisible px-8 py-3 bg-primary text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {isLoading ? "Processing..." : "Start Automation"}
                   </button>
@@ -1777,7 +1777,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
           className={`px-6 py-3 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
             isExecuting 
               ? 'bg-red-600 hover:bg-red-700' 
-              : 'bg-[#FF3B00] hover:bg-[#E63400]'
+              : 'bg-primary'
           }`}
         >
           {isLoading ? (

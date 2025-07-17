@@ -28,7 +28,7 @@ export default function ThemeToggle() {
             {theme === themeOption.value && (
               <motion.div
                 layoutId="theme-toggle-bg"
-                className="absolute inset-0 bg-[#FF3B00] rounded-md"
+                className="absolute inset-0 bg-primary rounded-md"
                 transition={{ type: "spring", duration: 0.5 }}
               />
             )}

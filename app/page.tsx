@@ -257,7 +257,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex flex-col">
+    <div className="min-h-screen background-transparent flex flex-col">
       {/* Top Navigation */}
       <nav className="flex justify-between items-center px-8 py-4 bg-background border-b border-border">
         <div className="flex items-center gap-3">
@@ -288,7 +288,7 @@ export default function Home() {
           {!user && (
             <button
               onClick={() => setShowLoginModal(true)}
-              className="px-4 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors font-medium"
+              className="px-4 py-2 bg-primary text-white rounded-md transition-colors font-medium"
             >
               Login
             </button>
@@ -368,7 +368,7 @@ export default function Home() {
                 <button
                   onClick={handleLogin}
                   disabled={authLoading}
-                  className="px-4 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] font-medium disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50"
                 >
                   {authLoading ? "Signing in..." : "Login"}
                 </button>
@@ -426,7 +426,7 @@ export default function Home() {
                 <button
                   onClick={handleSignup}
                   disabled={authLoading}
-                  className="px-4 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] font-medium disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50"
                 >
                   {authLoading ? "Creating..." : "Sign Up"}
                 </button>
@@ -447,7 +447,7 @@ export default function Home() {
                   onClick={() => setActiveTab('form')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'form'
-                      ? 'border-[#FF3B00] text-[#FF3B00]'
+                      ? 'border-primary text-primary-color'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
@@ -458,7 +458,7 @@ export default function Home() {
                     onClick={() => setActiveTab('autoset')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'autoset'
-                        ? 'border-[#FF3B00] text-[#FF3B00]'
+                        ? 'border-primary text-primary-color'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                   >
@@ -469,7 +469,7 @@ export default function Home() {
                   onClick={() => setActiveTab('browser')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'browser'
-                      ? 'border-[#FF3B00] text-[#FF3B00]'
+                      ? 'border-primary text-primary-color'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
