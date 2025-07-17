@@ -5,11 +5,102 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Theme colors */
+  --primary: #FF3B00;
+  --primary-hover: #E63400;
+  --primary-light: #FF5722;
+  
+  /* Background variations */
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-modal: #ffffff;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  
+  /* Border colors */
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-focus: #FF3B00;
+  
+  /* Text colors */
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+  
+  /* Status colors */
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --success-border: #bbf7d0;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --warning-border: #fed7aa;
+  --error: #ef4444;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  
+  /* Component colors */
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --button-secondary: #f3f4f6;
+  --button-secondary-hover: #e5e7eb;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  
+  /* Background variations */
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --bg-modal: #1f2937;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  
+  /* Border colors */
+  --border: #374151;
+  --border-light: #4b5563;
+  --border-focus: #FF3B00;
+  
+  /* Text colors */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --text-inverse: #111827;
+  
+  /* Status colors */
+  --success: #10b981;
+  --success-bg: #064e3b;
+  --success-border: #047857;
+  --warning: #f59e0b;
+  --warning-bg: #78350f;
+  --warning-border: #b45309;
+  --error: #ef4444;
+  --error-bg: #7f1d1d;
+  --error-border: #b91c1c;
+  --info: #3b82f6;
+  --info-bg: #1e3a8a;
+  --info-border: #2563eb;
+  
+  /* Component colors */
+  --input-bg: #374151;
+  --input-border: #4b5563;
+  --button-secondary: #374151;
+  --button-secondary-hover: #4b5563;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
 }
 
 body {
@@ -103,4 +194,116 @@ body {
 
 .dark * {
   scrollbar-color: #475569 #1e293b; /* Dark mode: thumb track */
+}
+
+/* Utility classes using CSS variables */
+.bg-theme {
+  background-color: var(--background);
+}
+
+.bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.bg-modal {
+  background-color: var(--bg-modal);
+}
+
+.text-theme {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.border-theme {
+  border-color: var(--border);
+}
+
+.border-light {
+  border-color: var(--border-light);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--text-inverse);
+  border: 1px solid var(--primary);
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: var(--button-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--button-secondary-hover);
+}
+
+.input-theme {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+.input-theme:focus {
+  border-color: var(--border-focus);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 59, 0, 0.1);
+}
+
+.shadow-theme-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-theme-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-theme-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.shadow-theme-xl {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Status styles */
+.status-success {
+  background-color: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+.status-warning {
+  background-color: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning);
+}
+
+.status-error {
+  background-color: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error);
+}
+
+.status-info {
+  background-color: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info);
 }
