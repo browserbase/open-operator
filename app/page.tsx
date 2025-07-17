@@ -29,7 +29,6 @@ export default function Home() {
   const [submittedFormData, setSubmittedFormData] = useState<CaseFormData | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'browser' | 'autoset'>('form');
   const [user, setUser] = useState<User | null>(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -145,9 +144,9 @@ export default function Home() {
     
     const result = await signInUser(loginEmail, loginPassword);
     if (result.success) {
-      setShowLoginModal(false);
       setLoginEmail("");
       setLoginPassword("");
+      setAuthError("");
     } else {
       setAuthError(result.error || "Login failed");
     }
@@ -170,6 +169,7 @@ export default function Home() {
       setSignupEmail("");
       setSignupPassword("");
       setConfirmPassword("");
+      setAuthError("");
     } else {
       setAuthError(result.error || "Signup failed");
     }
@@ -270,26 +270,20 @@ export default function Home() {
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowQueueManager(true)}
-            className="relative px-3 py-2 text-sm bg-secondary text-text-secondary rounded-md hover:bg-secondary/80 transition-colors font-medium"
-          >
-            Queue
-            {jobs.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
-                {jobs.filter(job => job.status === 'running' || job.status === 'queued').length}
-              </span>
-            )}
-          </button>
-          <ThemeToggle />
-          {!user && (
+          {user && (
             <button
-              onClick={() => setShowLoginModal(true)}
-              className="px-4 py-2 bg-primary text-white rounded-md transition-colors font-medium"
+              onClick={() => setShowQueueManager(true)}
+              className="relative px-3 py-2 text-sm bg-secondary text-text-secondary rounded-md hover:bg-secondary/80 transition-colors font-medium"
             >
-              Login
+              Queue
+              {jobs.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+                  {jobs.filter(job => job.status === 'running' || job.status === 'queued').length}
+                </span>
+              )}
             </button>
           )}
+          <ThemeToggle />
           {user && (
             <div className="flex items-center gap-3">
               <span className="text-green-600 font-medium">
@@ -313,67 +307,6 @@ export default function Home() {
           )}
         </div>
       </nav>
-
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay">
-          <div className="bg-modal rounded-lg shadow-theme-lg p-8 w-full max-w-sm">
-            <h2 className="text-lg font-bold mb-4 text-text-primary">Login</h2>
-            {authError && <div className="mb-2 text-red-600">{authError}</div>}
-            <input
-              type="email"
-              placeholder="Email"
-              value={loginEmail}
-              onChange={e => setLoginEmail(e.target.value)}
-              className="w-full mb-3 input-underline"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={loginPassword}
-              onChange={e => setLoginPassword(e.target.value)}
-              className="w-full mb-4 input-underline"
-            />
-            
-            {/* Notification about BAWebTools account */}
-            <div className="mb-4 p-3 bg-info-bg border border-info-border rounded-md">
-              <p className="text-sm text-info text-center">
-                Please sign in with your BAWebTools account credentials
-              </p>
-            </div>
-
-            <div className="flex justify-between items-center gap-2 mb-4">
-              <button
-                onClick={() => {
-                  setShowLoginModal(false);
-                  setShowSignupModal(true);
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
-              >
-                Sign Up
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowLoginModal(false);
-                    setAuthError("");
-                  }}
-                  className="px-4 py-2 bg-background-secondary text-text-primary rounded-md"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLogin}
-                  disabled={authLoading}
-                  className="px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50"
-                >
-                  {authLoading ? "Signing in..." : "Login"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Signup Modal */}
       {showSignupModal && (
@@ -434,23 +367,89 @@ export default function Home() {
       )}
       {/* Main Content */}
       <main className="flex-1 flex relative">
-        {/* Content Area with Tabs */}
-        <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting ? 'pr-[336px]' : ''}`}>
-          {/* Tab Navigation */}
-          <div className="mb-4">
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveTab('form')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'form'
-                      ? 'border-primary text-primary-color'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  {isExecuting ? 'Form Data' : 'Case Form'}
-                </button>
-                {user && (
+        {!user ? (
+          /* Login Card - displayed when user is not logged in */
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="w-full max-w-md">
+              <div className="bg-modal rounded-lg shadow-theme-lg p-8 border border-border">
+                <div className="text-center mb-6">
+                  <AnimatedCubeIcon size={48} />
+                  <h1 className="text-2xl font-bold text-text-primary mt-4 mb-2">Welcome to E-Automate</h1>
+                  <p className="text-text-secondary">Please sign in to access your automation tools</p>
+                </div>
+                
+                <div className="space-y-4">
+                  {authError && <div className="text-red-600 text-sm text-center">{authError}</div>}
+                  
+                  <div className="space-y-3">
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={loginEmail}
+                      onChange={e => setLoginEmail(e.target.value)}
+                      className="w-full input-underline"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                      className="w-full input-underline"
+                    />
+                  </div>
+                  
+                  {/* Notification about BAWebTools account */}
+                  <div className="p-3 bg-info-bg border border-info-border rounded-md">
+                    <p className="text-sm text-info text-center">
+                      Please sign in with your BAWebTools account credentials
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={handleLogin}
+                      disabled={authLoading}
+                      className="w-full px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50 hover:bg-primary-hover transition-colors"
+                    >
+                      {authLoading ? "Signing in..." : "Sign In"}
+                    </button>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowSignupModal(true)}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                      >
+                        Create Account
+                      </button>
+                      <button
+                        onClick={() => window.open('https://bawebtools.com', '_blank')}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-sm"
+                      >
+                        Visit BAWebTools
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Content Area with Tabs - displayed when user is logged in */
+          <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting ? 'pr-[336px]' : ''}`}>
+            {/* Tab Navigation */}
+            <div className="mb-4">
+              <div className="border-b border-gray-200 dark:border-gray-700">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('form')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'form'
+                        ? 'border-primary text-primary-color'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    {isExecuting ? 'Form Data' : 'Case Form'}
+                  </button>
                   <button
                     onClick={() => setActiveTab('autoset')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -461,99 +460,96 @@ export default function Home() {
                   >
                     Auto-Set
                   </button>
-                )}
-                <button
-                  onClick={() => setActiveTab('browser')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'browser'
-                      ? 'border-primary text-primary-color'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  Browser Session
-                </button>
-              </nav>
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="bg-background-form rounded-lg shadow-theme-sm border border-border h-[calc(100vh-200px)]">
-            {/* Form Tab Content - Always render to preserve state */}
-            <div className={`h-full ${activeTab === 'form' ? 'block' : 'hidden'}`}>
-              <div className="h-full overflow-y-auto">
-                <CaseForm 
-                  onSubmit={handleFormSubmit} 
-                  isLoading={isLoading}
-                  readOnly={false}
-                  initialFormData={submittedFormData || undefined}
-                  isLoggedIn={!!user}
-                  userId={user?.uid}
-                  onLoginRequested={() => setShowLoginModal(true)}
-                  isExecuting={isExecuting}
-                  onStopAutomation={handleClose}
-                />
+                  <button
+                    onClick={() => setActiveTab('browser')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'browser'
+                        ? 'border-primary text-primary-color'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    Browser Session
+                  </button>
+                </nav>
               </div>
             </div>
 
-            {/* Auto-Set Tab Content */}
-            {user && (
+            {/* Tab Content */}
+            <div className="bg-background-form rounded-lg shadow-theme-sm border border-border h-[calc(100vh-200px)]">
+              {/* Form Tab Content - Always render to preserve state */}
+              <div className={`h-full ${activeTab === 'form' ? 'block' : 'hidden'}`}>
+                <div className="h-full overflow-y-auto">
+                  <CaseForm 
+                    onSubmit={handleFormSubmit} 
+                    isLoading={isLoading}
+                    readOnly={false}
+                    initialFormData={submittedFormData || undefined}
+                    isLoggedIn={!!user}
+                    userId={user?.uid}
+                    isExecuting={isExecuting}
+                    onStopAutomation={handleClose}
+                  />
+                </div>
+              </div>
+
+              {/* Auto-Set Tab Content */}
               <div className={`h-full ${activeTab === 'autoset' ? 'block' : 'hidden'}`}>
                 <AutoSet 
                   isLoggedIn={!!user}
                   userId={user?.uid}
                 />
               </div>
-            )}
 
-            {/* Browser Tab Content */}
-            <div className={`h-full ${activeTab === 'browser' ? 'block' : 'hidden'}`}>
-              {isExecuting ? (
-                <>
-                  <div className="flex-shrink-0 w-full h-12 bg-background border-b border-border flex items-center px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                      <div className="w-3 h-3 rounded-full bg-green-500" />
-                    </div>
-                    <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
-                      Browser Session
-                    </div>
-                  </div>
-                  <div className="flex-1 h-full min-h-[100px]">
-                    {sessionUrl ? (
-                      <iframe
-                        src={sessionUrl}
-                        className="w-full h-full border-0"
-                        sandbox="allow-same-origin allow-scripts allow-forms"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        title="Browser Session"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                        <div className="text-center">
-                          <LottieLoading size={64} className="mx-auto mb-4" />
-                          <p>Initializing browser session...</p>
-                        </div>
+              {/* Browser Tab Content */}
+              <div className={`h-full ${activeTab === 'browser' ? 'block' : 'hidden'}`}>
+                {isExecuting ? (
+                  <>
+                    <div className="flex-shrink-0 w-full h-12 bg-background border-b border-border flex items-center px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                        <div className="w-3 h-3 rounded-full bg-green-500" />
                       </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-background-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+                      <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
+                        Browser Session
+                      </div>
                     </div>
-                    <p>Browser session will appear here when automation starts</p>
+                    <div className="flex-1 h-full min-h-[100px]">
+                      {sessionUrl ? (
+                        <iframe
+                          src={sessionUrl}
+                          className="w-full h-full border-0"
+                          sandbox="allow-same-origin allow-scripts allow-forms"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          title="Browser Session"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                          <div className="text-center">
+                            <LottieLoading size={64} className="mx-auto mb-4" />
+                            <p>Initializing browser session...</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-background-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p>Browser session will appear here when automation starts</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Progress Sidebar - only show when executing */}
         <AnimatePresence>

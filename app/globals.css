@@ -8,7 +8,7 @@
   --background-transparent: rgba(255, 255, 255, 0);
   /* Theme colors */
   --primary: #2fc14c;
-  --primary-hover: #E63400;
+  --primary-hover: #69e644;
   --primary-light: #FF5722;
   --accent: #0070f3;
   --accent-hover: #0051a5;
@@ -361,7 +361,7 @@ body {
 }
 
 .bg-primary:hover {
-  background-color: var(--primary-hover);
+  background-color: var(--primary-hover) !important;
 }
 
 .text-primary-color {
