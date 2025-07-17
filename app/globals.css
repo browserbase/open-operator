@@ -520,6 +520,18 @@ body {
   z-index: 1;
 }
 
+.time-input-label {
+  position: absolute;
+  top: 0.75rem;
+  left: 0;
+  color: var(--text-muted);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  transform-origin: left;
+  z-index: 1;
+}
+
 .input-underline:focus + .input-label,
 .textarea-underline:focus + .input-label,
 .select-underline:focus + .input-label,
@@ -556,6 +568,41 @@ body {
   color: var(--text-muted);
 }
 
+.input-underline:focus + .time-input-label,
+.textarea-underline:focus + .time-input-label,
+.select-underline:focus + .time-input-label,
+.time-input-underline:focus + .time-input-label,
+.input-underline:not(:placeholder-shown) + .time-input-label,
+.textarea-underline:not(:placeholder-shown) + .time-input-label,
+.select-underline:not([value=""]) + .time-input-label {
+  transform: translateY(-1.5rem) scale(0.875);
+  color: var(--primary);
+}
+
+/* Handle prefilled values */
+.input-underline:valid:not(:placeholder-shown) + .time-input-label,
+.textarea-underline:valid:not(:placeholder-shown) + .time-input-label,
+.select-underline:valid:not([value=""]) + .time-input-label,
+.time-input-underline:valid:not(:placeholder-shown) + .time-input-label {
+  transform: translateY(-1.5rem) scale(0.875);
+  color: var(--text-secondary);
+}
+
+.input-underline:read-only + .time-input-label,
+.textarea-underline:read-only + .time-input-label,
+.select-underline:disabled + .time-input-label,
+.time-input-underline:read-only + .time-input-label {
+  color: var(--text-muted);
+}
+
+/* Handle read-only labels when there's content */
+.input-underline:read-only:not(:placeholder-shown) + .time-input-label,
+.textarea-underline:read-only:not(:placeholder-shown) + .time-input-label,
+.select-underline:disabled:not([value=""]) + .time-input-label,
+.time-input-underline:read-only:not(:placeholder-shown) + .time-input-label {
+  transform: translateY(-1.5rem) scale(0.875);
+  color: var(--text-muted);
+}
 /* Time input specific styles */
 .time-input-underline {
   background: transparent;

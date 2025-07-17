@@ -162,10 +162,10 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
             )}
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded transition-colors"
+              className="px-4 py-2 rounded transition-opacity hover:opacity-70"
               style={{
-                backgroundColor: 'var(--primary)',
-                color: 'var(--text-inverse)'
+              backgroundColor: 'var(--primary)',
+              color: 'white'
               }}
             >
               Close
@@ -173,7 +173,7 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
           </div>
         </div>
         
-        <div className="p-6 overflow-y-auto max-h-[60vh]" style={{ backgroundColor: 'var(--bg-modal)' }}>
+        <div className="p-6 overflow-y-auto max-h-[60vh]" >
           {jobs.length === 0 ? (
             <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
               No jobs in queue
