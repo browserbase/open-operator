@@ -63,10 +63,12 @@ export default function Home() {
               setIsExecuting(true);
               setActiveTab('browser');
               
-              // Set session URL if available
+              // Set session URL and ID if available
               if (runningJob.sessionUrl) {
                 setSessionUrl(runningJob.sessionUrl);
-                setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+              }
+              if (runningJob.sessionId) {
+                setSessionId(runningJob.sessionId);
               }
             } else if (isExecuting) {
               // If we're already executing, check if this is a different job
@@ -79,16 +81,20 @@ export default function Home() {
                 });
                 setExecutionId(currentRunningExecutionId);
                 
-                // Update session URL if available
+                // Update session URL and ID if available
                 if (runningJob.sessionUrl) {
                   setSessionUrl(runningJob.sessionUrl);
-                  setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+                }
+                if (runningJob.sessionId) {
+                  setSessionId(runningJob.sessionId);
                 }
               } else if (runningJob.sessionUrl && !sessionUrl) {
                 // If we're already executing the same job but didn't have session URL, update it
                 console.log('Updating session URL for running job:', runningJob.sessionUrl);
                 setSessionUrl(runningJob.sessionUrl);
-                setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+                if (runningJob.sessionId && !sessionId) {
+                  setSessionId(runningJob.sessionId);
+                }
               }
             }
           } else if (isExecuting) {
@@ -96,7 +102,7 @@ export default function Home() {
             const lastJob = jobs.length > 0 ? jobs[jobs.length - 1] : null;
             if (lastJob && (lastJob.status === 'completed' || lastJob.status === 'failed')) {
               // Only stop executing if the session matches or if no sessionId is set
-              const lastJobSessionId = lastJob.sessionUrl?.split('/').pop();
+              const lastJobSessionId = lastJob.sessionId;
               if (!sessionId || lastJobSessionId === sessionId) {
                 console.log('Job completed/failed, stopping execution mode');
                 setIsExecuting(false);
@@ -213,16 +219,24 @@ export default function Home() {
     // End the Browserbase session if one exists
     if (sessionId) {
       try {
-        await fetch("/api/session", {
+        console.log('Ending session:', sessionId);
+        const response = await makeAuthenticatedRequest("/api/session", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ sessionId }),
-        });
-        console.log("Session ended successfully");
+        }, user);
+        
+        const result = await response.json();
+        if (result.success) {
+          console.log("Session ended successfully");
+        } else {
+          console.warn("Session end warning:", result.warning || result.error);
+        }
       } catch (error) {
         console.error("Error ending session:", error);
+        // Don't block the UI if session ending fails
       }
     }
     

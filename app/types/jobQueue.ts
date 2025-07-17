@@ -8,6 +8,7 @@ export interface QueuedJob {
   completedAt?: string;
   error?: string;
   sessionUrl?: string;
+  sessionId?: string; // Add sessionId to track the actual Browserbase session ID
   executionId?: string;
   userId?: string; // Add userId to track job ownership
 }
