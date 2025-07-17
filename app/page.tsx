@@ -14,6 +14,7 @@ import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/f
 import { User } from "firebase/auth";
 import { doc, setDoc, FieldValue } from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { makeAuthenticatedRequest } from "./utils/apiClient";
 
 export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -48,7 +49,7 @@ export default function Home() {
   useEffect(() => {
     const pollJobQueue = async () => {
       try {
-        const response = await fetch('/api/queue');
+        const response = await makeAuthenticatedRequest('/api/queue', {}, user);
         if (response.ok) {
           const data = await response.json();
           const jobs = data.jobs || []; // Extract jobs array from response
@@ -118,7 +119,7 @@ export default function Home() {
     pollJobQueue();
 
     return () => clearInterval(interval);
-  }, [isExecuting, sessionId]);
+  }, [isExecuting, sessionId, user]); // Add user dependency
 
   const handleLogin = async () => {
     setAuthLoading(true);
@@ -167,19 +168,19 @@ export default function Home() {
     
     try {
       // Always add jobs to the queue for consistent tracking
-      const response = await fetch("/api/queue", {
+      const response = await makeAuthenticatedRequest("/api/queue", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ action: 'add', formData }),
-      });
+      }, user);
 
       const result = await response.json();
 
       if (result.success) {
         // Check if this is the first job (will start immediately)
-        const queueResponse = await fetch("/api/queue");
+        const queueResponse = await makeAuthenticatedRequest("/api/queue", {}, user);
         const queueData = await queueResponse.json();
         const runningJobs = queueData.success ? queueData.jobs.filter((job: any) => job.status === 'running') : [];
 
@@ -560,6 +561,7 @@ export default function Home() {
         isVisible={showQueueManager}
         onClose={() => setShowQueueManager(false)}
         onRerunJob={handleJobRerun}
+        user={user}
       />
       
       {/* Toast Container */}
