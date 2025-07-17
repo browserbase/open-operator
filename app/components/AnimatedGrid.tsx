@@ -88,46 +88,10 @@ const AnimatedGrid = () => {
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 3: Right, down, left - 2 turns */}
-          <path
-            className="circuit-pulse circuit-3"
-            d="M 0 175.5 L 124 175.5 L 124 207.5 L 60 207.5 L 60 258"
-            fill="none"
-            stroke="url(#pulseGradient)"
-            filter="url(#strongGlow)"
-          />
-
-          {/* Circuit path 4: Left, up, right - 2 turns */}
-          <path
-            className="circuit-pulse circuit-4"
-            d="M 392 159.5 L 268 159.5 L 268 79.5 L 92 79.5 L 92 0"
-            fill="none"
-            stroke="url(#pulseGradient)"
-            filter="url(#strongGlow)"
-          />
-
-          {/* Circuit path 5: Up, right, down - 2 turns */}
-          <path
-            className="circuit-pulse circuit-5"
-            d="M 156 258 L 156 191.5 L 236 191.5 L 236 95.5 L 236 0"
-            fill="none"
-            stroke="url(#verticalPulseGradient)"
-            filter="url(#strongGlow)"
-          />
-
           {/* Circuit path 6: Down, left, up, right - 3 turns */}
           <path
             className="circuit-pulse circuit-6"
             d="M 316 0 L 316 79.5 L 188 79.5 L 188 143.5 L 252 143.5 L 252 258"
-            fill="none"
-            stroke="url(#pulseGradient)"
-            filter="url(#strongGlow)"
-          />
-
-          {/* Circuit path 7: Right, up, left, down - 3 turns */}
-          <path
-            className="circuit-pulse circuit-7"
-            d="M 0 223.5 L 108 223.5 L 108 143.5 L 204 143.5 L 204 31.5 L 284 31.5 L 284 0"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
