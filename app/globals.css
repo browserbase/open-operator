@@ -626,10 +626,10 @@ body {
 }
 
 .circuit-pulse {
-  stroke-width: 1;
+  stroke-width: 1.5;
   opacity: 0;
   stroke: var(--primary);
-  filter: drop-shadow(0 0 6px var(--primary));
+  filter: drop-shadow(0 0 8px var(--primary)) drop-shadow(0 0 12px var(--primary));
   stroke-linecap: round;
 }
 
@@ -722,5 +722,5 @@ body {
 
 .dark .circuit-pulse {
   stroke: var(--primary);
-  filter: drop-shadow(0 0 8px var(--primary));
+  filter: drop-shadow(0 0 10px var(--primary)) drop-shadow(0 0 16px var(--primary));
 }
