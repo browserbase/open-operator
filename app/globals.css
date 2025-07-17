@@ -63,7 +63,7 @@
 }
 
 .dark {
-  --background: #100606;
+  --background: #030a03;
   --foreground: #ffffff;
   --background-transparent: rgba(0, 0, 0, 0);
   /* Background variations - Next.js style */
@@ -226,7 +226,8 @@ body {
 }
 
 .bg-modal {
-  background-color: var(--bg-modal);
+  background-color: var(--background);
+  backdrop-filter: blur(15px);
 }
 
 .text-theme {
@@ -398,8 +399,8 @@ body {
 
 .input-underline:focus {
   outline: none;
-  border-bottom-color: var(--border-focus);
-  box-shadow: 0 2px 0 0 var(--border-focus);
+  border-bottom-color: var(--primary);
+  box-shadow: 0 2px 0 0 var(--primary);
   transform: translateY(-1px);
 }
 
@@ -518,7 +519,7 @@ body {
 .textarea-underline:not(:placeholder-shown) + .input-label,
 .select-underline:not([value=""]) + .input-label {
   transform: translateY(-1.5rem) scale(0.875);
-  color: var(--border-focus);
+  color: var(--primary);
 }
 
 /* Handle prefilled values */
@@ -625,8 +626,26 @@ body {
   opacity: var(--grid-opacity);
 }
 
+.grid-line-shimmer {
+  opacity: 0.2;
+  animation: gridShine 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+}
+
+@keyframes gridShine {
+  0% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.1;
+  }
+}
+
 .circuit-pulse {
-  stroke-width: 1.5;
+  stroke-width: .5;
   opacity: 0;
   stroke: var(--primary);
   filter: drop-shadow(0 0 8px var(--primary)) drop-shadow(0 0 12px var(--primary));

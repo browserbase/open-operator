@@ -42,29 +42,53 @@ const AnimatedGrid = () => {
           <stop offset="85%" stopColor="rgba(47, 193, 76, 1)" />
           <stop offset="100%" stopColor="rgba(47, 193, 76, 0.8)" />
         </linearGradient>
+        <linearGradient id="shimmerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(47, 193, 76, 0)" />
+          <stop offset="30%" stopColor="rgba(47, 193, 76, 0)" />
+          <stop offset="45%" stopColor="rgba(47, 193, 76, 0.2)" />
+          <stop offset="50%" stopColor="rgba(255, 255, 255, 0.8)" />
+          <stop offset="55%" stopColor="rgba(47, 193, 76, 0.2)" />
+          <stop offset="70%" stopColor="rgba(47, 193, 76, 0)" />
+          <stop offset="100%" stopColor="rgba(47, 193, 76, 0)" />
+          <animateTransform
+            attributeName="gradientTransform"
+            type="translate"
+            values="-150,-150;600,600;-150,-150"
+            dur="3s"
+            repeatCount="indefinite"
+          />
+        </linearGradient>
       </defs>
       
       <g className="grid-lines">
-        {/* Horizontal lines */}
+        {/* Horizontal lines with shimmer */}
         {[...Array(16)].map((_, i) => (
           <line
             key={`h-${i}`}
-            className="grid-line"
+            className="grid-line grid-line-shimmer"
             x2="392"
             y1={`${15.5 + i * 16}`}
             y2={`${15.5 + i * 16}`}
+            stroke="url(#shimmerGradient)"
+            style={{
+              animationDelay: `${i * 0.1}s`
+            }}
           />
         ))}
 
-        {/* Vertical lines */}
+        {/* Vertical lines with shimmer */}
         {[...Array(33)].map((_, i) => (
           <line
             key={`v-${i}`}
-            className="grid-line"
+            className="grid-line grid-line-shimmer"
             x1={`${12 + i * 16}`}
             x2={`${12 + i * 16}`}
             y1="0"
             y2="256"
+            stroke="url(#shimmerGradient)"
+            style={{
+              animationDelay: `${i * 0.05}s`
+            }}
           />
         ))}
 
