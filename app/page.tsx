@@ -7,14 +7,14 @@ import CaseForm from "./components/CaseForm";
 import ThemeToggle from "./components/ThemeToggle";
 import AutoSet from "./components/AutoSet";
 import LottieLoading from "./components/LottieLoading";
+import AnimatedCheckmark from "./components/AnimatedCheckmark";
 import QueueManager from "./components/QueueManager";
 import MileageWarningModal from "./components/MileageWarningModal";
-import ThemedModal from "./components/ThemedModal";
 import { ToastContainer, useToast } from "./components/Toast";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
-import { doc, setDoc, FieldValue } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { makeAuthenticatedRequest } from "./utils/apiClient";
 
@@ -771,10 +771,8 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
             >
               <div className="flex-shrink-0 mt-0.5">
                 {progressMessage.type === 'success' ? (
-                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                  <div className="w-5 h-5 text-green-500 flex items-center justify-center">
+                    <AnimatedCheckmark size={20} strokeWidth={2} />
                   </div>
                 ) : progressMessage.type === 'progress' ? (
                   <div className="w-5 h-5 flex items-center justify-center">
