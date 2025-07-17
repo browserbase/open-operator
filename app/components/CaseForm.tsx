@@ -1453,8 +1453,40 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         </div>
       )}
 
-      {/* Floating Run/Stop Automation Button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+        {/* Add to Queue Button - shown when automation is running */}
+        {isExecuting && (
+          <button
+            type="button"
+            onClick={() => {
+              // Trigger form submission programmatically to add to queue
+              const form = document.querySelector('form');
+              if (form) {
+                form.requestSubmit();
+              }
+            }}
+            disabled={isLoading || timeValidationError}
+            className="px-6 py-3 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
+              />
+            </svg>
+            Add to Queue
+          </button>
+        )}
+        
+        {/* Main Run/Stop Button */}
         <button
           type="button"
           onClick={() => {

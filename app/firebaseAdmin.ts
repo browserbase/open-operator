@@ -6,37 +6,43 @@ function initializeFirebaseAdmin() {
   // Check if Firebase Admin is already initialized
   if (getApps().length === 0) {
     try {
-      // For development/testing, you can use a service account key
-      // In production, you should use environment variables or Google Cloud authentication
-      
-      // Option 1: Use service account key (download from Firebase Console)
-      // const serviceAccount = require('./path/to/serviceAccountKey.json');
-      // initializeApp({
-      //   credential: cert(serviceAccount),
-      //   projectId: 'dfcs-webtools'
-      // });
-      
-      // Option 2: Use environment variables (recommended for production)
       if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        console.log('🔥 Initializing Firebase Admin with service account...');
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        
         initializeApp({
           credential: cert(serviceAccount),
-          projectId: 'dfcs-webtools'
+          projectId: serviceAccount.project_id
         });
+        
+        console.log('✅ Firebase Admin initialized successfully');
       } else {
-        // Option 3: For local development without service account
-        // This will use Application Default Credentials if available
-        console.log('No Firebase service account found, initializing with default settings...');
+        console.log('⚠️  FIREBASE_SERVICE_ACCOUNT_KEY not found in environment variables');
+        console.log('💡 To enable Firebase storage:');
+        console.log('   1. Go to Firebase Console > Project Settings > Service Accounts');
+        console.log('   2. Generate a new private key');
+        console.log('   3. Add the JSON content to your .env file as FIREBASE_SERVICE_ACCOUNT_KEY');
+        console.log('   4. Restart your development server');
+        console.log('');
+        console.log('🔄 Running in fallback mode - data will be stored in memory only');
+        
+        // Initialize with minimal config for development
         initializeApp({
           projectId: 'dfcs-webtools'
         });
       }
     } catch (error) {
-      console.error('Error initializing Firebase Admin:', error);
-      // Fallback initialization
-      initializeApp({
-        projectId: 'dfcs-webtools'
-      });
+      console.error('❌ Failed to initialize Firebase Admin:', error);
+      console.log('🔄 Running in fallback mode - data will be stored in memory only');
+      
+      // Try to initialize with minimal config
+      try {
+        initializeApp({
+          projectId: 'dfcs-webtools'
+        });
+      } catch (fallbackError) {
+        console.error('❌ Failed to initialize Firebase Admin in fallback mode:', fallbackError);
+      }
     }
   }
   

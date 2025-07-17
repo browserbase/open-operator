@@ -7,6 +7,7 @@ import CaseForm from "./components/CaseForm";
 import ThemeToggle from "./components/ThemeToggle";
 import AutoSet from "./components/AutoSet";
 import LottieLoading from "./components/LottieLoading";
+import QueueManager from "./components/QueueManager";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
@@ -29,6 +30,7 @@ export default function Home() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [showQueueManager, setShowQueueManager] = useState(false);
 
   // Listen for authentication state changes
   useEffect(() => {
@@ -37,6 +39,25 @@ export default function Home() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Listen for job queue updates
+  useEffect(() => {
+    const { jobQueue } = require('./utils/jobQueue');
+    
+    const unsubscribe = jobQueue.subscribe((jobs: any[]) => {
+      const runningJob = jobs.find(job => job.status === 'running');
+      if (runningJob && runningJob.sessionUrl && !isExecuting) {
+        // A job just started running, switch to browser view
+        setSessionUrl(runningJob.sessionUrl);
+        setExecutionId(runningJob.executionId);
+        setIsExecuting(true);
+        setActiveTab('browser');
+        console.log('Switched to browser view for running job:', runningJob.id);
+      }
+    });
+
+    return unsubscribe;
+  }, [isExecuting]);
 
   const handleLogin = async () => {
     setAuthLoading(true);
@@ -84,25 +105,51 @@ export default function Home() {
     setSubmittedFormData(formData); // Store the form data
     
     try {
-      const response = await fetch("/api/automation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      // Check if there are any running jobs in the queue
+      const queueResponse = await fetch("/api/queue");
+      const queueData = await queueResponse.json();
+      const hasRunningJobs = queueData.success && queueData.jobs.some((job: any) => job.status === 'running');
 
-      const result = await response.json();
+      if (hasRunningJobs) {
+        // If there's already a job running, add to queue
+        const response = await fetch("/api/queue", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ action: 'add', formData }),
+        });
 
-      if (result.success) {
-        setSessionUrl(result.sessionUrl);
-        setSessionId(result.sessionId);
-        setExecutionId(result.executionId);
-        setIsExecuting(true);
-        setActiveTab('browser'); // Switch to browser tab when automation starts
+        const result = await response.json();
+
+        if (result.success) {
+          alert(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
+          setShowQueueManager(true);
+        } else {
+          throw new Error(result.error || "Failed to queue job");
+        }
       } else {
-        console.error("Failed to start automation:", result.error);
-        alert("Failed to start automation: " + result.error);
+        // If no jobs running, execute directly like normal
+        const response = await fetch("/api/automation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setSessionUrl(result.sessionUrl);
+          setSessionId(result.sessionId);
+          setExecutionId(result.executionId);
+          setIsExecuting(true);
+          setActiveTab('browser'); // Switch to browser tab when automation starts
+        } else {
+          console.error("Failed to start automation:", result.error);
+          alert("Failed to start automation: " + result.error);
+        }
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -154,6 +201,12 @@ export default function Home() {
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowQueueManager(true)}
+            className="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+          >
+            Queue
+          </button>
           <ThemeToggle />
           {!user && (
             <button
@@ -405,7 +458,7 @@ export default function Home() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                         <div className="text-center">
-                          <LottieLoading size="w-16 h-16" className="mx-auto mb-4" />
+                          <LottieLoading size={64} className="mx-auto mb-4" />
                           <p>Initializing browser session...</p>
                         </div>
                       </div>
@@ -451,6 +504,12 @@ export default function Home() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Queue Manager Modal */}
+      <QueueManager 
+        isVisible={showQueueManager}
+        onClose={() => setShowQueueManager(false)}
+      />
     </div>
   );
 }
@@ -583,7 +642,7 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
                   </div>
                 ) : progressMessage.type === 'progress' ? (
                   <div className="w-5 h-5 flex items-center justify-center">
-                    <LottieLoading size="w-4 h-4" />
+                    <LottieLoading size={16} />
                   </div>
                 ) : progressMessage.type === 'error' ? (
                   <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
@@ -620,3 +679,4 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
     </>
   );
 }
+
