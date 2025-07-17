@@ -14,7 +14,7 @@ export default function ThemeToggle() {
 
   return (
     <div className="relative">
-      <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 space-x-1">
+      <div className="flex items-center bg-background-secondary rounded-lg p-1 space-x-1">
         {themes.map((themeOption) => (
           <button
             key={themeOption.value}

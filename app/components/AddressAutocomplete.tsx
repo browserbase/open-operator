@@ -179,7 +179,7 @@ export default function AddressAutocomplete({
 
     return createPortal(
       <div 
-        className="fixed z-[9999] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
+        className="fixed z-[9999] bg-background-primary border border-border rounded-md shadow-lg max-h-60 overflow-auto"
         style={{
           top: `${dropdownPosition.top}px`,
           left: `${dropdownPosition.left}px`,
@@ -191,7 +191,7 @@ export default function AddressAutocomplete({
           <button
             key={suggestion.place_id}
             type="button"
-            className="w-full px-3 py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none"
+            className="w-full px-3 py-2 text-left text-text-primary hover:bg-background-secondary focus:bg-background-secondary focus:outline-none"
             onClick={() => handleSuggestionClick(suggestion)}
           >
             <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
@@ -203,7 +203,7 @@ export default function AddressAutocomplete({
     );
   };
 
-  const baseInputClassName = `w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-gray-50 read-only:dark:bg-gray-800 read-only:cursor-default' : ''}`;
+  const baseInputClassName = `w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-background-secondary read-only:cursor-default' : ''}`;
 
   const combinedClassName = className ? `${baseInputClassName} ${className}` : baseInputClassName;
 
@@ -253,7 +253,7 @@ export default function AddressAutocomplete({
         />
         {!isLoaded && !readOnly && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-[#FF3B00] rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-border border-t-[#FF3B00] rounded-full animate-spin"></div>
           </div>
         )}
       </div>

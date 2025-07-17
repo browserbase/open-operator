@@ -747,13 +747,16 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   };
 
   // Helper for input styling with readonly support
-  const inputClassName = `w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-gray-50 read-only:dark:bg-gray-800 read-only:cursor-default' : ''}`;
+  const inputClassName = `input-underline ${readOnly ? 'read-only' : ''}`;
+  const textareaClassName = `textarea-underline ${readOnly ? 'read-only' : ''}`;
+  const selectClassName = `select-underline ${readOnly ? 'disabled' : ''}`;
+  const timeInputClassName = `time-input-underline ${readOnly ? 'read-only' : ''}`;
   
   return (
     <div className="h-full overflow-y-auto">
       {requiredError && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md">
-          <p className="text-sm text-red-700 dark:text-red-300">{requiredError}</p>
+        <div className="mb-4 p-3 bg-error-bg border border-error-border rounded-md">
+          <p className="text-sm text-error">{requiredError}</p>
         </div>
       )}
       {/* Main Content */}
@@ -765,10 +768,10 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
             className="p-8"
           >
             <div className="mb-8">
-              <h1 className="text-3xl font-ppneue text-gray-900 dark:text-gray-100 mb-2">
+              <h1 className="text-3xl font-ppneue text-text-primary mb-2">
                 {readOnly ? "Submitted Case Data" : "Case Note Form"}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 font-ppsupply">
+              <p className="text-text-secondary font-ppsupply">
                 {readOnly 
                   ? "Review the data that was submitted for automation." 
                   : "Fill out the form below to automatically create and populate case notes."
@@ -781,13 +784,13 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               {!readOnly && (
                 <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Form Templates</h3>
+                    <h3 className="text-lg font-medium text-text-primary">Form Templates</h3>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => isLoggedIn ? setShowLoadTemplates(true) : onLoginRequested?.()}
                         disabled={!isLoggedIn && savedTemplates.length === 0}
-                        className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-4 py-2 text-sm bg-background-secondary text-text-secondary rounded-md hover:bg-background-tertiary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         Load Template ({savedTemplates.length}){!isLoggedIn && ' (Login Required)'}
                       </button>
@@ -809,14 +812,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               {/* Login Credentials */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Ecasenote Login Credentials</h3>
+                  <h3 className="text-lg font-medium text-text-primary">Ecasenote Login Credentials</h3>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center">
                       <input
                         type="checkbox"
                         checked={saveCredentials}
                         onChange={(e) => setSaveCredentials(e.target.checked)}
-                        className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded"
+                        className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-border bg-background-secondary rounded"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Save credentials locally</span>
                     </label>
@@ -832,47 +835,47 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Company Code *
-                    </label>
+                  <div className="input-group">
                     <input
                       type="text"
                       required
                       value={formData.companyCode}
                       onChange={(e) => handleInputChange("companyCode", e.target.value)}
                       readOnly={readOnly}
-                      className={`${inputClassName}`}
-                      placeholder="Enter company code"
+                      className={inputClassName}
+                      placeholder=" "
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Username *
+                    <label className="input-label">
+                      Company Code <span className="text-red-500">*</span>
                     </label>
+                  </div>
+                  <div className="input-group">
                     <input
                       type="text"
                       required
                       value={formData.username}
                       onChange={(e) => handleInputChange("username", e.target.value)}
                       readOnly={readOnly}
-                      className={`${inputClassName}`}
-                      placeholder="Enter Username"
+                      className={inputClassName}
+                      placeholder=" "
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Password *
+                    <label className="input-label">
+                      Username <span className="text-red-500">*</span>
                     </label>
+                  </div>
+                  <div className="input-group">
                     <input
                       type="password"
                       required
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       readOnly={readOnly}
-                      className={`${inputClassName}`}
-                      placeholder="Enter password"
+                      className={inputClassName}
+                      placeholder=" "
                     />
+                    <label className="input-label">
+                      Password <span className="text-red-500">*</span>
+                    </label>
                   </div>
                 </div>
                 {saveCredentials && (
@@ -895,10 +898,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
               {/* Case Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Case Number <span className="text-red-500">*</span>
-                  </label>
+                <div className="input-group">
                   <input
                     type="text"
                     required
@@ -906,11 +906,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     onChange={(e) => handleInputChange("caseNumber", e.target.value)}
                     readOnly={readOnly}
                     className={inputClassName}
-                    placeholder="Enter case number"
+                    placeholder=" "
                   />
+                  <label className="input-label">
+                    Case Number <span className="text-red-500">*</span>
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="input-group">
+                  <label className="input-label-reg">
                     Date of Service <span className="text-red-500">*</span>
                   </label>
                   <CustomDatePicker
@@ -955,52 +958,52 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
               {/* Time Information */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Start Time <span className="text-red-500">*</span>
-                  </label>
+                <div className="input-group">
                   <input
                     type="time"
                     required
                     value={formData.startTime}
                     onChange={(e) => handleInputChange("startTime", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${
+                    className={`${timeInputClassName} ${
                       timeValidationError 
-                        ? 'border-red-500 dark:border-red-500' 
-                        : 'border-gray-300 dark:border-gray-600'
+                        ? 'border-b-red-500' 
+                        : ''
                     }`}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    End Time <span className="text-red-500">*</span>
+                  <label className="input-label">
+                    Start Time <span className="text-red-500">*</span>
                   </label>
+                </div>
+                <div className="input-group">
                   <input
                     type="time"
                     required
                     value={formData.endTime}
                     onChange={(e) => handleInputChange("endTime", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${
+                    className={`${timeInputClassName} ${
                       timeValidationError 
-                        ? 'border-red-500 dark:border-red-500' 
-                        : 'border-gray-300 dark:border-gray-600'
+                        ? 'border-b-red-500' 
+                        : ''
                     }`}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Service Type <span className="text-red-500">*</span>
+                  <label className="input-label">
+                    End Time <span className="text-red-500">*</span>
                   </label>
+                </div>
+                <div className="input-group">
                   <select
                     required
                     value={formData.serviceTypeIdentifier}
                     onChange={(e) => handleInputChange("serviceTypeIdentifier", e.target.value)}
                     disabled={readOnly}
-                    className={inputClassName}
+                    className={selectClassName}
                   >
                     <option value="56a">56a</option>
                     <option value="47e">47e</option>
                   </select>
+                  <label className="input-label">
+                    Service Type <span className="text-red-500">*</span>
+                  </label>
                 </div>
               </div>
 
@@ -1041,7 +1044,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               {/* Observation Notes for 56a */}
               {formData.serviceTypeIdentifier === "56a" && (
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Observation Notes (56a)</h3>
+                  <h3 className="text-lg font-medium text-text-primary">Observation Notes (56a)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Pick Up Address with Autocomplete */}
                     <div>
@@ -1074,7 +1077,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         type="text"
                         value={formData.observationNotes56a?.purposeOfTransportation || ''}
                         onChange={e => handleObservationNotesChange('purposeOfTransportation', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary"
                         placeholder="Enter purpose of transportation"
                         disabled={readOnly}
                         required
@@ -1085,18 +1088,18 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     {Object.entries(formData.observationNotes56a || {})
                       .filter(([key]) => key !== 'pickUpAddress' && key !== 'locationAddress' && key !== 'purposeOfTransportation')
                       .map(([key, value]) => (
-                        <div key={key}>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} <span className="text-red-500">*</span>
-                          </label>
+                        <div key={key} className="input-group">
                           <textarea
                             value={value}
                             onChange={(e) => handleObservationNotesChange(key, e.target.value)}
                             readOnly={readOnly}
                             rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent read-only:bg-gray-50 read-only:dark:bg-gray-800"
-                            placeholder={`Enter ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
+                            placeholder=" "
+                            className={textareaClassName}
                           />
+                          <label className="input-label">
+                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} <span className="text-red-500">*</span>
+                          </label>
                         </div>
                       ))}
                   </div>
@@ -1105,26 +1108,26 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
               {/* Note Summary for 47e */}
               {formData.serviceTypeIdentifier === "47e" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Note Summary (47e) <span className="text-red-500">*</span>
-                  </label>
+                <div className="input-group">
                   <div className="relative">
                     <textarea
                       value={formData.noteSummary47e}
                       onChange={(e) => handleInputChange("noteSummary47e", e.target.value)}
                       rows={6}
                       minLength={400}
-                      className="w-full px-3 py-2 pb-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
-                      placeholder="Enter note summary for 47e service type"
+                      className={`${textareaClassName} pb-8`}
+                      placeholder=" "
                       readOnly={readOnly}
                     />
+                    <label className="input-label">
+                      Note Summary (47e) <span className="text-red-500">*</span>
+                    </label>
                     {/* Character Counter */}
                     <div className={`absolute bottom-2 right-2 text-xs ${
                       (formData.noteSummary47e || '').length > 380 
-                        ? 'text-red-500 dark:text-red-400' 
+                        ? 'text-red-500' 
                         : (formData.noteSummary47e || '').length > 350
-                        ? 'text-yellow-600 dark:text-yellow-400'
+                        ? 'text-yellow-600'
                         : 'text-gray-500 dark:text-gray-400'
                     }`}>
                       {(formData.noteSummary47e || '').length}/400
@@ -1149,7 +1152,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         type="button"
                         onClick={() => handleInputChange("noteSummary47e", "")}
                         disabled={!(formData.noteSummary47e || '').trim()}
-                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-text-secondary bg-background-secondary border border-border rounded-md hover:bg-background-tertiary focus:outline-none focus:ring-2 focus:ring-border focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       >
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1169,14 +1172,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               {/* Mileage Section */}
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Mileage Information</h3>
+                  <h3 className="text-lg font-medium text-text-primary">Mileage Information</h3>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={showMileage}
                       onChange={(e) => handleMileageToggle(e.target.checked)}
                       disabled={readOnly}
-                      className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded disabled:opacity-50"
+                      className="mr-2 h-4 w-4 text-[#FF3B00] focus:ring-[#FF3B00] border-border bg-background-secondary rounded disabled:opacity-50"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Include Mileage</span>
                   </label>
@@ -1219,7 +1222,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             value={formData.mileageStartMileage}
                             onChange={(e) => handleInputChange("mileageStartMileage", e.target.value)}
                             readOnly={readOnly}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent read-only:bg-gray-50 read-only:dark:bg-gray-800"
+                            className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent read-only:bg-background-secondary read-only:text-text-secondary"
                             placeholder="Enter start mileage"
                           />
                           {isLoggedIn && lastProcessedMileage && !readOnly && (
@@ -1276,7 +1279,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             >
                               <div className="flex-1">
                                 <div className="flex items-center gap-3">
-                                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                                  <span className="font-medium text-text-primary">
                                     Stop {index + 1}
                                   </span>
                                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -1347,7 +1350,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                       type="text"
                                       value={index === 0 ? (formData.mileageStartAddress || "") : (formData.endAddresses[index - 1] || "")}
                                       readOnly={true}
-                                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+                                      className="w-full px-3 py-2 border border-border rounded-md bg-background-secondary text-text-secondary cursor-not-allowed"
                                       placeholder={index === 0 ? "Mileage start address" : "Previous stop address"}
                                     />
                                   </div>
@@ -1387,15 +1390,12 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                 
                                 {/* Purpose Field */}
                                 <div className="grid grid-cols-1 gap-4">
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                      Purpose <span className="text-red-500">*</span>
-                                    </label>
+                                  <div className="input-group">
                                     <select
                                       value={formData.additionalDropdownValues[index]}
                                       onChange={(e) => handleDropdownValueChange(index, e.target.value)}
                                       disabled={readOnly}
-                                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent disabled:bg-gray-50 disabled:dark:bg-gray-800"
+                                      className={selectClassName}
                                     >
                                       <option value="">Select purpose</option>
                                       {dropdownOptions.map((option) => (
@@ -1404,6 +1404,9 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                         </option>
                                       ))}
                                     </select>
+                                    <label className="input-label">
+                                      Purpose <span className="text-red-500">*</span>
+                                    </label>
                                   </div>
                                 </div>
                               </div>
@@ -1449,7 +1452,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       {/* Address Selection Modal */}
       {showAddressSelection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-md">
+          <div className="bg-background-primary rounded-lg shadow-lg p-8 w-full max-w-md">
             <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Select Start Address</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               Choose which saved address to use as your mileage start address:
