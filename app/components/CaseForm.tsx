@@ -8,7 +8,7 @@ import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFir
 import { AutoSetData } from "./AutoSet";
 import { dropdownOptions } from "../constants/dropdownOptions";
 import { db } from "../firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
@@ -205,12 +205,28 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     loadFirebaseTemplates();
   }, [isLoggedIn, userId]);
 
-  // Fetch last processed mileage when user logs in
+  // Fetch last processed mileage when user logs in and set up real-time listener
   useEffect(() => {
     if (isLoggedIn && userId) {
       fetchLastProcessedMileage();
+      
+      // Set up real-time listener for mileage updates
+      const userDoc = doc(db, 'users', userId);
+      const unsubscribe = onSnapshot(userDoc, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const userData = docSnapshot.data();
+          if (userData.lastProcessedMileage && userData.lastProcessedMileage !== lastProcessedMileage) {
+            setLastProcessedMileage(userData.lastProcessedMileage);
+            console.log('Mileage updated in real-time:', userData.lastProcessedMileage);
+          }
+        }
+      }, (error) => {
+        console.error('Error listening to mileage updates:', error);
+      });
+
+      return () => unsubscribe();
     }
-  }, [isLoggedIn, userId]);
+  }, [isLoggedIn, userId, lastProcessedMileage]);
 
   // Check for mileage warning when start mileage changes
   useEffect(() => {
