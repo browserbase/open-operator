@@ -12,6 +12,35 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import MileageWarningModal from "./MileageWarningModal";
 import NoteGeniusModal from "./NoteGeniusModal";
 
+// Utility function to format time from 24-hour to 12-hour format with AM/PM
+const formatTimeToAMPM = (time24: string): string => {
+  if (!time24) return '';
+  
+  const [hours, minutes] = time24.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
+// Utility function to parse date as local date to avoid timezone issues
+const parseLocalDate = (dateString: string): Date => {
+  if (!dateString) return new Date();
+  
+  // Split the date string and create a date using local timezone
+  const parts = dateString.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+    const day = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  }
+  
+  // Fallback to regular Date constructor
+  return new Date(dateString);
+};
+
 interface CaseFormProps {
   onSubmit: (formData: FormData) => void;
   isLoading: boolean;
@@ -28,6 +57,16 @@ interface SavedCredentials {
   companyCode: string;
   username: string;
   password: string;
+}
+
+interface MileageHistoryEntry {
+  capturedAt: string;
+  dateOfService: string;
+  endMileage: string;
+  endTime: string;
+  executionId: string;
+  savedAt: string;
+  startTime: string;
 }
 
 export interface FormTemplate {
@@ -82,6 +121,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [showMileageConfirmation, setShowMileageConfirmation] = useState(false);
   const [showNoteGeniusModal, setShowNoteGeniusModal] = useState(false);
   const [isLoadingMileage, setIsLoadingMileage] = useState(false);
+  const [mileageHistory, setMileageHistory] = useState<MileageHistoryEntry[]>([]);
+  const [isLoadingMileageHistory, setIsLoadingMileageHistory] = useState(false);
 
   // Function to fetch last processed mileage from Firebase
   const fetchLastProcessedMileage = useCallback(async () => {
@@ -114,6 +155,34 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       }));
     }
   }, [lastProcessedMileage]);
+
+  // Function to fetch mileage history from Firebase
+  const fetchMileageHistory = useCallback(async () => {
+    if (!isLoggedIn || !userId) return;
+    
+    setIsLoadingMileageHistory(true);
+    try {
+      const userDoc = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userDoc);
+      
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.data();
+        if (userData.mileageHistory && Array.isArray(userData.mileageHistory)) {
+          // Sort by savedAt timestamp descending (newest first) and take the last 5
+          const sortedHistory = userData.mileageHistory
+            .sort((a: MileageHistoryEntry, b: MileageHistoryEntry) => 
+              new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+            )
+            .slice(0, 5);
+          setMileageHistory(sortedHistory);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching mileage history:', error);
+    } finally {
+      setIsLoadingMileageHistory(false);
+    }
+  }, [isLoggedIn, userId]);
 
   // Function to check for mileage warning
   const checkMileageWarning = useCallback(() => {
@@ -183,6 +252,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   useEffect(() => {
     if (isLoggedIn && userId) {
       fetchLastProcessedMileage();
+      fetchMileageHistory();
       
       // Set up real-time listener for mileage updates
       const userDoc = doc(db, 'users', userId);
@@ -193,6 +263,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
             setLastProcessedMileage(userData.lastProcessedMileage);
             console.log('Mileage updated in real-time:', userData.lastProcessedMileage);
           }
+          // Update mileage history in real-time
+          if (userData.mileageHistory && Array.isArray(userData.mileageHistory)) {
+            const sortedHistory = userData.mileageHistory
+              .sort((a: MileageHistoryEntry, b: MileageHistoryEntry) => 
+                new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+              )
+              .slice(0, 5);
+            setMileageHistory(sortedHistory);
+          }
         }
       }, (error) => {
         console.error('Error listening to mileage updates:', error);
@@ -200,7 +279,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
       return () => unsubscribe();
     }
-  }, [isLoggedIn, userId, lastProcessedMileage]);
+  }, [isLoggedIn, userId, lastProcessedMileage, fetchLastProcessedMileage, fetchMileageHistory]);
 
   // Check for mileage warning when start mileage changes
   useEffect(() => {
@@ -824,6 +903,37 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     readOnly={readOnly}
                     className={inputClassName}
                   />
+                  
+                  {/* Mileage History Display */}
+                  {isLoggedIn && mileageHistory.length > 0 && (
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                        Recent E-Automate Note History
+                      </h4>
+                      <div className="space-y-2">
+                        {mileageHistory.map((entry, index) => (
+                          <div key={index} className="flex justify-between items-center text-sm">
+                            <span className="text-blue-700 dark:text-blue-300">
+                              {parseLocalDate(entry.dateOfService).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })} - {formatTimeToAMPM(entry.startTime)} to {formatTimeToAMPM(entry.endTime)}
+                            </span>
+                            <span className="text-blue-600 dark:text-blue-400 font-mono text-xs">
+                              End: {entry.endMileage}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {isLoadingMileageHistory && (
+                        <div className="flex items-center mt-2">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                          <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">Loading...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1007,7 +1117,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   
                   {/* Note Genius Button */}
                   {!readOnly && (
-                    <div className="mt-3">
+                    <div className="mt-3 flex items-start gap-3">
                       <button
                         type="button"
                         onClick={() => setShowNoteGeniusModal(true)}
@@ -1019,9 +1129,22 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         </svg>
                         Optimize with Note Genius
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        AI will format and optimize your note with professional structure
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange("noteSummary47e", "")}
+                        disabled={!(formData.noteSummary47e || '').trim()}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Clear
+                      </button>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          AI will format and optimize your note with professional structure
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

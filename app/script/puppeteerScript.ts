@@ -708,11 +708,11 @@ export async function runPuppeteerScript(
         }
       }, searchInputSelector);
       
-      // Type the search string character by character to trigger proper events
+      // Type the search string with no delay for faster input
       await page.type(searchInputSelector, searchString, { delay: 0 });
       console.log(`Typed search string: "${searchString}"`);
       
-      // Trigger additional events that might be needed for the filter
+      // Trigger search events immediately
       await page.evaluate((selector) => {
         const input = document.querySelector(selector) as HTMLInputElement;
         if (input) {
@@ -724,25 +724,63 @@ export async function runPuppeteerScript(
         }
       }, searchInputSelector);
       
-      // Look for the first note link matching the pattern href="/DFCS/Notes/Note?id=..."
-      const noteFound = await page.evaluate(() => {
-        const noteLinks = document.querySelectorAll('a[href*="/DFCS/Notes/Note?id="]');
-        if (noteLinks.length > 0) {
-          const firstLink = noteLinks[0] as HTMLElement;
-          firstLink.click();
+      // Wait for the table to update with filtered results (much faster than before)
+      await sleep(100); // Short wait for table to update
+      
+      // Check for note links with a timeout approach
+      const checkStartTime = Date.now();
+      const maxWaitTime = 2000; // Max 2 seconds to wait for results
+      
+      while (Date.now() - checkStartTime < maxWaitTime) {
+        const noteFound = await page.evaluate(() => {
+          const noteLinks = document.querySelectorAll('a[href*="/DFCS/Notes/Note?id="]');
+          if (noteLinks.length > 0) {
+            const firstLink = noteLinks[0] as HTMLElement;
+            firstLink.click();
+            return true;
+          }
+          return false;
+        });
+        
+        if (noteFound) {
+          console.log('Found existing note, clicked on it');
+          emit(uid, 'success', 'Found existing note!');
           return true;
         }
-        return false;
-      });
-      
-      if (noteFound) {
-        console.log('Found existing note, clicked on it');
-        emit(uid, 'success', 'Found existing note!');
-        return true;
-      } else {
-        console.log('No existing note found');
-        return false;
+        
+        // Check if table shows "no results" or is empty
+        const tableEmpty = await page.evaluate(() => {
+          const tableBody = document.querySelector('#data-models-table-body');
+          if (!tableBody) return true;
+          
+          const rows = tableBody.querySelectorAll('tr');
+          // Check if table is empty or shows no results message
+          if (rows.length === 0) return true;
+          
+          // Check for "no results" or similar messages
+          const noResultsMessages = [
+            'no results',
+            'no data',
+            'no records',
+            'no notes found',
+            'no entries'
+          ];
+          
+          const tableText = tableBody.textContent?.toLowerCase() || '';
+          return noResultsMessages.some(msg => tableText.includes(msg));
+        });
+        
+        if (tableEmpty) {
+          console.log('Table is empty or shows no results - no existing note found');
+          return false;
+        }
+        
+        // Short pause before checking again
+        await sleep(200);
       }
+      
+      console.log('No existing note found after timeout');
+      return false;
       
     } catch (error) {
       console.error('Error checking for existing note:', error);
@@ -1092,7 +1130,6 @@ export async function runPuppeteerScript(
       await populateMileageEntries(page, endAddresses, additionalDropdownValues);
       await saveAndReadyNote();
       
-      await page.waitForSelector("#ctl00_UpdateProgressDisplay", { hidden: true, timeout: defaultTimeout });
       console.log("Mileage Successfully Saved!");
       emit(uid, 'success', 'Mileage Saved Successfully!');
       emit(uid, 'toast', 'Mileage Saved Successfully!');
