@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
+import CustomDatePicker from "./CustomDatePicker";
 import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFirebase } from "./firebaseTemplateService";
 import { getAutoSetDataFromFirebase, AutoSetData } from "./firebaseAutoSetService";
 import { dropdownOptions } from "../constants/dropdownOptions";
@@ -539,15 +540,17 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       if (!formData.observationNotes56a?.interactionsWithClient) missingFields.push("Interactions With Client");
       if (!formData.observationNotes56a?.clientDressedAppropriately) missingFields.push("Client Dressed Appropriately");
       if (!formData.observationNotes56a?.concerns) missingFields.push("Concerns");
-      formData.endAddresses.forEach((addr, i) => {
-        if (!addr) missingFields.push(`Stop ${i + 1} Address`);
-      });
-      formData.additionalDropdownValues.forEach((val, i) => {
-        if (!val) missingFields.push(`Purpose for Stop ${i + 1}`);
-      });
-      // Check mileage fields if mileage is enabled
+      
+      // Only validate mileage-related fields if mileage is enabled
       if (showMileage) {
+        if (!formData.mileageStartAddress) missingFields.push("Start Address");
         if (!formData.mileageStartMileage) missingFields.push("Start Mileage");
+        formData.endAddresses.forEach((addr, i) => {
+          if (!addr) missingFields.push(`Stop ${i + 1} Address`);
+        });
+        formData.additionalDropdownValues.forEach((val, i) => {
+          if (!val) missingFields.push(`Purpose for Stop ${i + 1}`);
+        });
       }
     } else if (formData.serviceTypeIdentifier === "47e") {
       if (!formData.caseNumber) missingFields.push("Case Number");
@@ -556,15 +559,17 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       if (!formData.endTime) missingFields.push("End Time");
       if (!formData.personServed) missingFields.push("Person Served");
       if (!formData.noteSummary47e) missingFields.push("Note Summary (47e)");
-      formData.endAddresses.forEach((addr, i) => {
-        if (!addr) missingFields.push(`Stop ${i + 1} Address`);
-      });
-      formData.additionalDropdownValues.forEach((val, i) => {
-        if (!val) missingFields.push(`Purpose for Stop ${i + 1}`);
-      });
-      // Check mileage fields if mileage is enabled
+      
+      // Only validate mileage-related fields if mileage is enabled
       if (showMileage) {
+        if (!formData.mileageStartAddress) missingFields.push("Start Address");
         if (!formData.mileageStartMileage) missingFields.push("Start Mileage");
+        formData.endAddresses.forEach((addr, i) => {
+          if (!addr) missingFields.push(`Stop ${i + 1} Address`);
+        });
+        formData.additionalDropdownValues.forEach((val, i) => {
+          if (!val) missingFields.push(`Purpose for Stop ${i + 1}`);
+        });
       }
     }
 
@@ -908,11 +913,9 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Date of Service <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    required
+                  <CustomDatePicker
                     value={formData.dateOfService}
-                    onChange={(e) => handleInputChange("dateOfService", e.target.value)}
+                    onChange={(value) => handleInputChange("dateOfService", value)}
                     readOnly={readOnly}
                     className={inputClassName}
                   />
@@ -1111,7 +1114,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       value={formData.noteSummary47e}
                       onChange={(e) => handleInputChange("noteSummary47e", e.target.value)}
                       rows={6}
-                      maxLength={400}
+                      minLength={400}
                       className="w-full px-3 py-2 pb-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent"
                       placeholder="Enter note summary for 47e service type"
                       readOnly={readOnly}
@@ -1203,6 +1206,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                           label="Start Address"
                           placeholder="Enter start address"
                           readOnly={readOnly}
+                          required={true}
                         />
                       </div>
                       <div>
