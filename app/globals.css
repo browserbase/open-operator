@@ -235,7 +235,7 @@ body {
 
 .btn-primary {
   background-color: var(--primary);
-  color: var(--text-inverse);
+  color: white !important;
   border: 1px solid var(--primary);
   transition: all 0.15s ease;
 }

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
 import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFirebase } from "./firebaseTemplateService";
-import { AutoSetData } from "./AutoSet";
+import { getAutoSetDataFromFirebase, AutoSetData } from "./firebaseAutoSetService";
 import { dropdownOptions } from "../constants/dropdownOptions";
 import { db } from "../firebaseConfig";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
@@ -118,8 +118,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   // Function to check for mileage warning
   const checkMileageWarning = useCallback(() => {
     if (lastProcessedMileage && formData.mileageStartMileage) {
-      const lastMileage = parseInt(lastProcessedMileage);
-      const currentStartMileage = parseInt(formData.mileageStartMileage);
+      const lastMileage = parseInt(lastProcessedMileage.replace(/,/g, ''));
+      const currentStartMileage = parseInt(formData.mileageStartMileage.replace(/,/g, ''));
       
       if (!isNaN(lastMileage) && !isNaN(currentStartMileage) && currentStartMileage < lastMileage) {
         setShowMileageWarning(true);
@@ -151,24 +151,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       }));
       setSaveCredentials(true);
     }
-
-    // Load saved templates from localStorage
-    const savedTemplatesData = localStorage.getItem('caseFormTemplates');
-    if (savedTemplatesData) {
-      const templates = JSON.parse(savedTemplatesData);
-      setSavedTemplates(templates);
-      
-      // Auto-load template if one is marked for auto-loading
-      const autoLoadTemplate = templates.find((template: FormTemplate) => template.isAutoLoad);
-      if (autoLoadTemplate && autoLoadTemplate.formData && !hasAutoLoaded.current) {
-        setFormData(prev => ({
-          ...prev,
-          ...autoLoadTemplate.formData
-        }));
-        setShowMileage(Boolean(autoLoadTemplate.formData.mileageStartAddress || autoLoadTemplate.formData.mileageStartMileage));
-        hasAutoLoaded.current = true;
-      }
-    }
   }, [initialFormData]);
 
   // Load Firebase templates when user logs in
@@ -177,18 +159,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       if (isLoggedIn && userId) {
         try {
           const firebaseTemplates = await getTemplatesFromFirebase(userId);
-          // Convert Firebase templates to local format and merge with local templates
-          const localTemplates = JSON.parse(localStorage.getItem('caseFormTemplates') || '[]');
-          const allTemplates = [...localTemplates, ...firebaseTemplates];
-          // Remove duplicates based on template name and creation time
-          const uniqueTemplates = allTemplates.filter((template, index, self) => 
-            index === self.findIndex(t => t.name === template.name && t.createdAt === template.createdAt)
-          );
-          setSavedTemplates(uniqueTemplates);
+          setSavedTemplates(firebaseTemplates);
           
           // Auto-load template if one is marked for auto-loading (only once)
           if (!hasAutoLoaded.current) {
-            const autoLoadTemplate = uniqueTemplates.find((template: FormTemplate) => template.isAutoLoad);
+            const autoLoadTemplate = firebaseTemplates.find((template: FormTemplate) => template.isAutoLoad);
             if (autoLoadTemplate && autoLoadTemplate.formData) {
               setFormData(prev => ({
                 ...prev,
@@ -201,6 +176,9 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         } catch (error) {
           console.error('Failed to load templates from Firebase:', error);
         }
+      } else {
+        // Clear templates when user logs out
+        setSavedTemplates([]);
       }
     };
 
@@ -235,13 +213,26 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     checkMileageWarning();
   }, [formData.mileageStartMileage, lastProcessedMileage]);
 
-  // Load auto-set data
+  // Load auto-set data from Firebase when user logs in
   useEffect(() => {
-    const savedAutoSetData = localStorage.getItem('autoSetData');
-    if (savedAutoSetData) {
-      setAutoSetData(JSON.parse(savedAutoSetData));
-    }
-  }, []);
+    const loadAutoSetData = async () => {
+      if (isLoggedIn && userId) {
+        try {
+          const data = await getAutoSetDataFromFirebase(userId);
+          if (data) {
+            setAutoSetData(data);
+          }
+        } catch (error) {
+          console.error('Failed to load auto set data:', error);
+        }
+      } else {
+        // Clear auto set data when user logs out
+        setAutoSetData({ homeAddress: "", officeAddress: "" });
+      }
+    };
+
+    loadAutoSetData();
+  }, [isLoggedIn, userId]);
 
   // Handle mileage checkbox with address selection
   const handleMileageToggle = (enabled: boolean) => {
@@ -503,6 +494,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const saveTemplate = async () => {
     if (!templateName.trim()) return;
 
+    if (!isLoggedIn || !userId) {
+      alert('Please log in to save templates');
+      return;
+    }
+
     // Check if a template with this name already exists
     const existingTemplate = savedTemplates.find(t => t.name.toLowerCase() === templateName.trim().toLowerCase());
     
@@ -543,17 +539,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     }
 
     setSavedTemplates(updatedTemplates);
-    localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
 
-    // Save to Firebase if logged in
-    if (isLoggedIn && userId) {
-      try {
-        await saveTemplateToFirebase(template, userId);
-        console.log('Template saved to Firebase successfully');
-      } catch (error) {
-        console.error('Failed to save template to Firebase:', error);
-        // Template is still saved locally even if Firebase fails
-      }
+    // Save to Firebase
+    try {
+      await saveTemplateToFirebase(template, userId);
+      console.log('Template saved to Firebase successfully');
+    } catch (error) {
+      console.error('Failed to save template to Firebase:', error);
+      alert('Failed to save template. Please try again.');
+      return;
     }
 
     // Reset states
@@ -585,42 +579,47 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   };
 
   const deleteTemplate = async (templateId: string) => {
+    if (!isLoggedIn || !userId) {
+      alert('Please log in to delete templates');
+      return;
+    }
+
     const updatedTemplates = savedTemplates.filter(t => t.id !== templateId);
     setSavedTemplates(updatedTemplates);
-    localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
 
-    // Delete from Firebase if logged in
-    if (isLoggedIn && userId) {
-      try {
-        await deleteTemplateFromFirebase(templateId, userId);
-        console.log('Template deleted from Firebase successfully');
-      } catch (error) {
-        console.error('Failed to delete template from Firebase:', error);
-        // Template is still deleted locally even if Firebase fails
-      }
+    // Delete from Firebase
+    try {
+      await deleteTemplateFromFirebase(templateId, userId);
+      console.log('Template deleted from Firebase successfully');
+    } catch (error) {
+      console.error('Failed to delete template from Firebase:', error);
+      alert('Failed to delete template. Please try again.');
     }
   };
 
   const setAutoLoadTemplate = async (templateId: string) => {
+    if (!isLoggedIn || !userId) {
+      alert('Please log in to set auto-load templates');
+      return;
+    }
+
     const updatedTemplates = savedTemplates.map(template => ({
       ...template,
       isAutoLoad: template.id === templateId
     }));
     
     setSavedTemplates(updatedTemplates);
-    localStorage.setItem('caseFormTemplates', JSON.stringify(updatedTemplates));
 
-    // Update Firebase if logged in
-    if (isLoggedIn && userId) {
-      try {
-        // Update all templates in Firebase to reflect auto-load changes
-        for (const template of updatedTemplates) {
-          await saveTemplateToFirebase(template, userId);
-        }
-        console.log('Auto-load template setting updated in Firebase successfully');
-      } catch (error) {
-        console.error('Failed to update auto-load setting in Firebase:', error);
+    // Update Firebase
+    try {
+      // Update all templates in Firebase to reflect auto-load changes
+      for (const template of updatedTemplates) {
+        await saveTemplateToFirebase(template, userId);
       }
+      console.log('Auto-load template setting updated in Firebase successfully');
+    } catch (error) {
+      console.error('Failed to update auto-load setting in Firebase:', error);
+      alert('Failed to update auto-load setting. Please try again.');
     }
   };
 
@@ -663,11 +662,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setShowLoadTemplates(true)}
-                        disabled={savedTemplates.length === 0}
+                        onClick={() => isLoggedIn ? setShowLoadTemplates(true) : onLoginRequested?.()}
+                        disabled={!isLoggedIn && savedTemplates.length === 0}
                         className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Load Template ({savedTemplates.length})
+                        Load Template ({savedTemplates.length}){!isLoggedIn && ' (Login Required)'}
                       </button>
                       <button
                         type="button"
@@ -680,7 +679,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Save your form data as templates for quick reuse. Templates do not include login credentials.
-                    {isLoggedIn ? ' Templates will be saved to both local storage and Firebase.' : ' Login required to save templates to Firebase.'}
+                    {isLoggedIn ? ' Templates are saved to your Firebase account.' : ' Login required to save and load templates.'}
                     {savedTemplates.some(t => t.isAutoLoad) && (
                       <span className="block mt-1 text-green-600 dark:text-green-400">
                         Auto-load template: <strong>{savedTemplates.find(t => t.isAutoLoad)?.name}</strong> will load automatically when you visit this page.
@@ -1614,8 +1613,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         isVisible={showMileageConfirmation}
         onClose={handleMileageCancel}
         onConfirm={handleMileageConfirm}
-        currentMileage={formData.mileageStartMileage ? parseInt(formData.mileageStartMileage) : undefined}
-        lastMileage={lastProcessedMileage ? parseInt(lastProcessedMileage) : undefined}
+        currentMileage={formData.mileageStartMileage ? parseInt(formData.mileageStartMileage.replace(/,/g, '')) : undefined}
+        lastMileage={lastProcessedMileage ? parseInt(lastProcessedMileage.replace(/,/g, '')) : undefined}
       />
     </div>
   );
