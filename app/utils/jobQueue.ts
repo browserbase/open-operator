@@ -8,27 +8,38 @@ class JobQueue {
   private isProcessing = false;
   private subscribers = new Set<(jobs: QueuedJob[]) => void>();
   private executionToJobMap = new Map<string, string>(); // Maps executionId to jobId
+  private userQueues = new Map<string, QueuedJob[]>(); // User-specific job queues
 
-  addJob(formData: any): QueuedJob {
+  addJob(formData: any, userId: string = 'anonymous'): QueuedJob {
     const job: QueuedJob = {
       id: this.generateId(),
       formData,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userId // Add userId to job
     };
 
+    // Add to global jobs list (for backward compatibility)
     this.jobs.push(job);
+    
+    // Add to user-specific queue
+    if (!this.userQueues.has(userId)) {
+      this.userQueues.set(userId, []);
+    }
+    this.userQueues.get(userId)!.push(job);
+    
     this.notifySubscribers();
     
-    console.log(`Added job ${job.id} to queue. Current queue status:`, {
+    console.log(`Added job ${job.id} to queue for user ${userId}. Current queue status:`, {
       total: this.jobs.length,
-      pending: this.jobs.filter(j => j.status === 'pending').length,
-      running: this.jobs.filter(j => j.status === 'running').length,
-      completed: this.jobs.filter(j => j.status === 'completed').length,
-      failed: this.jobs.filter(j => j.status === 'failed').length
+      userJobs: this.userQueues.get(userId)?.length || 0,
+      pending: this.jobs.filter(j => j.status === 'pending' && j.userId === userId).length,
+      running: this.jobs.filter(j => j.status === 'running' && j.userId === userId).length,
+      completed: this.jobs.filter(j => j.status === 'completed' && j.userId === userId).length,
+      failed: this.jobs.filter(j => j.status === 'failed' && j.userId === userId).length
     });
     
-    // Start processing if not already running
+    // Start processing if not already running for this user
     if (!this.isProcessing) {
       this.processQueue();
     }
@@ -38,6 +49,11 @@ class JobQueue {
 
   getJobs(): QueuedJob[] {
     return [...this.jobs];
+  }
+
+  // Get jobs for a specific user
+  getJobsForUser(userId: string): QueuedJob[] {
+    return this.jobs.filter(job => job.userId === userId);
   }
 
   getJob(id: string): QueuedJob | undefined {
@@ -57,8 +73,38 @@ class JobQueue {
     this.notifySubscribers();
   }
 
+  // Remove completed jobs for a specific user
+  removeCompletedJobsForUser(userId: string) {
+    this.jobs = this.jobs.filter(job => {
+      if (job.userId === userId) {
+        return job.status !== 'completed' && job.status !== 'failed';
+      }
+      return true; // Keep jobs from other users
+    });
+    
+    // Update user-specific queue
+    if (this.userQueues.has(userId)) {
+      this.userQueues.set(userId, 
+        this.userQueues.get(userId)!.filter(job => 
+          job.status !== 'completed' && job.status !== 'failed'
+        )
+      );
+    }
+    
+    this.notifySubscribers();
+  }
+
   removeJob(id: string) {
+    const jobToRemove = this.jobs.find(job => job.id === id);
     this.jobs = this.jobs.filter(job => job.id !== id);
+    
+    // Remove from user-specific queue if applicable
+    if (jobToRemove?.userId && this.userQueues.has(jobToRemove.userId)) {
+      this.userQueues.set(jobToRemove.userId,
+        this.userQueues.get(jobToRemove.userId)!.filter(job => job.id !== id)
+      );
+    }
+    
     this.notifySubscribers();
   }
 
@@ -66,15 +112,22 @@ class JobQueue {
     const existingJob = this.jobs.find(job => job.id === id);
     if (!existingJob) return null;
 
-    // Create a new job with the same form data
+    // Create a new job with the same form data and userId
     const newJob: QueuedJob = {
       id: this.generateId(),
       formData: existingJob.formData,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userId: existingJob.userId // Preserve the original user ID
     };
 
     this.jobs.push(newJob);
+    
+    // Add to user-specific queue if userId exists
+    if (existingJob.userId && this.userQueues.has(existingJob.userId)) {
+      this.userQueues.get(existingJob.userId)!.push(newJob);
+    }
+    
     this.notifySubscribers();
     
     // Start processing if not already running
@@ -87,6 +140,11 @@ class JobQueue {
 
   getCurrentlyRunningJob(): QueuedJob | null {
     return this.jobs.find(job => job.status === 'running') || null;
+  }
+
+  // Get currently running job for a specific user
+  getCurrentlyRunningJobForUser(userId: string): QueuedJob | null {
+    return this.jobs.find(job => job.status === 'running' && job.userId === userId) || null;
   }
 
   isQueueActive(): boolean {
