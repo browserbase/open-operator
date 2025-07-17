@@ -621,7 +621,6 @@ body {
 .grid-line {
   stroke: var(--grid-line);
   stroke-dasharray: 1 1;
-  animation: shimmer 2.5s ease-in-out infinite;
   stroke-width: 0.5;
   opacity: var(--grid-opacity);
 }
