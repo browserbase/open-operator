@@ -233,7 +233,7 @@ body {
 }
 
 .bg-modal {
-  background-color: var(--background);
+  background-color: var(--background-transparent);
   backdrop-filter: blur(15px);
 }
 

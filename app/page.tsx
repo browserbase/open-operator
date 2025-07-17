@@ -19,6 +19,7 @@ import { User } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { makeAuthenticatedRequest } from "./utils/apiClient";
+import { checkSubscriptionStatus, hasActiveSubscription, SubscriptionStatus } from "./utils/subscription";
 
 export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -29,6 +30,8 @@ export default function Home() {
   const [submittedFormData, setSubmittedFormData] = useState<CaseFormData | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'browser' | 'autoset'>('form');
   const [user, setUser] = useState<User | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -51,9 +54,29 @@ export default function Home() {
   useEffect(() => {
     const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        // Check subscription status when user logs in
+        checkUserSubscription(currentUser);
+      } else {
+        // Clear subscription status when user logs out
+        setSubscriptionStatus(null);
+      }
     });
     return () => unsubscribe();
   }, []);
+
+  const checkUserSubscription = async (currentUser: User) => {
+    setSubscriptionLoading(true);
+    try {
+      const status = await checkSubscriptionStatus(currentUser);
+      setSubscriptionStatus(status);
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      setSubscriptionStatus({ status: 'no_active_subscription' });
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
 
   // Listen for job queue updates via polling
   useEffect(() => {
@@ -147,6 +170,7 @@ export default function Home() {
       setLoginEmail("");
       setLoginPassword("");
       setAuthError("");
+      // Subscription check will be triggered by the auth state change
     } else {
       setAuthError(result.error || "Login failed");
     }
@@ -270,7 +294,7 @@ export default function Home() {
           </span>
         </div>
         <div className="flex items-center gap-4">
-          {user && (
+          {user && subscriptionStatus && hasActiveSubscription(subscriptionStatus) && (
             <button
               onClick={() => setShowQueueManager(true)}
               className="relative px-3 py-2 text-sm bg-secondary text-text-secondary rounded-md hover:bg-secondary/80 transition-colors font-medium"
@@ -399,7 +423,7 @@ export default function Home() {
                   </div>
                   
                   {/* Notification about BAWebTools account */}
-                  <div className="p-3 bg-info-bg border border-info-border rounded-md">
+                  <div className="p-3 bg-info-bg  border-info-border rounded-md">
                     <p className="text-sm text-info text-center">
                       Please sign in with your BAWebTools account credentials
                     </p>
@@ -414,13 +438,7 @@ export default function Home() {
                       {authLoading ? "Signing in..." : "Sign In"}
                     </button>
                     
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowSignupModal(true)}
-                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
-                      >
-                        Create Account
-                      </button>
+                    <div className="flex gap-2">          
                       <button
                         onClick={() => window.open('https://bawebtools.com', '_blank')}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-sm"
@@ -433,8 +451,68 @@ export default function Home() {
               </div>
             </div>
           </div>
+        ) : subscriptionLoading ? (
+          /* Loading subscription status */
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <LottieLoading size={64} className="mx-auto mb-4" />
+              <p className="text-text-secondary">Checking subscription status...</p>
+            </div>
+          </div>
+        ) : !subscriptionStatus || !hasActiveSubscription(subscriptionStatus) ? (
+          /* Subscription required card */
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="w-full max-w-md">
+              <div className="bg-modal rounded-lg shadow-theme-lg p-8 border border-border">
+                <div className="text-center mb-6">
+                  <AnimatedCubeIcon size={48} />
+                  <h1 className="text-2xl font-bold text-text-primary mt-4 mb-2">Subscription Required</h1>
+                  <p className="text-text-secondary mb-4">
+                    Hello {user.email}! To access E-Automate features, you need an active subscription.
+                  </p>
+                  
+                  {subscriptionStatus?.status === 'past_due' && (
+                    <div className="p-3 bg-warning-bg border border-warning-border rounded-md mb-4">
+                      <p className="text-sm text-warning text-center">
+                        Your subscription is past due. Please update your payment method.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => window.open('https://bawebtools.com', '_blank')}
+                      className="w-full px-4 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary-hover transition-colors"
+                    >
+                      Get Subscription at BAWebTools
+                    </button>
+                    
+                    <p className="text-sm text-text-muted text-center">
+                      Go to BAWebTools.com → Menu → My Plan
+                    </p>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => checkUserSubscription(user)}
+                        disabled={subscriptionLoading}
+                        className="flex-1 px-4 py-2 bg-secondary text-text-primary rounded-md hover:bg-secondary/80 transition-colors font-medium disabled:opacity-50"
+                      >
+                        {subscriptionLoading ? "Checking..." : "Refresh Status"}
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
-          /* Content Area with Tabs - displayed when user is logged in */
+          /* Content Area with Tabs - displayed when user is logged in with active subscription */
           <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting ? 'pr-[336px]' : ''}`}>
             {/* Tab Navigation */}
             <div className="mb-4">
