@@ -1457,6 +1457,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     borderColor: 'var(--border)',
                     backgroundColor: 'var(--bg-secondary)'
                   }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                    e.currentTarget.style.borderColor = 'var(--border-focus)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                  }}
                 >
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Home Address</div>
                   <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{autoSetData.homeAddress}</div>
@@ -1469,6 +1477,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   style={{ 
                     borderColor: 'var(--border)',
                     backgroundColor: 'var(--bg-secondary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                    e.currentTarget.style.borderColor = 'var(--border-focus)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
                   }}
                 >
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Office Address</div>
@@ -1485,6 +1501,14 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   borderColor: 'var(--border)',
                   backgroundColor: 'var(--bg-secondary)'
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                  e.currentTarget.style.borderColor = 'var(--border-focus)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                }}
               >
                 <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Manual Entry</div>
                 <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Enter address manually</div>
@@ -1495,6 +1519,12 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                 onClick={() => setShowAddressSelection(false)}
                 className="px-4 py-2 transition-colors"
                 style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
               >
                 Cancel
               </button>

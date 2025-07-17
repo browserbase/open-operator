@@ -17,7 +17,7 @@
   /* Background variations */
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
-  --bg-modal: #ffffff;
+  --bg-modal: rgba(255, 255, 255, 0.8);
   --bg-overlay: rgba(0, 0, 0, 0.4);
   
   /* Border colors */
@@ -65,7 +65,7 @@
   /* Background variations - Next.js style */
   --bg-secondary: #111111;
   --bg-tertiary: #1a1a1a;
-  --bg-modal: #1a1a1a;
+  --bg-modal: rgba(26, 26, 26, 0.8);
   --bg-overlay: rgba(0, 0, 0, 0.8);
   
   /* Border colors - Next.js style */
