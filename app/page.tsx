@@ -361,7 +361,7 @@ export default function Home() {
                     setShowLoginModal(false);
                     setAuthError("");
                   }}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md"
+                  className="px-4 py-2 bg-background-secondary text-text-primary rounded-md"
                 >
                   Cancel
                 </button>
@@ -419,7 +419,7 @@ export default function Home() {
                     setShowSignupModal(false);
                     setAuthError("");
                   }}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md"
+                  className="px-4 py-2 bg-background-secondary text-text-primary rounded-md"
                 >
                   Cancel
                 </button>
@@ -545,7 +545,7 @@ export default function Home() {
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-background-secondary rounded-full flex items-center justify-center mx-auto mb-4">
                       <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -787,7 +787,7 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
     <>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Progress</h3>
+          <h3 className="text-lg font-medium text-text-primary">Progress</h3>
           <button
             onClick={onStop}
             className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
@@ -829,7 +829,7 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
                     </svg>
                   </div>
                 ) : (
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                  <div className="w-5 h-5 rounded-full border-2 border-border" />
                 )}
               </div>
               <div className="flex-1 min-w-0">

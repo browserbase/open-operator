@@ -181,7 +181,7 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
                       ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900'
                       : job.status === 'failed'
                       ? 'border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900'
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                      : 'border-border bg-background-secondary'
                   }`}
                   onClick={() => loadJobToForm(job)}
                 >
