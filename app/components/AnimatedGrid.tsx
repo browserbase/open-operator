@@ -70,73 +70,73 @@ const AnimatedGrid = () => {
 
         {/* Circuit-like directional pulses */}
         <g className="pulse-group">
-          {/* Circuit path 1: Right then down L-shape - extends to edges */}
+          {/* Circuit path 1: Right, down, right - 2 turns */}
           <path
             className="circuit-pulse circuit-1"
-            d="M 0 47.5 L 140 47.5 L 140 258"
+            d="M 0 47.5 L 76 47.5 L 76 127.5 L 140 127.5 L 140 258"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 2: Down then right L-shape - extends to edges */}
+          {/* Circuit path 2: Down, right, down - 2 turns */}
           <path
             className="circuit-pulse circuit-2"
-            d="M 220 0 L 220 111.5 L 392 111.5"
+            d="M 220 0 L 220 63.5 L 300 63.5 L 300 111.5 L 392 111.5"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 3: Right then down L-shape - extends to edges */}
+          {/* Circuit path 3: Right, down, left - 2 turns */}
           <path
             className="circuit-pulse circuit-3"
-            d="M 0 175.5 L 188 175.5 L 188 258"
+            d="M 0 175.5 L 124 175.5 L 124 207.5 L 60 207.5 L 60 258"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 4: Left to right horizontal - full width */}
+          {/* Circuit path 4: Left, up, right - 2 turns */}
           <path
             className="circuit-pulse circuit-4"
-            d="M 0 79.5 L 392 79.5"
+            d="M 392 159.5 L 268 159.5 L 268 79.5 L 92 79.5 L 92 0"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 5: Bottom to top vertical - full height */}
+          {/* Circuit path 5: Up, right, down - 2 turns */}
           <path
             className="circuit-pulse circuit-5"
-            d="M 92 0 L 92 258"
+            d="M 156 258 L 156 191.5 L 236 191.5 L 236 95.5 L 236 0"
             fill="none"
             stroke="url(#verticalPulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 6: Up then left then down U-shape - extends to edges */}
+          {/* Circuit path 6: Down, left, up, right - 3 turns */}
           <path
             className="circuit-pulse circuit-6"
-            d="M 316 258 L 316 127.5 L 252 127.5 L 252 258"
+            d="M 316 0 L 316 79.5 L 188 79.5 L 188 143.5 L 252 143.5 L 252 258"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 7: Left then up L-shape - extends to edges */}
+          {/* Circuit path 7: Right, up, left, down - 3 turns */}
           <path
             className="circuit-pulse circuit-7"
-            d="M 392 191.5 L 284 191.5 L 284 0"
+            d="M 0 223.5 L 108 223.5 L 108 143.5 L 204 143.5 L 204 31.5 L 284 31.5 L 284 0"
             fill="none"
             stroke="url(#pulseGradient)"
             filter="url(#strongGlow)"
           />
 
-          {/* Circuit path 8: Top to bottom vertical - full height */}
+          {/* Circuit path 8: Up, left, down, right - 3 turns */}
           <path
             className="circuit-pulse circuit-8"
-            d="M 156 0 L 156 258"
+            d="M 364 258 L 364 175.5 L 284 175.5 L 284 95.5 L 188 95.5 L 188 31.5 L 392 31.5"
             fill="none"
             stroke="url(#verticalPulseGradient)"
             filter="url(#strongGlow)"
