@@ -482,7 +482,7 @@ export default function Home() {
                 <CaseForm 
                   onSubmit={handleFormSubmit} 
                   isLoading={isLoading}
-                  readOnly={isExecuting}
+                  readOnly={false}
                   initialFormData={submittedFormData || undefined}
                   isLoggedIn={!!user}
                   userId={user?.uid}
