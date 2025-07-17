@@ -259,7 +259,7 @@ export default function Home() {
   return (
     <div className="min-h-screen background-transparent flex flex-col">
       {/* Top Navigation */}
-      <nav className="flex justify-between items-center px-8 py-4 bg-background border-b border-border">
+      <nav className="flex justify-between items-center px-8 py-4 bg-background-form border-b border-border">
         <div className="flex items-center gap-3">
           <Image
             src="/favicon.svg"
