@@ -74,6 +74,7 @@ export interface FormTemplate {
   name: string;
   createdAt: string;
   formData: Omit<FormData, 'companyCode' | 'username' | 'password' | 'dateOfService'> & { dateOfService?: string };
+  showMileage?: boolean; // Add this field to track mileage checkbox state
 }
 
 export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation }: CaseFormProps) {
@@ -627,6 +628,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       id: overwriteMode && existingTemplateId ? existingTemplateId : Math.random().toString(36).substring(2, 15),
       name: templateName.trim(),
       createdAt: overwriteMode ? existingTemplate?.createdAt || new Date().toISOString() : new Date().toISOString(),
+      showMileage: showMileage, // Save the mileage checkbox state
       formData: {
         caseNumber: formData.caseNumber,
         startTime: formData.startTime,
@@ -703,9 +705,20 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       };
     });
     
-    // Don't automatically enable mileage when loading templates
-    // User must manually enable mileage checkbox if they want to include mileage
-    // setShowMileage(Boolean(template.formData.mileageStartAddress || template.formData.mileageStartMileage));
+    // Restore the mileage checkbox state from the template
+    if (template.showMileage !== undefined) {
+      setShowMileage(template.showMileage);
+    } else {
+      // For backward compatibility with old templates that don't have showMileage field
+      // Check if template has meaningful mileage data to determine if mileage should be shown
+      const hasMeaningfulMileageData = Boolean(
+        template.formData.mileageStartAddress || 
+        template.formData.mileageStartMileage ||
+        (template.formData.endAddresses && template.formData.endAddresses.length > 0)
+      );
+      setShowMileage(hasMeaningfulMileageData);
+    }
+    
     setShowLoadTemplates(false);
   };
 
