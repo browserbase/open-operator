@@ -925,21 +925,21 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   
                   {/* Mileage History Display */}
                   {isLoggedIn && mileageHistory.length > 0 && (
-                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                    <div className="mt-3 p-3 bg-background-secondary border border-border rounded-md">
+                      <h4 className="text-sm font-medium text-text-primary mb-2">
                         Recent E-Automate Note History
                       </h4>
                       <div className="space-y-2">
                         {mileageHistory.map((entry, index) => (
                           <div key={index} className="flex justify-between items-center text-sm">
-                            <span className="text-blue-700 dark:text-blue-300">
+                            <span className="text-text-secondary">
                               {parseLocalDate(entry.dateOfService).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric'
                               })} - {formatTimeToAMPM(entry.startTime)} to {formatTimeToAMPM(entry.endTime)}
                             </span>
-                            <span className="text-blue-600 dark:text-blue-400 font-mono text-xs">
+                            <span className="text-accent font-mono text-xs">
                               {entry.endMileage ? `End: ${entry.endMileage}` : 'No mileage'}
                             </span>
                           </div>
@@ -947,8 +947,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       </div>
                       {isLoadingMileageHistory && (
                         <div className="flex items-center mt-2">
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                          <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">Loading...</span>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-accent"></div>
+                          <span className="ml-2 text-xs text-accent">Loading...</span>
                         </div>
                       )}
                     </div>
@@ -1071,17 +1071,19 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     </div>
 
                     {/* Purpose of Transportation as text input */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Purpose of Transportation <span className="text-red-500">*</span></label>
+                    <div className="input-group">
                       <input
                         type="text"
                         value={formData.observationNotes56a?.purposeOfTransportation || ''}
                         onChange={e => handleObservationNotesChange('purposeOfTransportation', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary"
-                        placeholder="Enter purpose of transportation"
+                        className={inputClassName}
+                        placeholder=" "
                         disabled={readOnly}
                         required
                       />
+                      <label className="input-label">
+                        Purpose of Transportation <span className="text-red-500">*</span>
+                      </label>
                     </div>
 
                     {/* Other observation note fields except purposeOfTransportation, pickUpAddress, locationAddress */}
@@ -1187,15 +1189,15 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
                 {showMileage && (
                   <div className="space-y-6">
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md">
+                    <div className="mb-4 p-3 bg-background-secondary border border-border rounded-md">
                       <div className="flex">
                         <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                          <svg className="h-5 w-5 text-accent" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                           </svg>
                         </div>
                         <div className="ml-3">
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                          <p className="text-sm text-text-secondary">
                             <strong>Note:</strong> Mileage will be calculated automatically by Ecasenotes based on the addresses provided. You only need to enter the starting mileage reading from your vehicle.
                           </p>
                         </div>
@@ -1212,25 +1214,25 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                           required={true}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <div className="input-group">
+                        <input
+                          type="text"
+                          value={formData.mileageStartMileage}
+                          onChange={(e) => handleInputChange("mileageStartMileage", e.target.value)}
+                          readOnly={readOnly}
+                          className={inputClassName}
+                          placeholder=" "
+                        />
+                        <label className="input-label">
                           Start Mileage <span className="text-red-500">*</span>
                         </label>
                         <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={formData.mileageStartMileage}
-                            onChange={(e) => handleInputChange("mileageStartMileage", e.target.value)}
-                            readOnly={readOnly}
-                            className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent read-only:bg-background-secondary read-only:text-text-secondary"
-                            placeholder="Enter start mileage"
-                          />
                           {isLoggedIn && lastProcessedMileage && !readOnly && (
                             <button
                               type="button"
                               onClick={setCurrentMileage}
                               disabled={isLoadingMileage}
-                              className="flex items-center px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50"
+                              className="flex items-center px-3 py-1 text-xs bg-background-secondary text-text-secondary border border-border rounded-md hover:bg-background-tertiary transition-colors disabled:opacity-50"
                             >
                               {isLoadingMileage ? (
                                 <span>Loading...</span>
@@ -1261,7 +1263,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     {/* Stops */}
                     <div>
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label className="block text-sm font-medium text-text-primary">
                           Stops <span className="text-red-500">*</span>
                         </label>
                       </div>
@@ -1271,10 +1273,10 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                         const purposeLabel = dropdownOptions.find(opt => opt.value === purpose)?.label || purpose || 'No purpose selected';
                         
                         return (
-                          <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg mb-4">
+                          <div key={index} className="border border-border rounded-lg mb-4">
                             {/* Accordion Header */}
                             <div 
-                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-background-secondary transition-colors"
                               onClick={() => toggleStopExpansion(index)}
                             >
                               <div className="flex-1">
@@ -1335,24 +1337,24 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             
                             {/* Accordion Content */}
                             <div 
-                              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                              className={` transition-all duration-300 ease-in-out ${
                                 isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                               }`}
                             >
                               <div className="px-4 pb-4 space-y-4">
                                 {/* Address Fields Row */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                      Stop {index + 1} Start Address
-                                    </label>
+                                  <div className="input-group">
                                     <input
                                       type="text"
                                       value={index === 0 ? (formData.mileageStartAddress || "") : (formData.endAddresses[index - 1] || "")}
                                       readOnly={true}
-                                      className="w-full px-3 py-2 border border-border rounded-md bg-background-secondary text-text-secondary cursor-not-allowed"
-                                      placeholder={index === 0 ? "Mileage start address" : "Previous stop address"}
+                                      className="input-underline bg-background-secondary text-text-secondary cursor-not-allowed"
+                                      placeholder=" "
                                     />
+                                    <label className="input-label">
+                                      Stop {index + 1} Start Address
+                                    </label>
                                   </div>
                                   <div>
                                     <AddressAutocomplete
@@ -1369,7 +1371,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                           <button
                                             type="button"
                                             onClick={() => handleEndAddressChange(index, autoSetData.homeAddress)}
-                                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                            className="px-2 py-1 text-xs bg-background-secondary text-text-secondary rounded hover:bg-background-tertiary transition-colors"
                                           >
                                             Set Home
                                           </button>
@@ -1378,7 +1380,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                                           <button
                                             type="button"
                                             onClick={() => handleEndAddressChange(index, autoSetData.officeAddress)}
-                                            className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                            className="px-2 py-1 text-xs bg-background-secondary text-text-secondary rounded hover:bg-background-tertiary transition-colors"
                                           >
                                             Set Office
                                           </button>
@@ -1453,7 +1455,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       {showAddressSelection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-background-primary rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Select Start Address</h3>
+            <h3 className="text-lg font-bold mb-4 text-text-primary">Select Start Address</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               Choose which saved address to use as your mileage start address:
             </p>
@@ -1461,19 +1463,19 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
               {autoSetData.homeAddress && (
                 <button
                   onClick={() => selectStartAddress(autoSetData.homeAddress)}
-                  className="w-full p-3 text-left border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full p-3 text-left border border-border rounded-md hover:bg-background-secondary transition-colors"
                 >
-                  <div className="font-medium text-gray-900 dark:text-gray-100">Home Address</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{autoSetData.homeAddress}</div>
+                  <div className="font-medium text-text-primary">Home Address</div>
+                  <div className="text-sm text-text-secondary">{autoSetData.homeAddress}</div>
                 </button>
               )}
               {autoSetData.officeAddress && (
                 <button
                   onClick={() => selectStartAddress(autoSetData.officeAddress)}
-                  className="w-full p-3 text-left border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full p-3 text-left border border-border rounded-md hover:bg-background-secondary transition-colors"
                 >
-                  <div className="font-medium text-gray-900 dark:text-gray-100">Office Address</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{autoSetData.officeAddress}</div>
+                  <div className="font-medium text-text-primary">Office Address</div>
+                  <div className="text-sm text-text-secondary">{autoSetData.officeAddress}</div>
                 </button>
               )}
               <button
@@ -1481,10 +1483,10 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   setShowMileage(true);
                   setShowAddressSelection(false);
                 }}
-                className="w-full p-3 text-left border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="w-full p-3 text-left border border-border rounded-md hover:bg-background-secondary transition-colors"
               >
-                <div className="font-medium text-gray-900 dark:text-gray-100">Manual Entry</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Enter address manually</div>
+                <div className="font-medium text-text-primary">Manual Entry</div>
+                <div className="text-sm text-text-secondary">Enter address manually</div>
               </button>
             </div>
             <div className="flex justify-end mt-6">
@@ -1502,8 +1504,8 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       {/* Save Template Modal */}
       {showTemplateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+          <div className="bg-background-primary rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-medium text-text-primary mb-4">
               {overwriteMode ? "Template Already Exists" : "Save Template"}
             </h3>
             
@@ -1536,7 +1538,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   type="text"
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter template name"
                   autoFocus
                 />
@@ -1549,7 +1551,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <button
                     type="button"
                     onClick={cancelOverwrite}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="px-4 py-2 text-text-secondary border border-border rounded-md hover:bg-background-secondary transition-colors"
                   >
                     Change Name
                   </button>
@@ -1571,7 +1573,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       setOverwriteMode(false);
                       setExistingTemplateId(null);
                     }}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="px-4 py-2 text-text-secondary border border-border rounded-md hover:bg-background-secondary transition-colors"
                   >
                     Cancel
                   </button>
@@ -1593,9 +1595,9 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       {/* Load Templates Modal */}
       {showLoadTemplates && (
         <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-background-primary rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Load Template</h3>
+              <h3 className="text-lg font-medium text-text-primary">Load Template</h3>
               <button
                 onClick={() => setShowLoadTemplates(false)}
                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
@@ -1618,7 +1620,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
+                          <h4 className="font-medium text-text-primary">{template.name}</h4>
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           Created: {new Date(template.createdAt).toLocaleDateString()} at {new Date(template.createdAt).toLocaleTimeString()}

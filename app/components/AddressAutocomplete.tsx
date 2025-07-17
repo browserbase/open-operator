@@ -29,7 +29,6 @@ interface AddressAutocompleteProps {
 export default function AddressAutocomplete({
   value,
   onChange,
-  placeholder,
   label,
   readOnly = false,
   className = "",
@@ -179,7 +178,7 @@ export default function AddressAutocomplete({
 
     return createPortal(
       <div 
-        className="fixed z-[9999] bg-background-primary border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+        className="fixed z-[9999] bg-background-primary/80 backdrop-blur-md border border-border rounded-md shadow-lg max-h-60 overflow-auto"
         style={{
           top: `${dropdownPosition.top}px`,
           left: `${dropdownPosition.left}px`,
@@ -203,19 +202,14 @@ export default function AddressAutocomplete({
     );
   };
 
-  const baseInputClassName = `w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-background-secondary read-only:cursor-default' : ''}`;
+  const baseInputClassName = `input-underline ${readOnly ? 'read-only:opacity-50 read-only:cursor-default' : ''}`;
 
   const combinedClassName = className ? `${baseInputClassName} ${className}` : baseInputClassName;
 
   if (error) {
     // Fallback to regular input if Google Maps fails to load
     return (
-      <div>
-        {label && (
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {label} {required && <span className="text-red-500">*</span>}
-          </label>
-        )}
+      <div className="input-group">
         <input
           type="text"
           value={inputValue}
@@ -223,8 +217,11 @@ export default function AddressAutocomplete({
           onFocus={handleInputFocus}
           readOnly={readOnly}
           className={combinedClassName}
-          placeholder={placeholder}
+          placeholder=" "
         />
+        <label className="input-label">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
         <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
           Address autocomplete unavailable - using text input
         </p>
@@ -233,12 +230,7 @@ export default function AddressAutocomplete({
   }
 
   return (
-    <div>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-      )}
+    <div className="input-group">
       <div className="relative">
         <input
           ref={autocompleteElementRef}
@@ -249,8 +241,11 @@ export default function AddressAutocomplete({
           onBlur={handleInputBlur}
           readOnly={readOnly}
           className={combinedClassName}
-          placeholder={placeholder || `Enter ${label?.toLowerCase() || 'address'}`}
+          placeholder=" "
         />
+        <label className="input-label">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
         {!isLoaded && !readOnly && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
             <div className="w-4 h-4 border-2 border-border border-t-[#FF3B00] rounded-full animate-spin"></div>
