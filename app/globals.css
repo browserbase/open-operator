@@ -5,9 +5,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --background-transparent: rgba(255, 255, 255, 0.8);
+  --background-transparent: rgba(255, 255, 255, 0);
   /* Theme colors */
-  --primary: #FF3B00;
+  --primary: #2fc14c;
   --primary-hover: #E63400;
   --primary-light: #FF5722;
   --accent: #0070f3;
@@ -30,6 +30,10 @@
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
   --text-inverse: #ffffff;
+  
+  /* Grid colors */
+  --grid-line: #94a3b8;
+  --grid-opacity: 0.4;
   
   /* Status colors */
   --success: #10b981;
@@ -59,9 +63,9 @@
 }
 
 .dark {
-  --background: #000000;
+  --background: #100606;
   --foreground: #ffffff;
-  --background-transparent: rgba(0, 0, 0, 0.8);
+  --background-transparent: rgba(0, 0, 0, 0);
   /* Background variations - Next.js style */
   --bg-secondary: #111111;
   --bg-tertiary: #1a1a1a;
@@ -78,6 +82,10 @@
   --text-secondary: #a1a1a1;
   --text-muted: #6b7280;
   --text-inverse: #000000;
+  
+  /* Grid colors */
+  --grid-line: #444444;
+  --grid-opacity: 0.8;
   
   /* Status colors */
   --success: #10b981;
@@ -145,8 +153,10 @@ body {
 }
 
 .bg-background-form{
-
+  background-color: var(--background-transparent);
+  backdrop-filter: blur(15px);
 }
+
 .google-spinner-circle {
   fill: none;
   stroke-width: 5;
@@ -336,6 +346,30 @@ body {
 
 .bg-accent {
   background-color: var(--accent);
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.text-primary-color {
+  color: var(--primary);
+}
+
+.border-primary {
+  border-color: var(--primary);
+}
+
+.focus-ring-primary:focus {
+  outline: none;
+  --tw-ring-color: var(--primary);
+  --tw-ring-opacity: 0.5;
+  --tw-ring-offset-width: 2px;
+  box-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
 }
 
 .border-accent {
@@ -568,4 +602,126 @@ body {
 
 .calendar-day-current-month {
   color: var(--text-primary);
+}
+
+/* Animated Grid Styles */
+.animated-grid {
+  stroke: var(--grid-line);
+  opacity: var(--grid-opacity);
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(0.5px);
+}
+
+.grid-line {
+  stroke: var(--grid-line);
+  stroke-dasharray: 1 1;
+  animation: shimmer 2.5s ease-in-out infinite;
+  stroke-width: 0.5;
+  opacity: var(--grid-opacity);
+}
+
+.circuit-pulse {
+  stroke-width: 1;
+  opacity: 0;
+  stroke: var(--primary);
+  filter: drop-shadow(0 0 6px var(--primary));
+  stroke-linecap: round;
+}
+
+/* Circuit path animations */
+.circuit-1 {
+  animation: pathPulse 2s linear infinite;
+  animation-delay: 0s;
+}
+
+.circuit-2 {
+  animation: pathPulse 2s linear infinite;
+  animation-delay: 0.7s;
+}
+
+.circuit-3 {
+  animation: pathPulse 2s linear infinite;
+  animation-delay: 1.4s;
+}
+
+.circuit-4 {
+  animation: pathPulse 2.5s linear infinite;
+  animation-delay: 0.3s;
+}
+
+.circuit-5 {
+  animation: pathPulse 1.8s linear infinite;
+  animation-delay: 1s;
+}
+
+.circuit-6 {
+  animation: pathPulse 3s linear infinite;
+  animation-delay: 0.5s;
+}
+
+.circuit-7 {
+  animation: pathPulse 2.2s linear infinite;
+  animation-delay: 1.8s;
+}
+
+.circuit-8 {
+  animation: pathPulse 2.3s linear infinite;
+  animation-delay: 0.8s;
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.05;
+  }
+  50% {
+    opacity: 0.15;
+  }
+  100% {
+    opacity: 0.05;
+  }
+}
+
+@keyframes pathPulse {
+  0% {
+    opacity: 0;
+    stroke-dasharray: 0 400;
+    stroke-dashoffset: 0;
+  }
+  5% {
+    opacity: 1;
+    stroke-dasharray: 60 400;
+    stroke-dashoffset: 0;
+  }
+  95% {
+    opacity: 1;
+    stroke-dasharray: 60 400;
+    stroke-dashoffset: -340;
+  }
+  100% {
+    opacity: 0;
+    stroke-dasharray: 60 400;
+    stroke-dashoffset: -400;
+  }
+}
+
+/* Dark mode grid adjustments */
+.dark .animated-grid {
+  opacity: var(--grid-opacity);
+  filter: blur(0.5px);
+}
+
+.dark .grid-line {
+  stroke: var(--grid-line);
+  opacity: var(--grid-opacity);
+}
+
+.dark .circuit-pulse {
+  stroke: var(--primary);
+  filter: drop-shadow(0 0 8px var(--primary));
 }

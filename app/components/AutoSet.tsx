@@ -122,7 +122,7 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
                 <button
                   onClick={saveData}
                   disabled={isSaving || (!autoSetData.homeAddress && !autoSetData.officeAddress)}
-                  className="px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="px-8 py-3 bg-primary text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {isSaving ? "Saving..." : "Save Addresses"}
                 </button>

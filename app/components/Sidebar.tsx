@@ -87,7 +87,7 @@ export default function Sidebar({
                     <motion.div
                       className={`inline-block p-4 rounded-xl font-ppsupply ${
                         message.role === 'user'
-                          ? 'bg-[#FF3B00] text-white'
+                          ? 'bg-primary text-white'
                           : 'bg-gray-100 text-gray-900'
                       }`}
                       layoutId={`message-${message.id}`}
@@ -107,7 +107,7 @@ export default function Sidebar({
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent font-ppsupply"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus-ring-primary focus:border-transparent font-ppsupply"
                 placeholder="Type a message..."
               />
               {!isMobile && (
