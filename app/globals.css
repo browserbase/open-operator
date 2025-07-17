@@ -480,7 +480,7 @@ body {
 .input-underline:read-only,
 .textarea-underline:read-only,
 .select-underline:disabled {
-  border-bottom-color: var(--text-muted);
+  
   color: var(--text-secondary);
   cursor: default;
 }
@@ -569,8 +569,8 @@ body {
 
 .time-input-underline:focus {
   outline: none;
-  border-bottom-color: var(--border-focus);
-  box-shadow: 0 2px 0 0 var(--border-focus);
+  border-bottom-color: var(--primary);
+  box-shadow: 0 2px 0 0 var(--primary);
   transform: translateY(-1px);
 }
 
