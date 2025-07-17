@@ -1,14 +1,7 @@
-export interface QueuedJob {
-  id: string;
-  formData: any;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
-  error?: string;
-  sessionUrl?: string;
-  executionId?: string;
-}
+import { QueuedJob } from '../types/jobQueue';
+
+// Re-export for backward compatibility
+export type { QueuedJob };
 
 class JobQueue {
   private jobs: QueuedJob[] = [];
@@ -55,6 +48,42 @@ class JobQueue {
     this.notifySubscribers();
   }
 
+  removeJob(id: string) {
+    this.jobs = this.jobs.filter(job => job.id !== id);
+    this.notifySubscribers();
+  }
+
+  rerunJob(id: string): QueuedJob | null {
+    const existingJob = this.jobs.find(job => job.id === id);
+    if (!existingJob) return null;
+
+    // Create a new job with the same form data
+    const newJob: QueuedJob = {
+      id: this.generateId(),
+      formData: existingJob.formData,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    this.jobs.push(newJob);
+    this.notifySubscribers();
+    
+    // Start processing if not already running
+    if (!this.isProcessing) {
+      this.processQueue();
+    }
+
+    return newJob;
+  }
+
+  getCurrentlyRunningJob(): QueuedJob | null {
+    return this.jobs.find(job => job.status === 'running') || null;
+  }
+
+  isQueueActive(): boolean {
+    return this.isProcessing || this.jobs.some(job => job.status === 'running' || job.status === 'pending');
+  }
+
   subscribe(callback: (jobs: QueuedJob[]) => void) {
     this.subscribers.add(callback);
     return () => this.subscribers.delete(callback);
@@ -97,17 +126,9 @@ class JobQueue {
     });
 
     try {
-      // Call the automation API exactly like the original form submission
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
-      const response = await fetch(`${baseUrl}/api/automation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(job.formData),
-      });
-
-      const result = await response.json();
+      // Call the automation function directly instead of making HTTP requests
+      const { startAutomation } = await import('./automation');
+      const result = await startAutomation(job.formData);
 
       if (result.success) {
         this.updateJob(job.id, {
@@ -118,7 +139,7 @@ class JobQueue {
         });
         console.log(`Job ${job.id} completed successfully`);
       } else {
-        throw new Error(result.error || 'Automation failed');
+        throw new Error(result.error || result.details || 'Automation failed');
       }
     } catch (error) {
       this.updateJob(job.id, {

@@ -41,10 +41,27 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // For now, we'll just mark as failed to stop processing
-        // In a real implementation, you might want to actually cancel the job
-        jobQueue.updateJob(jobId, { status: 'failed', error: 'Cancelled by user' });
+        jobQueue.removeJob(jobId);
         return NextResponse.json({ success: true });
+      }
+
+      case 'rerun': {
+        if (!jobId) {
+          return NextResponse.json(
+            { success: false, error: 'Missing jobId' },
+            { status: 400 }
+          );
+        }
+
+        const newJob = jobQueue.rerunJob(jobId);
+        if (!newJob) {
+          return NextResponse.json(
+            { success: false, error: 'Job not found' },
+            { status: 404 }
+          );
+        }
+
+        return NextResponse.json({ success: true, job: newJob });
       }
 
       case 'clear-completed': {

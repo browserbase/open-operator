@@ -11,6 +11,8 @@ import QueueManager from "./components/QueueManager";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
+import { doc, setDoc, FieldValue } from "firebase/firestore";
+import { db } from "./firebaseConfig";
 
 export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -40,24 +42,50 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // Listen for job queue updates
+  // Listen for job queue updates via polling
   useEffect(() => {
-    const { jobQueue } = require('./utils/jobQueue');
-    
-    const unsubscribe = jobQueue.subscribe((jobs: any[]) => {
-      const runningJob = jobs.find(job => job.status === 'running');
-      if (runningJob && runningJob.sessionUrl && !isExecuting) {
-        // A job just started running, switch to browser view
-        setSessionUrl(runningJob.sessionUrl);
-        setExecutionId(runningJob.executionId);
-        setIsExecuting(true);
-        setActiveTab('browser');
-        console.log('Switched to browser view for running job:', runningJob.id);
+    const pollJobQueue = async () => {
+      try {
+        const response = await fetch('/api/queue');
+        if (response.ok) {
+          const data = await response.json();
+          const jobs = data.jobs || []; // Extract jobs array from response
+          const runningJob = jobs.find((job: any) => job.status === 'running');
+          
+          if (runningJob) {
+            // If there's a running job and we're not already executing, sync the state
+            if (!isExecuting && runningJob.sessionUrl) {
+              setSessionUrl(runningJob.sessionUrl);
+              setSessionId(runningJob.sessionUrl.split('/').pop() || null);
+              setExecutionId(runningJob.executionId || null);
+              setIsExecuting(true);
+              setActiveTab('browser');
+            }
+          } else if (isExecuting) {
+            // If no running job but we think we're executing, check if the last job completed/failed
+            const lastJob = jobs.length > 0 ? jobs[jobs.length - 1] : null;
+            if (lastJob && (lastJob.status === 'completed' || lastJob.status === 'failed')) {
+              // Only stop executing if the session matches
+              const lastJobSessionId = lastJob.sessionUrl?.split('/').pop();
+              if (!sessionId || lastJobSessionId === sessionId) {
+                setIsExecuting(false);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling job queue:', error);
       }
-    });
+    };
 
-    return unsubscribe;
-  }, [isExecuting]);
+    // Poll every 2 seconds when component is mounted
+    const interval = setInterval(pollJobQueue, 2000);
+    
+    // Initial poll
+    pollJobQueue();
+
+    return () => clearInterval(interval);
+  }, [isExecuting, sessionId]);
 
   const handleLogin = async () => {
     setAuthLoading(true);
@@ -105,58 +133,46 @@ export default function Home() {
     setSubmittedFormData(formData); // Store the form data
     
     try {
-      // Check if there are any running jobs in the queue
-      const queueResponse = await fetch("/api/queue");
-      const queueData = await queueResponse.json();
-      const hasRunningJobs = queueData.success && queueData.jobs.some((job: any) => job.status === 'running');
+      // Always add jobs to the queue for consistent tracking
+      const response = await fetch("/api/queue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: 'add', formData }),
+      });
 
-      if (hasRunningJobs) {
-        // If there's already a job running, add to queue
-        const response = await fetch("/api/queue", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ action: 'add', formData }),
-        });
+      const result = await response.json();
 
-        const result = await response.json();
+      if (result.success) {
+        // Check if this is the first job (will start immediately)
+        const queueResponse = await fetch("/api/queue");
+        const queueData = await queueResponse.json();
+        const runningJobs = queueData.success ? queueData.jobs.filter((job: any) => job.status === 'running') : [];
 
-        if (result.success) {
+        if (runningJobs.length > 0) {
+          // If a job is already running, show queue manager
           alert(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
           setShowQueueManager(true);
         } else {
-          throw new Error(result.error || "Failed to queue job");
+          // If this is the first job, it will start running soon
+          alert(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
+          setShowQueueManager(true);
         }
       } else {
-        // If no jobs running, execute directly like normal
-        const response = await fetch("/api/automation", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          setSessionUrl(result.sessionUrl);
-          setSessionId(result.sessionId);
-          setExecutionId(result.executionId);
-          setIsExecuting(true);
-          setActiveTab('browser'); // Switch to browser tab when automation starts
-        } else {
-          console.error("Failed to start automation:", result.error);
-          alert("Failed to start automation: " + result.error);
-        }
+        throw new Error(result.error || "Failed to queue job");
       }
     } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("Error submitting form. Please try again.");
+      console.error("Error submitting job:", error);
+      alert("Failed to submit job: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleJobRerun = (formData: CaseFormData) => {
+    setSubmittedFormData(formData);
+    setActiveTab('form'); // Switch to form tab to show the loaded data
   };
 
   const handleClose = async () => {
@@ -499,6 +515,7 @@ export default function Home() {
               <ExecutionProgressSidebar 
                 executionId={executionId || ''}
                 onStop={handleClose}
+                user={user}
               />
             </motion.div>
           )}
@@ -509,18 +526,49 @@ export default function Home() {
       <QueueManager 
         isVisible={showQueueManager}
         onClose={() => setShowQueueManager(false)}
+        onRerunJob={handleJobRerun}
       />
     </div>
   );
+}
+
+// Function to save mileage data to Firebase
+async function saveMileageDataToFirebase(mileageData: any, user: User | null) {
+  if (!user || !user.uid) {
+    console.log('No authenticated user found, cannot save mileage data to Firebase');
+    return;
+  }
+
+  try {
+    const userDoc = doc(db, 'users', user.uid);
+    await setDoc(userDoc, {
+      lastProcessedMileage: mileageData.endMileage,
+      lastMileageUpdate: new Date(),
+      mileageHistory: [{
+        executionId: mileageData.executionId || 'unknown',
+        dateOfService: mileageData.dateOfService,
+        startTime: mileageData.startTime,
+        endTime: mileageData.endTime,
+        endMileage: mileageData.endMileage,
+        capturedAt: mileageData.capturedAt,
+        savedAt: new Date().toISOString()
+      }]
+    }, { merge: true });
+    
+    console.log('Mileage data saved to Firebase successfully:', mileageData);
+  } catch (error) {
+    console.error('Failed to save mileage data to Firebase:', error);
+  }
 }
 
 // ExecutionProgressSidebar component to show progress in the sidebar
 interface ExecutionProgressSidebarProps {
   executionId: string;
   onStop: () => void;
+  user: User | null;
 }
 
-function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSidebarProps) {
+function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgressSidebarProps) {
   // Track actual progress messages instead of predefined steps
   const [progressMessages, setProgressMessages] = useState<Array<{
     message: string;
@@ -558,6 +606,20 @@ function ExecutionProgressSidebar({ executionId, onStop }: ExecutionProgressSide
               timestamp: Date.now()
             }
           ]);
+        } else if (eventData.type === 'miles') {
+          // Handle mileage data - save to Firebase if user is logged in
+          console.log('Received mileage data:', eventData.data);
+          if (eventData.data && typeof eventData.data === 'object') {
+            saveMileageDataToFirebase(eventData.data, user);
+            setProgressMessages(prev => [
+              ...prev.filter(msg => msg.type !== 'progress'),
+              {
+                message: `Mileage recorded: ${eventData.data.endMileage} miles`,
+                type: 'success',
+                timestamp: Date.now()
+              }
+            ]);
+          }
         } else if (eventData.type === 'success') {
           // On success, keep previous success/error messages but clear progress messages
           setProgressMessages(prev => [
