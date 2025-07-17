@@ -52,7 +52,11 @@ export default function CustomSelect({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const dropdown = document.getElementById('custom-select-dropdown');
+      
+      if (selectRef.current && !selectRef.current.contains(target) && 
+          dropdown && !dropdown.contains(target)) {
         setIsOpen(false);
       }
     };
@@ -120,24 +124,53 @@ export default function CustomSelect({
     return createPortal(
       <div 
         id="custom-select-dropdown"
-        className="fixed z-[9999] bg-background-primary/80 backdrop-blur-md border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+        className="fixed z-[9999] backdrop-blur-md border rounded-md shadow-lg max-h-60 overflow-auto"
         style={{
           top: `${dropdownPosition.top}px`,
           left: `${dropdownPosition.left}px`,
           width: `${dropdownPosition.width}px`,
-          marginTop: '4px'
+          marginTop: '4px',
+          backgroundColor: 'var(--bg-modal)',
+          borderColor: 'var(--border)',
+          boxShadow: 'var(--shadow-lg)'
         }}
       >
         {options.map((option) => (
           <button
             key={option.value}
             type="button"
-            className={`w-full px-3 py-2 text-left text-text-primary hover:bg-background-secondary focus:bg-background-secondary focus:outline-none ${
-              option.value === value ? 'bg-background-secondary' : ''
+            className={`w-full px-3 py-2 text-left transition-colors focus:outline-none ${
+              option.value === value ? 'font-medium' : ''
             }`}
-            onClick={() => handleOptionClick(option.value)}
+            style={{
+              color: 'var(--text-primary)',
+              backgroundColor: option.value === value ? 'var(--bg-secondary)' : 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              if (option.value !== value) {
+                e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (option.value !== value) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+            }}
+            onBlur={(e) => {
+              if (option.value !== value) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOptionClick(option.value);
+            }}
           >
-            <div className="font-medium">{option.label}</div>
+            <div>{option.label}</div>
           </button>
         ))}
       </div>,
@@ -163,10 +196,11 @@ export default function CustomSelect({
           {displayValue || " "}
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
             <svg 
-              className={`w-4 h-4 text-text-secondary transform transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+              className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
+              style={{ color: 'var(--text-secondary)' }}
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
