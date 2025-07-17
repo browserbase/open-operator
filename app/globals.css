@@ -5,7 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  
+  --background-transparent: rgba(255, 255, 255, 0.8);
   /* Theme colors */
   --primary: #FF3B00;
   --primary-hover: #E63400;
@@ -61,7 +61,7 @@
 .dark {
   --background: #000000;
   --foreground: #ffffff;
-  
+  --background-transparent: rgba(0, 0, 0, 0.8);
   /* Background variations - Next.js style */
   --bg-secondary: #111111;
   --bg-tertiary: #1a1a1a;
@@ -144,6 +144,9 @@ body {
   animation: google-spinner-rotate 2s linear infinite;
 }
 
+.bg-background-form{
+
+}
 .google-spinner-circle {
   fill: none;
   stroke-width: 5;

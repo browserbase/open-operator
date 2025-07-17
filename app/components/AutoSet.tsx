@@ -70,7 +70,7 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
     <div className="h-full overflow-y-auto">
       <div className="p-6">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-background-primary rounded-lg shadow-sm border border-border p-8">
+          <div className="bg-background-primary rounded-lg shadow-sm  border-border p-8">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-text-primary mb-2">
                 Auto-Set Addresses
@@ -118,7 +118,7 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
                 />
               </div>
 
-              <div className="flex justify-end pt-6 border-t">
+              <div className="flex justify-end pt-6 ">
                 <button
                   onClick={saveData}
                   disabled={isSaving || (!autoSetData.homeAddress && !autoSetData.officeAddress)}

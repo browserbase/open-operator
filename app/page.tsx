@@ -480,7 +480,7 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-background rounded-lg shadow-theme-sm border border-border h-[calc(100vh-200px)]">
+          <div className="bg-background-form rounded-lg shadow-theme-sm border border-border h-[calc(100vh-200px)]">
             {/* Form Tab Content - Always render to preserve state */}
             <div className={`h-full ${activeTab === 'form' ? 'block' : 'hidden'}`}>
               <div className="h-full overflow-y-auto">
