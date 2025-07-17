@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AddressAutocomplete from "./AddressAutocomplete";
-
-interface AutoSetData {
-  homeAddress: string;
-  officeAddress: string;
-}
+import { saveAutoSetDataToFirebase, getAutoSetDataFromFirebase, AutoSetData } from "./firebaseAutoSetService";
 
 interface AutoSetProps {
   isLoggedIn: boolean;
@@ -21,13 +17,26 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
-  // Load saved auto-set data from localStorage
+  // Load auto-set data from Firebase when user logs in
   useEffect(() => {
-    const savedData = localStorage.getItem('autoSetData');
-    if (savedData) {
-      setAutoSetData(JSON.parse(savedData));
-    }
-  }, []);
+    const loadAutoSetData = async () => {
+      if (isLoggedIn && userId) {
+        try {
+          const data = await getAutoSetDataFromFirebase(userId);
+          if (data) {
+            setAutoSetData(data);
+          }
+        } catch (error) {
+          console.error('Failed to load auto set data:', error);
+        }
+      } else {
+        // Reset data when user logs out
+        setAutoSetData({ homeAddress: "", officeAddress: "" });
+      }
+    };
+
+    loadAutoSetData();
+  }, [isLoggedIn, userId]);
 
   const handleAddressChange = (field: keyof AutoSetData, value: string) => {
     setAutoSetData(prev => ({
@@ -37,17 +46,15 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
   };
 
   const saveData = async () => {
+    if (!isLoggedIn || !userId) {
+      setSaveMessage("Please log in to save auto-set data");
+      setTimeout(() => setSaveMessage(""), 3000);
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('autoSetData', JSON.stringify(autoSetData));
-      
-      // TODO: Save to Firebase when logged in
-      if (isLoggedIn && userId) {
-        // Firebase save logic can be added here
-        console.log('Would save to Firebase for user:', userId);
-      }
-      
+      await saveAutoSetDataToFirebase(autoSetData, userId);
       setSaveMessage("Auto-set addresses saved successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (error) {
@@ -74,7 +81,7 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
               {!isLoggedIn && (
                 <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    <strong>Note:</strong> You must be logged in to access this feature. Addresses will only be saved locally until you log in.
+                    <strong>Note:</strong> You must be logged in to save and access auto-set addresses. Please log in to use this feature.
                   </p>
                 </div>
               )}
