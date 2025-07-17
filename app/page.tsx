@@ -38,6 +38,7 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [showQueueManager, setShowQueueManager] = useState(false);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
   const [mileageData, setMileageData] = useState<{
     current?: number;
@@ -61,6 +62,7 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           const jobs = data.jobs || []; // Extract jobs array from response
+          setJobs(jobs); // Update jobs state for count badge
           const runningJob = jobs.find((job: any) => job.status === 'running');
           
           if (runningJob) {
@@ -199,13 +201,11 @@ export default function Home() {
         const runningJobs = queueData.success ? queueData.jobs.filter((job: any) => job.status === 'running') : [];
 
         if (runningJobs.length > 0) {
-          // If a job is already running, show queue manager
+          // If a job is already running, show success message
           toast.showSuccess(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
-          setShowQueueManager(true);
         } else {
           // If this is the first job, it will start running soon
           toast.showSuccess(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
-          setShowQueueManager(true);
         }
       } else {
         throw new Error(result.error || "Failed to queue job");
@@ -269,15 +269,20 @@ export default function Home() {
             height={32}
           />
           <span className="font-ppsupply text-gray-900 dark:text-gray-100">
-            {isExecuting ? "Automation in Progress" : "ECaseNote Automation"}
+            {isExecuting ? "E-Automate" : "E-Automate"}
           </span>
         </div>
         <div className="flex items-center gap-4">
           <button
             onClick={() => setShowQueueManager(true)}
-            className="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+            className="relative px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             Queue
+            {jobs.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+                {jobs.filter(job => job.status === 'running' || job.status === 'queued').length}
+              </span>
+            )}
           </button>
           <ThemeToggle />
           {!user && (
@@ -607,31 +612,59 @@ export default function Home() {
 }
 
 // Function to save mileage data to Firebase
-async function saveMileageDataToFirebase(mileageData: any, user: User | null) {
+// Function to save processed note data to Firebase (with or without mileage)
+async function saveProcessedNoteDataToFirebase(noteData: any, user: User | null) {
   if (!user || !user.uid) {
-    console.log('No authenticated user found, cannot save mileage data to Firebase');
+    console.log('No authenticated user found, cannot save note data to Firebase');
     return;
   }
 
   try {
     const userDoc = doc(db, 'users', user.uid);
-    await setDoc(userDoc, {
-      lastProcessedMileage: mileageData.endMileage,
-      lastMileageUpdate: new Date(),
-      mileageHistory: [{
-        executionId: mileageData.executionId || 'unknown',
-        dateOfService: mileageData.dateOfService,
-        startTime: mileageData.startTime,
-        endTime: mileageData.endTime,
-        endMileage: mileageData.endMileage,
-        capturedAt: mileageData.capturedAt,
-        savedAt: new Date().toISOString()
-      }]
-    }, { merge: true });
     
-    console.log('Mileage data saved to Firebase successfully:', mileageData);
+    // Prepare the history entry - always include basic note data
+    const historyEntry: {
+      executionId: string;
+      dateOfService: string;
+      startTime: string;
+      endTime: string;
+      capturedAt: string;
+      savedAt: string;
+      endMileage?: string;
+    } = {
+      executionId: noteData.executionId || 'unknown',
+      dateOfService: noteData.dateOfService,
+      startTime: noteData.startTime,
+      endTime: noteData.endTime,
+      capturedAt: noteData.capturedAt,
+      savedAt: new Date().toISOString()
+    };
+    
+    // Add endMileage only if it exists (when mileage was processed)
+    if (noteData.endMileage) {
+      historyEntry.endMileage = noteData.endMileage;
+    }
+    
+    // Prepare the document update
+    const updateData: {
+      mileageHistory: typeof historyEntry[];
+      lastProcessedMileage?: string;
+      lastMileageUpdate?: Date;
+    } = {
+      mileageHistory: [historyEntry]
+    };
+    
+    // Only update lastProcessedMileage if endMileage exists
+    if (noteData.endMileage) {
+      updateData.lastProcessedMileage = noteData.endMileage;
+      updateData.lastMileageUpdate = new Date();
+    }
+    
+    await setDoc(userDoc, updateData, { merge: true });
+    
+    console.log('Note data saved to Firebase successfully:', noteData);
   } catch (error) {
-    console.error('Failed to save mileage data to Firebase:', error);
+    console.error('Failed to save note data to Firebase:', error);
   }
 }
 
@@ -681,18 +714,29 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
             }
           ]);
         } else if (eventData.type === 'miles') {
-          // Handle mileage data - save to Firebase if user is logged in
-          console.log('Received mileage data:', eventData.data);
+          // Handle note data - save to Firebase if user is logged in
+          console.log('Received note data:', eventData.data);
           if (eventData.data && typeof eventData.data === 'object') {
-            saveMileageDataToFirebase(eventData.data, user);
-            setProgressMessages(prev => [
-              ...prev.filter(msg => msg.type !== 'progress'),
-              {
-                message: `Mileage recorded: ${eventData.data.endMileage} miles`,
-                type: 'success',
-                timestamp: Date.now()
-              }
-            ]);
+            saveProcessedNoteDataToFirebase(eventData.data, user);
+            if (eventData.data.endMileage) {
+              setProgressMessages(prev => [
+                ...prev.filter(msg => msg.type !== 'progress'),
+                {
+                  message: `Note processed with mileage: ${eventData.data.endMileage} miles`,
+                  type: 'success',
+                  timestamp: Date.now()
+                }
+              ]);
+            } else {
+              setProgressMessages(prev => [
+                ...prev.filter(msg => msg.type !== 'progress'),
+                {
+                  message: `Note processed successfully`,
+                  type: 'success',
+                  timestamp: Date.now()
+                }
+              ]);
+            }
           }
         } else if (eventData.type === 'success') {
           // On success, keep previous success/error messages but clear progress messages
@@ -713,7 +757,7 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
         } else if (eventData.type === 'connected') {
           console.log('Connected to automation events');
           setProgressMessages([{
-            message: 'Connected to automation service',
+            message: 'Connected to automation',
             type: 'success',
             timestamp: Date.now()
           }]);

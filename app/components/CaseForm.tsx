@@ -62,7 +62,7 @@ interface SavedCredentials {
 interface MileageHistoryEntry {
   capturedAt: string;
   dateOfService: string;
-  endMileage: string;
+  endMileage?: string; // Make optional since not all notes will have mileage
   endTime: string;
   executionId: string;
   savedAt: string;
@@ -934,7 +934,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                               })} - {formatTimeToAMPM(entry.startTime)} to {formatTimeToAMPM(entry.endTime)}
                             </span>
                             <span className="text-blue-600 dark:text-blue-400 font-mono text-xs">
-                              End: {entry.endMileage}
+                              {entry.endMileage ? `End: ${entry.endMileage}` : 'No mileage'}
                             </span>
                           </div>
                         ))}

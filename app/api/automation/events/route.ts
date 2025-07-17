@@ -21,6 +21,14 @@ interface MileageData {
   capturedAt: string;
 }
 
+// Interface for note data (without mileage)
+interface NoteData {
+  dateOfService: string;
+  startTime: string;
+  endTime: string;
+  capturedAt: string;
+}
+
 // Store active event streams
 const eventStreams = new Map<string, ReadableStreamDefaultController>();
 
@@ -68,42 +76,56 @@ export function GET(request: NextRequest) {
 // Function to save mileage data to Firebase
 async function saveMileageToFirebase(executionId: string, mileageData: MileageData, userId?: string) {
   try {
-    // Note: This requires Firebase Authentication to be set up
-    // Since we don't have auth implemented yet, we'll gracefully handle the error
     console.log('Attempting to save mileage data to Firebase...');
-    
-    // If no userId provided, we'll store it with executionId for now
-    // In a real app, you'd want to get the userId from the session/auth
     const docId = userId || executionId;
-    
+
     const mileageDocRef = adminDb.collection('users').doc(docId).collection('mileageHistory').doc(executionId);
     await mileageDocRef.set({
       ...mileageData,
       executionId,
       savedAt: FieldValue.serverTimestamp(),
       lastProcessedMileage: mileageData.endMileage
-    });
-    
-    // Also update the user's lastProcessedMileage in their profile
+    }, { merge: true }); // <-- merge option added here
+
     const userDocRef = adminDb.collection('users').doc(docId);
     await userDocRef.set({
       lastProcessedMileage: mileageData.endMileage,
       lastMileageUpdate: FieldValue.serverTimestamp()
     }, { merge: true });
-    
+
     console.log('Mileage data saved to Firebase successfully');
   } catch (error) {
     console.log('Firebase write failed (this is expected without authentication):', error instanceof Error ? error.message : error);
-    
-    // Store mileage data locally in memory for this session as a fallback
     console.log('Storing mileage data in memory as fallback:', {
       executionId,
       ...mileageData,
       savedAt: new Date().toISOString()
     });
-    
-    // You could also store this in a local database, file, or other storage mechanism
-    // For now, we'll just log it and continue execution
+  }
+}
+
+// Function to save note data to Firebase (without mileage)
+async function saveNoteToFirebase(executionId: string, noteData: NoteData, userId?: string) {
+  try {
+    console.log('Attempting to save note data to Firebase...');
+    const docId = userId || executionId;
+
+    const noteDocRef = adminDb.collection('users').doc(docId).collection('mileageHistory').doc(executionId);
+    await noteDocRef.set({
+      ...noteData,
+      executionId,
+      savedAt: FieldValue.serverTimestamp(),
+      // Don't update lastProcessedMileage to preserve existing values
+    }, { merge: true });
+
+    console.log('Note data saved to Firebase successfully');
+  } catch (error) {
+    console.log('Firebase write failed (this is expected without authentication):', error instanceof Error ? error.message : error);
+    console.log('Storing note data in memory as fallback:', {
+      executionId,
+      ...noteData,
+      savedAt: new Date().toISOString()
+    });
   }
 }
 
@@ -117,6 +139,14 @@ export function sendEventToExecution(executionId: string, event: string, data: u
     // Type guard to check if data has the required MileageData properties
     if ('dateOfService' in data && 'startTime' in data && 'endTime' in data && 'endMileage' in data && 'capturedAt' in data) {
       saveMileageToFirebase(executionId, data as MileageData);
+    }
+  }
+  
+  // Handle note data (without mileage) for history tracking
+  if (event === 'noteProcessed' && typeof data === 'object' && data !== null) {
+    // Type guard to check if data has the required NoteData properties
+    if ('dateOfService' in data && 'startTime' in data && 'endTime' in data && 'capturedAt' in data) {
+      saveNoteToFirebase(executionId, data as NoteData);
     }
   }
   

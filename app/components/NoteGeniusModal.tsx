@@ -27,6 +27,8 @@ export default function NoteGeniusModal({
       .replace(/\*/g, '') // Remove any remaining asterisks
       // Add proper line breaks before section headers
       .replace(/(Observations of the Session:|Behavioral Observations:|Support and Intervention:|Goals for Future Sessions:|Summary:)/g, '\n\n$1\n')
+      // Add line breaks for strategy/goal headers (Strategy 1:, Goal 1:, etc.)
+      .replace(/\b(Strategy|Goal|Intervention|Activity|Objective|Behavior)\s+(\d+):/g, '\n\n$1 $2:\n')
       // Add line breaks after content blocks
       .replace(/\.(Behavioral|Support|Goals|Summary)/g, '.\n\n$1')
       // Clean up multiple line breaks
@@ -103,6 +105,8 @@ export default function NoteGeniusModal({
       .replace(/\*/g, '')
       // Add proper line breaks before section headers
       .replace(/(Observations of the Session:|Behavioral Observations:|Support and Intervention:|Goals for Future Sessions:|Summary:)/g, '\n\n$1\n')
+      // Add line breaks for strategy/goal headers (Strategy 1:, Goal 1:, etc.)
+      .replace(/\b(Strategy|Goal|Intervention|Activity|Objective|Behavior)\s+(\d+):/g, '\n\n$1 $2:\n')
       // Add line breaks after content blocks that run together
       .replace(/\.(Behavioral|Support|Goals|Summary)/g, '.\n\n$1')
       // Fix specific patterns where text runs together
