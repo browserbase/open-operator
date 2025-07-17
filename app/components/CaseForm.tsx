@@ -6,6 +6,7 @@ import { FormData } from "../script/automationScript";
 import AddressAutocomplete from "./AddressAutocomplete";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomSelect from "./CustomSelect";
+import CustomTimeInput from "./CustomTimeInput";
 import { saveTemplateToFirebase, getTemplatesFromFirebase, deleteTemplateFromFirebase } from "./firebaseTemplateService";
 import { getAutoSetDataFromFirebase, AutoSetData } from "./firebaseAutoSetService";
 import { dropdownOptions } from "../constants/dropdownOptions";
@@ -958,38 +959,22 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
 
               {/* Time Information */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="input-group">
-                  <input
-                    type="time"
-                    required
-                    value={formData.startTime}
-                    onChange={(e) => handleInputChange("startTime", e.target.value)}
-                    className={`${timeInputClassName} ${
-                      timeValidationError 
-                        ? 'border-b-red-500' 
-                        : ''
-                    }`}
-                  />
-                  <label className="input-label">
-                    Start Time <span className="text-red-500">*</span>
-                  </label>
-                </div>
-                <div className="input-group">
-                  <input
-                    type="time"
-                    required
-                    value={formData.endTime}
-                    onChange={(e) => handleInputChange("endTime", e.target.value)}
-                    className={`${timeInputClassName} ${
-                      timeValidationError 
-                        ? 'border-b-red-500' 
-                        : ''
-                    }`}
-                  />
-                  <label className="input-label">
-                    End Time <span className="text-red-500">*</span>
-                  </label>
-                </div>
+                <CustomTimeInput
+                  value={formData.startTime}
+                  onChange={(value) => handleInputChange("startTime", value)}
+                  label="Start Time"
+                  required={true}
+                  readOnly={readOnly}
+                  error={timeValidationError}
+                />
+                <CustomTimeInput
+                  value={formData.endTime}
+                  onChange={(value) => handleInputChange("endTime", value)}
+                  label="End Time"
+                  required={true}
+                  readOnly={readOnly}
+                  error={timeValidationError}
+                />
                 <CustomSelect
                   options={[
                     { value: "56a", label: "56a" },
@@ -1700,7 +1685,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             className="px-3 py-1 text-sm rounded transition-colors"
                             style={{ 
                               backgroundColor: 'var(--primary)',
-                              color: 'var(--text-inverse)'
+                              color: 'white'
                             }}
                           >
                             Load
@@ -1710,7 +1695,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             className="px-3 py-1 text-sm rounded transition-colors"
                             style={{ 
                               backgroundColor: 'var(--error)',
-                              color: 'var(--text-inverse)'
+                              color: 'white'
                             }}
                           >
                             Delete
