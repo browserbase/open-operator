@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 
@@ -45,6 +45,52 @@ export default function AddressAutocomplete({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const [isClient, setIsClient] = useState(false);
 
+  // Calculate dropdown position based on input position
+  const updateDropdownPosition = useCallback(() => {
+    if (autocompleteElementRef.current) {
+      const rect = autocompleteElementRef.current.getBoundingClientRect();
+      const viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+      
+      // Dropdown dimensions (estimated)
+      const dropdownHeight = Math.min(240, suggestions.length * 56); // max-h-60 = 240px, each item ~56px
+      const dropdownWidth = rect.width;
+      
+      // Calculate initial position (below input)
+      let top = rect.bottom + window.scrollY + 4; // 4px margin
+      let left = rect.left + window.scrollX;
+      
+      // Check if dropdown would go off the right edge
+      if (left + dropdownWidth > viewport.width) {
+        left = viewport.width - dropdownWidth - 8; // 8px padding from edge
+      }
+      
+      // Check if dropdown would go off the left edge
+      if (left < 8) {
+        left = 8; // 8px padding from edge
+      }
+      
+      // Check if dropdown would go off the bottom edge
+      if (rect.bottom + dropdownHeight + 4 > viewport.height) {
+        // Position above the input instead
+        top = rect.top + window.scrollY - dropdownHeight - 4;
+        
+        // If it still doesn't fit above, position at the top of the viewport
+        if (top < window.scrollY + 8) {
+          top = window.scrollY + 8;
+        }
+      }
+      
+      setDropdownPosition({
+        top,
+        left,
+        width: dropdownWidth
+      });
+    }
+  }, [suggestions.length]);
+
   // Ensure we're on the client side for portal rendering
   useEffect(() => {
     setIsClient(true);
@@ -67,7 +113,7 @@ export default function AddressAutocomplete({
       window.removeEventListener('resize', handleReposition);
       window.removeEventListener('scroll', handleReposition);
     };
-  }, [showSuggestions]);
+  }, [showSuggestions, updateDropdownPosition]);
 
   // Sync internal input value with external value prop
   useEffect(() => {
@@ -145,17 +191,22 @@ export default function AddressAutocomplete({
     }
   };
 
-  // Calculate dropdown position based on input position
-  const updateDropdownPosition = () => {
-    if (autocompleteElementRef.current) {
-      const rect = autocompleteElementRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
-    }
-  };
+  // Position dropdown when suggestions change or window resizes
+  useEffect(() => {
+    updateDropdownPosition();
+    
+    const handleResize = () => {
+      updateDropdownPosition();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', updateDropdownPosition);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', updateDropdownPosition);
+    };
+  }, [suggestions, updateDropdownPosition]);
 
   const handleInputFocus = () => {
     // Show suggestions when input is focused if there's text
@@ -178,23 +229,42 @@ export default function AddressAutocomplete({
 
     return createPortal(
       <div 
-        className="fixed z-[9999] bg-background-primary/80 backdrop-blur-md border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+        className="fixed z-[9999] backdrop-blur-md border rounded-md shadow-lg max-h-60 overflow-auto"
         style={{
           top: `${dropdownPosition.top}px`,
           left: `${dropdownPosition.left}px`,
           width: `${dropdownPosition.width}px`,
-          marginTop: '4px'
+          marginTop: '4px',
+          backgroundColor: 'var(--bg-modal)',
+          borderColor: 'var(--border)',
+          boxShadow: 'var(--shadow-lg)'
         }}
       >
         {suggestions.map((suggestion) => (
           <button
             key={suggestion.place_id}
             type="button"
-            className="w-full px-3 py-2 text-left text-text-primary hover:bg-background-secondary focus:bg-background-secondary focus:outline-none"
+            className="w-full px-3 py-2 text-left transition-colors focus:outline-none"
+            style={{
+              color: 'var(--text-primary)',
+              backgroundColor: 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
             onClick={() => handleSuggestionClick(suggestion)}
           >
             <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{suggestion.structured_formatting.secondary_text}</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{suggestion.structured_formatting.secondary_text}</div>
           </button>
         ))}
       </div>,
