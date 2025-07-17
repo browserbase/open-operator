@@ -34,7 +34,6 @@ export interface FormTemplate {
   id: string;
   name: string;
   createdAt: string;
-  isAutoLoad?: boolean;
   formData: Omit<FormData, 'companyCode' | 'username' | 'password' | 'dateOfService'> & { dateOfService?: string };
 }
 
@@ -83,7 +82,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [showMileageConfirmation, setShowMileageConfirmation] = useState(false);
   const [showNoteGeniusModal, setShowNoteGeniusModal] = useState(false);
   const [isLoadingMileage, setIsLoadingMileage] = useState(false);
-  const hasAutoLoaded = useRef(false);
 
   // Function to fetch last processed mileage from Firebase
   const fetchLastProcessedMileage = useCallback(async () => {
@@ -162,19 +160,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         try {
           const firebaseTemplates = await getTemplatesFromFirebase(userId);
           setSavedTemplates(firebaseTemplates);
-          
-          // Auto-load template if one is marked for auto-loading (only once)
-          if (!hasAutoLoaded.current) {
-            const autoLoadTemplate = firebaseTemplates.find((template: FormTemplate) => template.isAutoLoad);
-            if (autoLoadTemplate && autoLoadTemplate.formData) {
-              setFormData(prev => ({
-                ...prev,
-                ...autoLoadTemplate.formData
-              }));
-              setShowMileage(Boolean(autoLoadTemplate.formData.mileageStartAddress || autoLoadTemplate.formData.mileageStartMileage));
-              hasAutoLoaded.current = true;
-            }
-          }
         } catch (error) {
           console.error('Failed to load templates from Firebase:', error);
         }
@@ -580,10 +565,26 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       return;
     }
     
-    setFormData(prev => ({
-      ...prev,
-      ...template.formData
-    }));
+    console.log('Loading template:', template.name);
+    
+    // Use functional update to get current credentials at the time of execution
+    setFormData(currentFormData => {
+      // Preserve existing credentials when loading template
+      const currentCredentials = {
+        companyCode: currentFormData.companyCode,
+        username: currentFormData.username,
+        password: currentFormData.password
+      };
+      
+      // Return completely new form data with template data and preserved credentials
+      return {
+        ...template.formData,
+        ...currentCredentials,
+        // Ensure required fields have default values
+        dateOfService: template.formData.dateOfService || ''
+      };
+    });
+    
     // Update mileage visibility based on template data
     setShowMileage(Boolean(template.formData.mileageStartAddress || template.formData.mileageStartMileage));
     setShowLoadTemplates(false);
@@ -605,32 +606,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     } catch (error) {
       console.error('Failed to delete template from Firebase:', error);
       alert('Failed to delete template. Please try again.');
-    }
-  };
-
-  const setAutoLoadTemplate = async (templateId: string) => {
-    if (!isLoggedIn || !userId) {
-      alert('Please log in to set auto-load templates');
-      return;
-    }
-
-    const updatedTemplates = savedTemplates.map(template => ({
-      ...template,
-      isAutoLoad: template.id === templateId
-    }));
-    
-    setSavedTemplates(updatedTemplates);
-
-    // Update Firebase
-    try {
-      // Update all templates in Firebase to reflect auto-load changes
-      for (const template of updatedTemplates) {
-        await saveTemplateToFirebase(template, userId);
-      }
-      console.log('Auto-load template setting updated in Firebase successfully');
-    } catch (error) {
-      console.error('Failed to update auto-load setting in Firebase:', error);
-      alert('Failed to update auto-load setting. Please try again.');
     }
   };
 
@@ -691,11 +666,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Save your form data as templates for quick reuse. Templates do not include login credentials.
                     {isLoggedIn ? ' Templates are saved to your Firebase account.' : ' Login required to save and load templates.'}
-                    {savedTemplates.some(t => t.isAutoLoad) && (
-                      <span className="block mt-1 text-green-600 dark:text-green-400">
-                        Auto-load template: <strong>{savedTemplates.find(t => t.isAutoLoad)?.name}</strong> will load automatically when you visit this page.
-                      </span>
-                    )}
                   </p>
                 </div>
               )}
@@ -1466,11 +1436,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
-                          {template.isAutoLoad && (
-                            <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs font-medium">
-                              Auto-Load
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           Created: {new Date(template.createdAt).toLocaleDateString()} at {new Date(template.createdAt).toLocaleTimeString()}
@@ -1501,17 +1466,6 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                             Delete
                           </button>
                         </div>
-                        <button
-                          onClick={() => setAutoLoadTemplate(template.id)}
-                          className={`px-3 py-1 text-sm rounded transition-colors ${
-                            template.isAutoLoad 
-                              ? 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed' 
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          }`}
-                          disabled={template.isAutoLoad}
-                        >
-                          {template.isAutoLoad ? 'Auto-Loading' : 'Set Auto-Load'}
-                        </button>
                       </div>
                     </div>
                   </div>
