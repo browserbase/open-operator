@@ -1,5 +1,7 @@
 "use client";
 
+import AnimatedCubeIcon from "./components/AnimatedCubeIcon";
+
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -261,13 +263,8 @@ export default function Home() {
       {/* Top Navigation */}
       <nav className="flex justify-between items-center px-8 py-4 bg-background-form border-b border-border">
         <div className="flex items-center gap-3">
-          <Image
-            src="/favicon.svg"
-            alt="Open Operator"
-            className="w-8 h-8"
-            width={32}
-            height={32}
-          />
+          {/* Animated Cube Icon */}
+          <AnimatedCubeIcon size={32} />
           <span className="font-ppsupply text-foreground">
             {isExecuting ? "E-Automate" : "E-Automate"}
           </span>
