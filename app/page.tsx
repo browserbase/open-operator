@@ -316,7 +316,7 @@ export default function Home() {
               className={`relative px-3 py-2 text-sm rounded-md transition-colors font-medium ${
                 jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3
                   ? 'bg-warning text-warning-foreground'
-                  : 'bg-secondary text-text-secondary hover:bg-secondary/80'
+                  : 'bg-background-secondary text-text-secondary hover:bg-secondary/80'
               }`}
               title={jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3 ? 'Queue is full (3/3 active jobs)' : 'View job queue'}
             >
