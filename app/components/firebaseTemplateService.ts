@@ -14,7 +14,6 @@ export const saveTemplateToFirebase = async (template: FormTemplate, userId: str
       userId,
       createdAt: new Date().toISOString()
     });
-    console.log('Template saved to Firebase successfully');
   } catch (error) {
     console.error('Error saving template to Firebase:', error);
     throw error;
@@ -34,6 +33,7 @@ export const getTemplatesFromFirebase = async (userId: string): Promise<Firebase
         name: data.name,
         createdAt: data.createdAt,
         formData: data.formData,
+        showMileage: data.showMileage, // Include showMileage field
         userId: data.userId
       } as FirebaseTemplate);
     });
@@ -49,7 +49,6 @@ export const deleteTemplateFromFirebase = async (templateId: string, userId: str
   try {
     const templateRef = doc(db, 'users', userId, 'templates', templateId);
     await deleteDoc(templateRef);
-    console.log('Template deleted from Firebase successfully');
   } catch (error) {
     console.error('Error deleting template from Firebase:', error);
     throw error;

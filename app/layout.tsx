@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { PostHogProvider } from "./components/PosthogProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
+import AnimatedGrid from "./components/AnimatedGrid";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,8 +33,8 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
+      { url: "/cube-icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", type: "image/x-icon" },
     ],
   },
 };
@@ -46,13 +47,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        {/* Fallback for browsers that don't support SVG favicons */}
-        <link rel="alternate icon" href="/favicon.ico" />
+        <link rel="icon" href="/cube-icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
       </head>
       <body
-        className={`${inter.variable} ${ppNeue.variable} ${ppSupply.variable} font-sans antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors`}
+        className={`${inter.variable} ${ppNeue.variable} ${ppSupply.variable} font-sans antialiased background-theme text-theme transition-colors`}
       >
+        <AnimatedGrid />
         <ThemeProvider>
           <PostHogProvider>{children}</PostHogProvider>
         </ThemeProvider>

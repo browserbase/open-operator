@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jobQueueManager, QueuedJob } from "../../utils/jobQueue";
+import { jobQueue, QueuedJob } from "../../utils/jobQueue";
 import { getUserIdFromRequest } from "../../utils/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    // Get user ID for user-specific job filtering
     const userId = await getUserIdFromRequest(request);
-    const userQueue = jobQueueManager.getOrCreateQueue(userId);
-    const jobs = userQueue.getJobs();
-    return NextResponse.json({ success: true, jobs });
+    const jobs = jobQueue.getJobsForUser(userId);
+    return NextResponse.json({ success: true, jobs, userId });
   } catch (error) {
     console.error('Error getting queue:', error);
     return NextResponse.json(
@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     const userQueue = jobQueueManager.getOrCreateQueue(userId);
     const body = await request.json();
     const { action, jobId } = body;
+    
+    // Get user ID for user-specific operations
+    const userId = await getUserIdFromRequest(request);
 
     switch (action) {
       case 'add': {
@@ -34,7 +37,14 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const job = userQueue.addJob(formData);
+        const job = jobQueue.addJob(formData, userId);
+        if (!job) {
+          return NextResponse.json(
+            { success: false, error: 'Queue is full. You can only have 3 active jobs at a time.' },
+            { status: 429 }
+          );
+        }
+
         return NextResponse.json({ success: true, job });
       }
 
@@ -46,7 +56,23 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        userQueue.removeJob(jobId);
+        // Verify user owns the job before removing
+        const job = jobQueue.getJob(jobId);
+        if (!job) {
+          return NextResponse.json(
+            { success: false, error: 'Job not found' },
+            { status: 404 }
+          );
+        }
+        
+        if (job.userId !== userId) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized - cannot remove job owned by another user' },
+            { status: 403 }
+          );
+        }
+
+        jobQueue.removeJob(jobId);
         return NextResponse.json({ success: true });
       }
 
@@ -58,11 +84,27 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const newJob = userQueue.rerunJob(jobId);
-        if (!newJob) {
+        // Verify user owns the job before rerunning
+        const existingJob = jobQueue.getJob(jobId);
+        if (!existingJob) {
           return NextResponse.json(
             { success: false, error: 'Job not found' },
             { status: 404 }
+          );
+        }
+        
+        if (existingJob.userId !== userId) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized - cannot rerun job owned by another user' },
+            { status: 403 }
+          );
+        }
+
+        const newJob = jobQueue.rerunJob(jobId);
+        if (!newJob) {
+          return NextResponse.json(
+            { success: false, error: 'Cannot rerun job. Queue is full (3 active jobs maximum) or job not found.' },
+            { status: 429 }
           );
         }
 
@@ -70,7 +112,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'clear-completed': {
-        userQueue.removeCompletedJobs();
+        jobQueue.removeCompletedJobsForUser(userId);
         return NextResponse.json({ success: true });
       }
 
