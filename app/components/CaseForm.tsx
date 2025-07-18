@@ -1080,7 +1080,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                   {isLoggedIn && mileageHistory.length > 0 && (
                     <div className="mt-3 p-3 bg-background-secondary border border-border rounded-md">
                       <h4 className="text-sm font-medium text-text-primary mb-2">
-                        Recent E-Automate Note History
+                        Recent Node Note History
                       </h4>
                       <div className="space-y-2">
                         {mileageHistory.map((entry, index) => (
