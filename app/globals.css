@@ -522,7 +522,7 @@ body {
 
 .time-input-label {
   position: absolute;
-  top: 0.75rem;
+  top: 0.5rem;
   left: 0;
   color: var(--text-muted);
   font-size: 1rem;
@@ -530,6 +530,7 @@ body {
   pointer-events: none;
   transform-origin: left;
   z-index: 1;
+   transform: translateY(-1.5rem) scale(0.875);
 }
 
 .input-underline:focus + .input-label,
@@ -571,7 +572,7 @@ body {
 .input-underline:focus + .time-input-label,
 .textarea-underline:focus + .time-input-label,
 .select-underline:focus + .time-input-label,
-.time-input-underline:focus + .time-input-label,
+.time-input-underline:focus +.time-input-label,
 .input-underline:not(:placeholder-shown) + .time-input-label,
 .textarea-underline:not(:placeholder-shown) + .time-input-label,
 .select-underline:not([value=""]) + .time-input-label {

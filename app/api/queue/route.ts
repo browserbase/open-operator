@@ -36,6 +36,13 @@ export async function POST(request: NextRequest) {
         }
 
         const job = jobQueue.addJob(formData, userId);
+        if (!job) {
+          return NextResponse.json(
+            { success: false, error: 'Queue is full. You can only have 3 active jobs at a time.' },
+            { status: 429 }
+          );
+        }
+
         return NextResponse.json({ success: true, job });
       }
 
@@ -94,8 +101,8 @@ export async function POST(request: NextRequest) {
         const newJob = jobQueue.rerunJob(jobId);
         if (!newJob) {
           return NextResponse.json(
-            { success: false, error: 'Failed to rerun job' },
-            { status: 500 }
+            { success: false, error: 'Cannot rerun job. Queue is full (3 active jobs maximum) or job not found.' },
+            { status: 429 }
           );
         }
 

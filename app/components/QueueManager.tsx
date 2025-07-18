@@ -91,9 +91,17 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
             onRerunJob(result.job.formData);
           }
         }
+      } else {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          alert('Cannot rerun job: You already have 3 active jobs in the queue. Please wait for some jobs to complete or remove some jobs first.');
+        } else {
+          alert(`Error: ${errorData.error || 'Failed to rerun job'}`);
+        }
       }
     } catch (error) {
       console.error('Error rerunning job:', error);
+      alert('Error rerunning job. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -142,9 +150,15 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
     <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50" style={{ backgroundColor: 'var(--bg-overlay)' }}>
       <div className="rounded-lg shadow-2xl border max-w-4xl w-full max-h-[80vh] overflow-hidden" style={{ backgroundColor: 'var(--bg-modal)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-xl)' }}>
         <div className="flex items-center justify-between p-6 border-b" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-          <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Job Queue ({jobs.length} jobs)
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Job Queue ({jobs.length} total)
+            </h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Active jobs: {jobs.filter(job => job.status === 'pending' || job.status === 'running').length}/3 
+              (limit: 3 active jobs at a time)
+            </p>
+          </div>
           <div className="flex gap-2">
             {jobs.some(job => job.status === 'completed' || job.status === 'failed') && (
               <button
@@ -305,12 +319,13 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
                                 e.stopPropagation();
                                 rerunJob(job.id);
                               }}
-                              disabled={loading}
+                              disabled={loading || jobs.filter(j => j.status === 'pending' || j.status === 'running').length >= 3}
                               className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors"
                               style={{
                                 backgroundColor: 'var(--primary)',
                                 color: 'var(--text-inverse)'
                               }}
+                              title={jobs.filter(j => j.status === 'pending' || j.status === 'running').length >= 3 ? 'Queue is full (3 active jobs maximum)' : 'Rerun this job'}
                             >
                               Rerun
                             </button>

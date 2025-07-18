@@ -22,7 +22,7 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
   }, [message.id, message.duration, onClose]);
 
   const getToastStyles = () => {
-    const baseStyles = "max-w-sm w-full bg-background-primary border-l-4 p-4 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform translate-x-0";
+    const baseStyles = "max-w-sm w-full -primary border-l-4 p-4 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform translate-x-0";
     
     switch (message.type) {
       case 'success':
@@ -112,9 +112,9 @@ interface ToastContainerProps {
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onClose }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-4 right-4 bg-modal z-50 space-y-2 rounded-[8px]">
       {messages.map((message) => (
-        <Toast key={message.id} message={message} onClose={onClose} />
+      <Toast key={message.id} message={message} onClose={onClose} />
       ))}
     </div>
   );
