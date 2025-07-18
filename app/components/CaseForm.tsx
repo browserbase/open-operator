@@ -15,6 +15,7 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import MileageWarningModal from "./MileageWarningModal";
 import NoteGeniusModal from "./NoteGeniusModal";
 import ThemedModal from "./ThemedModal";
+import { useResponsive } from "../utils/useResponsive";
 
 // Utility function to format time from 24-hour to 12-hour format with AM/PM
 const formatTimeToAMPM = (time24: string): string => {
@@ -87,7 +88,8 @@ export interface FormTemplate {
   showMileage?: boolean; // Only at root level
 }
 
-export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation, toast }: CaseFormProps) {
+export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation }: CaseFormProps) {
+  const { isMobile } = useResponsive();
   const [saveCredentials, setSaveCredentials] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<FormTemplate[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);

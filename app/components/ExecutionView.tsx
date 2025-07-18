@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { FormData } from "../script/automationScript";
 import AnimatedCheckmark from "./AnimatedCheckmark";
+import { useResponsive } from "../utils/useResponsive";
 
 interface ExecutionViewProps {
   onClose: () => void;
@@ -35,6 +36,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
   const [isComplete, setIsComplete] = useState(false);
   const [currentScreenshot, setCurrentScreenshot] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'browser' | 'form'>('browser');
+  const { isMobile } = useResponsive();
 
   // Connect to real-time events via Server-Sent Events
   useEffect(() => {

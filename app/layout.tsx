@@ -6,6 +6,7 @@ import "./globals.css";
 import { PostHogProvider } from "./components/PosthogProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
 import AnimatedGrid from "./components/AnimatedGrid";
+import ResponsiveMetaTags from "./components/ResponsiveMetaTags";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,12 +48,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
         <link rel="icon" href="/cube-icon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" type="image/x-icon" />
       </head>
       <body
         className={`${inter.variable} ${ppNeue.variable} ${ppSupply.variable} font-sans antialiased background-theme text-theme transition-colors`}
       >
+        <ResponsiveMetaTags />
         <AnimatedGrid />
         <ThemeProvider>
           <PostHogProvider>{children}</PostHogProvider>

@@ -48,6 +48,7 @@
   --error-border: #fecaca;
   --info: #3b82f6;
   --info-bg: #eff6ff;
+
   --info-border: #bfdbfe;
   
   /* Component colors */
@@ -66,6 +67,36 @@
   --stroke-width: 0.8;
 }
 
+/* Mobile responsive styles */
+@layer utilities {
+  .mobile-container {
+    @apply px-3 py-2 sm:px-6 sm:py-4;
+  }
+  
+  .mobile-text {
+    @apply text-sm sm:text-base;
+  }
+  
+  .mobile-heading {
+    @apply text-lg sm:text-xl font-medium;
+  }
+  
+  .mobile-subheading {
+    @apply text-base sm:text-lg font-medium;
+  }
+  
+  .mobile-button {
+    @apply px-3 py-1.5 sm:px-4 sm:py-2 text-sm rounded-md;
+  }
+  
+  .mobile-form-field {
+    @apply p-2 sm:p-3 text-sm sm:text-base;
+  }
+  
+  .mobile-card {
+    @apply p-3 sm:p-4 rounded-md;
+  }
+}
 .dark {
   --background: #0a0703;
   --foreground: #ffffff;
