@@ -76,8 +76,10 @@ export interface FormTemplate {
   id: string;
   name: string;
   createdAt: string;
-  formData: Omit<FormData, 'companyCode' | 'username' | 'password' | 'dateOfService'> & { dateOfService?: string };
-  showMileage?: boolean; // Add this field to track mileage checkbox state
+  formData: Omit<FormData, 'companyCode' | 'username' | 'password' | 'dateOfService'> & { 
+    dateOfService?: string;
+  };
+  showMileage?: boolean; // Only at root level
 }
 
 export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation }: CaseFormProps) {
@@ -635,7 +637,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       id: overwriteMode && existingTemplateId ? existingTemplateId : Math.random().toString(36).substring(2, 15),
       name: templateName.trim(),
       createdAt: overwriteMode ? existingTemplate?.createdAt || new Date().toISOString() : new Date().toISOString(),
-      showMileage: showMileage, // Save the mileage checkbox state
+      showMileage: showMileage, // Save the mileage checkbox state at root level
       formData: {
         caseNumber: formData.caseNumber,
         startTime: formData.startTime,
@@ -648,6 +650,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         endAddresses: formData.endAddresses,
         additionalDropdownValues: formData.additionalDropdownValues,
         noteSummary47e: formData.noteSummary47e,
+        // Don't save showMileage in formData to avoid confusion
       }
     };
 
@@ -712,10 +715,12 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       };
     });
     
-    // Restore the mileage checkbox state from the template
+
     if (template.showMileage !== undefined) {
+      console.log('Using root level showMileage:', template.showMileage);
       setShowMileage(template.showMileage);
     } else {
+      console.log('No showMileage found, using fallback logic');
       // For backward compatibility with old templates that don't have showMileage field
       // Check if template has meaningful mileage data to determine if mileage should be shown
       const hasMeaningfulMileageData = Boolean(
@@ -723,6 +728,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         template.formData.mileageStartMileage ||
         (template.formData.endAddresses && template.formData.endAddresses.length > 0)
       );
+      console.log('Fallback logic result:', hasMeaningfulMileageData);
       setShowMileage(hasMeaningfulMileageData);
     }
     

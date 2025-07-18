@@ -8,9 +8,9 @@
   --background-transparent: rgba(255, 255, 255, 0);
   /* Theme colors */
 
-   --primary: #c15d2f;
-  --primary-hover: #e66a44;
-  --primary-light: #FF5722;
+   --primary: #0070f3;
+  --primary-hover: #0051a5;
+  --primary-light: #3291ff;
   --accent: #0070f3;
   --accent-hover: #0051a5;
   --accent-light: #3291ff;
