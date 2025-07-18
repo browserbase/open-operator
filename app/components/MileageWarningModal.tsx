@@ -4,6 +4,7 @@ interface MileageWarningModalProps {
   isVisible: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  onSetCurrentMileage?: () => void;
   currentMileage?: number;
   lastMileage?: number;
   warningMessage?: string;
@@ -13,6 +14,7 @@ export default function MileageWarningModal({
   isVisible,
   onClose,
   onConfirm,
+  onSetCurrentMileage,
   currentMileage,
   lastMileage,
   warningMessage
@@ -29,6 +31,8 @@ export default function MileageWarningModal({
       confirmText="Continue Anyway"
       cancelText="Cancel"
       size="md"
+      showCancel={false}
+      showConfirm={false}
     >
       <div 
         className="p-4 rounded-lg mb-4"
@@ -91,11 +95,50 @@ export default function MileageWarningModal({
       </div>
 
       <p 
-        className="text-sm"
+        className="text-sm mb-4"
         style={{ color: 'var(--text-secondary)' }}
       >
         Would you like to continue with the automation anyway? This will update the recorded mileage.
       </p>
+
+      {/* Custom footer with three buttons */}
+      <div className="flex gap-3 justify-end pt-4">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm font-medium rounded-md transition-colors hover:opacity-80"
+          style={{ 
+            backgroundColor: 'var(--background-secondary)', 
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border)'
+          }}
+        >
+          Cancel
+        </button>
+        
+        {onSetCurrentMileage && lastMileage !== undefined && (
+          <button
+            onClick={onSetCurrentMileage}
+            className="px-4 py-2 text-sm font-medium rounded-md transition-colors hover:opacity-90"
+            style={{ 
+              backgroundColor: 'var(--primary)', 
+              color: 'white'
+            }}
+          >
+            Set Current Mileage ({lastMileage.toLocaleString()})
+          </button>
+        )}
+        
+        <button
+          onClick={onConfirm}
+          className="px-4 py-2 text-sm font-medium rounded-md transition-colors hover:opacity-90"
+          style={{ 
+            backgroundColor: 'var(--warning)', 
+            color: 'white'
+          }}
+        >
+          Continue Anyway
+        </button>
+      </div>
     </ThemedModal>
   );
 }

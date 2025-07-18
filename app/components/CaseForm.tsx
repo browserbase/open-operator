@@ -515,6 +515,18 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     setShowMileageConfirmation(false);
   };
 
+  const handleSetCurrentMileage = () => {
+    // Set the current mileage to the last processed mileage
+    if (lastProcessedMileage) {
+      setFormData(prev => ({
+        ...prev,
+        mileageStartMileage: lastProcessedMileage
+      }));
+    }
+    setShowMileageConfirmation(false);
+    // Don't submit the form - just update the field and close the modal
+  };
+
   // Handler for Note Genius modal
   const handleNoteGeniusAccept = (optimizedText: string) => {
     setFormData(prev => ({
@@ -582,12 +594,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     }
 
     if (missingFields.length > 0) {
-      const errorMessage = `Please fill out all required fields: ${missingFields.join(", ")}`;
-      if (toast) {
-        toast.showError(errorMessage);
-      } else {
-        setRequiredError(errorMessage);
-      }
+      setRequiredError(`Please fill out all required fields: ${missingFields.join(", ")}`);
       return;
     } else {
       setRequiredError("");
@@ -770,7 +777,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   
   return (
     <div className="h-full overflow-y-auto">
-      {!toast && requiredError && (
+      {requiredError && (
         <div className="mb-4 p-3 bg-error-bg border border-error-border rounded-md">
           <p className="text-sm text-error">{requiredError}</p>
         </div>
@@ -1862,6 +1869,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         isVisible={showMileageConfirmation}
         onClose={handleMileageCancel}
         onConfirm={handleMileageConfirm}
+        onSetCurrentMileage={handleSetCurrentMileage}
         currentMileage={formData.mileageStartMileage ? parseInt(formData.mileageStartMileage.replace(/,/g, '')) : undefined}
         lastMileage={lastProcessedMileage ? parseInt(lastProcessedMileage.replace(/,/g, '')) : undefined}
       />

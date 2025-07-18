@@ -166,6 +166,15 @@ body {
   backdrop-filter: blur(15px);
 }
 
+.bg-background-secondary{
+  background-color: rgba(75, 74, 74, 0.123);
+}
+
+.bg-background-secondary:hover {
+  background-color: rgba(71, 71, 71, 0.432) !important;
+}
+
+
 .google-spinner-circle {
   fill: none;
   stroke-width: 5;
@@ -640,7 +649,7 @@ body {
 
 .calendar-day-selected {
   background-color: var(--primary);
-  color: white;
+  color: white !important;
 }
 
 .calendar-day-selected:hover {
