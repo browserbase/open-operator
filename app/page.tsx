@@ -12,6 +12,7 @@ import LottieLoading from "./components/LottieLoading";
 import AnimatedCheckmark from "./components/AnimatedCheckmark";
 import QueueManager from "./components/QueueManager";
 import MileageWarningModal from "./components/MileageWarningModal";
+import MiniJobStatus from "./components/MiniJobStatus";
 import { ToastContainer, useToast } from "./components/Toast";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
@@ -44,6 +45,7 @@ export default function Home() {
   const [showQueueManager, setShowQueueManager] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
+  const [isExecutionExpanded, setIsExecutionExpanded] = useState(true);
   const [mileageData, setMileageData] = useState<{
     current?: number;
     last?: number;
@@ -285,6 +287,15 @@ export default function Home() {
     setExecutionId(null);
     setSubmittedFormData(null);
     setActiveTab('form'); // Reset to form tab
+    setIsExecutionExpanded(true); // Reset to expanded state
+  };
+
+  const handleExpandExecution = () => {
+    setIsExecutionExpanded(true);
+  };
+
+  const handleMinimizeExecution = () => {
+    setIsExecutionExpanded(false);
   };
 
   return (
@@ -543,7 +554,7 @@ export default function Home() {
           </div>
         ) : (
           /* Content Area with Tabs - displayed when user is logged in with active subscription */
-          <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting ? 'pr-[336px]' : ''}`}>
+          <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting && isExecutionExpanded ? 'pr-[336px]' : ''}`}>
             {/* Tab Navigation */}
             <div className="mb-4">
               <div className="border-b border-gray-200 dark:border-gray-700">
@@ -660,9 +671,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* Progress Sidebar - only show when executing */}
+        {/* Progress Sidebar - only show when executing and expanded */}
         <AnimatePresence>
-          {isExecuting && (
+          {isExecuting && isExecutionExpanded && (
             <motion.div 
               className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-modal border-l border-border flex flex-col z-30 shadow-theme-lg"
               initial={{ x: 320, opacity: 0 }}
@@ -675,6 +686,20 @@ export default function Home() {
                 duration: 0.3
               }}
             >
+              {/* Minimize button */}
+              <div className="p-3 border-b border-border flex justify-between items-center">
+                <h3 className="text-sm font-medium text-text-primary">Automation Progress</h3>
+                <button
+                  onClick={handleMinimizeExecution}
+                  className="p-1 rounded hover:bg-background-secondary transition-colors"
+                  title="Minimize"
+                >
+                  <svg className="w-4 h-4 text-text-secondary" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              
               <ExecutionProgressSidebar 
                 executionId={executionId || ''}
                 onStop={handleClose}
@@ -683,6 +708,15 @@ export default function Home() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Mini Job Status - show when executing but not expanded */}
+        <MiniJobStatus
+          isVisible={isExecuting && !isExecutionExpanded}
+          executionId={executionId || ''}
+          onExpand={handleExpandExecution}
+          onStop={handleClose}
+          user={user}
+        />
       </main>
 
       {/* Queue Manager Modal */}
