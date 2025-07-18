@@ -227,6 +227,7 @@ export default function ThemedModal({
                       {subtitle}
                     </p>
                   )}
+                </div>
               </div>
 
               {/* Content */}
