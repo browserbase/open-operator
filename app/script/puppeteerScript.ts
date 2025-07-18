@@ -244,6 +244,21 @@ export async function runPuppeteerScript(
 
   // Format time to "h:mm AM/PM" format
   const formatTime = (timeStr: string): string => {
+    console.log(`Converting time: "${timeStr}"`);
+    // Handle both 24-hour format (HH:MM) and existing formats with AM/PM
+    const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (time24Match) {
+      // Convert 24-hour format to 12-hour format with AM/PM
+      const [, hours, minutes] = time24Match;
+      const hour24 = parseInt(hours, 10);
+      const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+      const period = hour24 >= 12 ? 'PM' : 'AM';
+      const converted = `${hour12}:${minutes} ${period}`;
+      console.log(`Converted 24-hour time "${timeStr}" to "${converted}"`);
+      return converted;
+    }
+    
+    // Handle existing format with AM/PM
     const match = timeStr.match(/(\d{1,2})(:?)(\d{0,2})\s*(AM|PM)?/i);
     if (!match) {
       throw new Error(`Invalid time format: ${timeStr}`);
@@ -251,11 +266,14 @@ export async function runPuppeteerScript(
     const [, hours, , minutes = "00", period] = match;
     const hoursNum = parseInt(hours, 10);
     const finalPeriod = period ? period.toUpperCase() : (hoursNum >= 5 && hoursNum <= 11 ? "AM" : "PM");
-    return `${hoursNum}:${minutes.padStart(2, '0')} ${finalPeriod}`;
+    const result = `${hoursNum}:${minutes.padStart(2, '0')} ${finalPeriod}`;
+    console.log(`Formatted time "${timeStr}" to "${result}"`);
+    return result;
   };
 
   const formattedStartTime = formatTime(startTime);
   const formattedEndTime = formatTime(endTime);
+  console.log(`Final formatted times - Start: "${formattedStartTime}", End: "${formattedEndTime}"`);
   const targetServiceTime = `${formattedStartTime} to ${formattedEndTime}`;
 
   // Selector templates for mileage fields

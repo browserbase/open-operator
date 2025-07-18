@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { adminDb } from "../../../firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
+import { getUserIdFromRequest } from "../../../utils/auth";
 
 export const runtime = "nodejs";
 
@@ -29,8 +30,8 @@ interface NoteData {
   capturedAt: string;
 }
 
-// Store active event streams
-const eventStreams = new Map<string, ReadableStreamDefaultController>();
+// Store active event streams with user context
+const eventStreams = new Map<string, { controller: ReadableStreamDefaultController; userId?: string }>();
 
 export function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -43,11 +44,15 @@ export function GET(request: NextRequest) {
   console.log(`Creating SSE connection for execution: ${executionId}`);
 
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       console.log(`SSE stream started for execution: ${executionId}`);
       
-      // Store the controller so we can send events to it
-      eventStreams.set(executionId, controller);
+      // Get user ID from request for authentication context
+      const userId = await getUserIdFromRequest(request);
+      console.log(`User ID for execution ${executionId}: ${userId}`);
+      
+      // Store the controller with user context so we can send events to it
+      eventStreams.set(executionId, { controller, userId });
       
       // Send initial connection event
       const data = `data: ${JSON.stringify({
@@ -79,16 +84,23 @@ async function saveMileageToFirebase(executionId: string, mileageData: MileageDa
     console.log('Attempting to save mileage data to Firebase...');
     const docId = userId || executionId;
 
-    const mileageDocRef = adminDb.collection('users').doc(docId).collection('mileageHistory').doc(executionId);
-    await mileageDocRef.set({
-      ...mileageData,
-      executionId,
-      savedAt: FieldValue.serverTimestamp(),
-      lastProcessedMileage: mileageData.endMileage
-    }, { merge: true }); // <-- merge option added here
-
+    // Update the user's main document with the mileage data in the mileageHistory array
     const userDocRef = adminDb.collection('users').doc(docId);
+    
+    // Prepare the history entry with mileage data
+    const historyEntry = {
+      executionId,
+      dateOfService: mileageData.dateOfService,
+      startTime: mileageData.startTime,
+      endTime: mileageData.endTime,
+      capturedAt: mileageData.capturedAt,
+      savedAt: FieldValue.serverTimestamp(),
+      endMileage: mileageData.endMileage,
+    };
+
+    // Add the entry to the mileageHistory array and update lastProcessedMileage
     await userDocRef.set({
+      mileageHistory: FieldValue.arrayUnion(historyEntry),
       lastProcessedMileage: mileageData.endMileage,
       lastMileageUpdate: FieldValue.serverTimestamp()
     }, { merge: true });
@@ -110,12 +122,23 @@ async function saveNoteToFirebase(executionId: string, noteData: NoteData, userI
     console.log('Attempting to save note data to Firebase...');
     const docId = userId || executionId;
 
-    const noteDocRef = adminDb.collection('users').doc(docId).collection('mileageHistory').doc(executionId);
-    await noteDocRef.set({
-      ...noteData,
+    // Update the user's main document with the note data in the mileageHistory array
+    const userDocRef = adminDb.collection('users').doc(docId);
+    
+    // Prepare the history entry without mileage data
+    const historyEntry = {
       executionId,
+      dateOfService: noteData.dateOfService,
+      startTime: noteData.startTime,
+      endTime: noteData.endTime,
+      capturedAt: noteData.capturedAt,
       savedAt: FieldValue.serverTimestamp(),
-      // Don't update lastProcessedMileage to preserve existing values
+      // Don't include endMileage to preserve existing mileage data
+    };
+
+    // Add the entry to the mileageHistory array
+    await userDocRef.set({
+      mileageHistory: FieldValue.arrayUnion(historyEntry)
     }, { merge: true });
 
     console.log('Note data saved to Firebase successfully');
@@ -134,11 +157,14 @@ export function sendEventToExecution(executionId: string, event: string, data: u
   console.log(`sendEventToExecution called - ExecutionId: ${executionId}, Event: ${event}, Data:`, data);
   console.log(`Available streams:`, Array.from(eventStreams.keys()));
   
+  // Get the stream context (controller + userId)
+  const streamContext = eventStreams.get(executionId);
+  
   // Handle mileage data specially
   if (event === 'miles' && typeof data === 'object' && data !== null) {
     // Type guard to check if data has the required MileageData properties
     if ('dateOfService' in data && 'startTime' in data && 'endTime' in data && 'endMileage' in data && 'capturedAt' in data) {
-      saveMileageToFirebase(executionId, data as MileageData);
+      saveMileageToFirebase(executionId, data as MileageData, streamContext?.userId);
     }
   }
   
@@ -146,7 +172,7 @@ export function sendEventToExecution(executionId: string, event: string, data: u
   if (event === 'noteProcessed' && typeof data === 'object' && data !== null) {
     // Type guard to check if data has the required NoteData properties
     if ('dateOfService' in data && 'startTime' in data && 'endTime' in data && 'capturedAt' in data) {
-      saveNoteToFirebase(executionId, data as NoteData);
+      saveNoteToFirebase(executionId, data as NoteData, streamContext?.userId);
     }
   }
   
@@ -163,7 +189,7 @@ export function sendEventToExecution(executionId: string, event: string, data: u
     }).catch(console.error);
   }
   
-  const controller = eventStreams.get(executionId);
+  const controller = streamContext?.controller;
   if (controller) {
     try {
       const eventData = `data: ${JSON.stringify({
