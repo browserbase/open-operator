@@ -19,8 +19,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    const userQueue = jobQueueManager.getOrCreateQueue(userId);
     const body = await request.json();
     const { action, jobId } = body;
     
