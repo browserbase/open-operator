@@ -7,12 +7,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function GET(request: NextRequest) {
-  console.log('🔄 GET checkSubscriptionStatus API called');
   return NextResponse.json({ message: 'API is working', timestamp: new Date().toISOString() });
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🔄 checkSubscriptionStatus API called');
   try {
     const { userId, email } = await request.json();
     console.log('📋 Request data:', { userId, email });

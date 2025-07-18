@@ -96,8 +96,6 @@ async function createSession(timezone?: string, contextId?: string) {
     };
   }
 
-  console.log("timezone ", timezone);
-  console.log("getClosestRegion(timezone)", getClosestRegion(timezone));
   const session = await bb.sessions.create({
     projectId: process.env.BROWSERBASE_PROJECT_ID!,
     browserSettings: {

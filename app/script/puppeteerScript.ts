@@ -36,12 +36,7 @@ interface ObservationNotesEntry {
   value: string;
 }
 
-interface ProcessedNoteData {
-  dateOfService: string;
-  startTime: string;
-  endTime: string;
-  mileage: number;
-}
+
 
 // Event emitter interface for progress updates
 export interface ProgressEmitter {
@@ -51,7 +46,6 @@ export interface ProgressEmitter {
 // Helper function to close Browserbase session
 async function closeBrowserbaseSession(sessionId: string): Promise<void> {
   try {
-    console.log(`Attempting to close Browserbase session: ${sessionId}`);
     const response = await fetch('/api/session', {
       method: 'DELETE',
       headers: {
@@ -60,9 +54,7 @@ async function closeBrowserbaseSession(sessionId: string): Promise<void> {
       body: JSON.stringify({ sessionId }),
     });
     
-    if (response.ok) {
-      console.log(`Successfully closed Browserbase session: ${sessionId}`);
-    } else {
+    if (!response.ok) {
       console.warn(`Failed to close Browserbase session: ${sessionId}`, await response.text());
     }
   } catch (error) {
@@ -72,7 +64,6 @@ async function closeBrowserbaseSession(sessionId: string): Promise<void> {
 
 // Helper function to close only the Browserbase session (not the browser)
 async function closeSessionOnly(sessionId: string): Promise<void> {
-  console.log("Closing Browserbase session only (keeping browser alive)");
   await closeBrowserbaseSession(sessionId);
 }
 
@@ -211,11 +202,10 @@ export async function runPuppeteerScript(
       throw new Error(`Invalid date format: expected a string, received ${typeof dateStr}`);
     }
     dateStr = dateStr.trim();
-    console.log(`Received dateStr: "${dateStr}"`);
+    
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       const [year, month, day] = dateStr.split('-');
       const formattedDate = `${month}/${day}/${year.slice(-2)}`;
-      console.log(`Formatted date from YYYY-MM-DD to MM/DD/YY: "${formattedDate}"`);
       return formattedDate;
     }
     const parts = dateStr.split('/');
@@ -234,7 +224,6 @@ export async function runPuppeteerScript(
       day = day.padStart(2, '0');
       const shortYear = year.slice(-2);
       const formattedDate = `${month}/${day}/${shortYear}`;
-      console.log(`Formatted date from MM/DD/YYYY to MM/DD/YY: "${formattedDate}"`);
       return formattedDate;
     }
     throw new Error(`Invalid date format: expected "MM/DD/YYYY" or "YYYY-MM-DD", check the Date of Service`);
@@ -244,7 +233,6 @@ export async function runPuppeteerScript(
 
   // Format time to "h:mm AM/PM" format
   const formatTime = (timeStr: string): string => {
-    console.log(`Converting time: "${timeStr}"`);
     // Handle both 24-hour format (HH:MM) and existing formats with AM/PM
     const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
     if (time24Match) {
@@ -254,7 +242,6 @@ export async function runPuppeteerScript(
       const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
       const period = hour24 >= 12 ? 'PM' : 'AM';
       const converted = `${hour12}:${minutes} ${period}`;
-      console.log(`Converted 24-hour time "${timeStr}" to "${converted}"`);
       return converted;
     }
     
@@ -267,13 +254,11 @@ export async function runPuppeteerScript(
     const hoursNum = parseInt(hours, 10);
     const finalPeriod = period ? period.toUpperCase() : (hoursNum >= 5 && hoursNum <= 11 ? "AM" : "PM");
     const result = `${hoursNum}:${minutes.padStart(2, '0')} ${finalPeriod}`;
-    console.log(`Formatted time "${timeStr}" to "${result}"`);
     return result;
   };
 
   const formattedStartTime = formatTime(startTime);
   const formattedEndTime = formatTime(endTime);
-  console.log(`Final formatted times - Start: "${formattedStartTime}", End: "${formattedEndTime}"`);
   const targetServiceTime = `${formattedStartTime} to ${formattedEndTime}`;
 
   // Selector templates for mileage fields
@@ -297,10 +282,8 @@ export async function runPuppeteerScript(
 
       await page.waitForSelector(mileageStartAddressSelector);
       await clearAndType(page, mileageStartAddressSelector, address);
-      console.log(`Entered Start Address: "${address}"`);
       await page.waitForSelector(mileageStartMileageSelector);
       await humanLikeType(page, mileageStartMileageSelector, mileage);
-      console.log(`Entered Start Mileage: "${mileage}"`);
     } catch (error) {
       emit(uid, 'error', `Error populating Start Address and Start Mileage: ${error}`);
       console.error("Error populating Start Address and Start Mileage:", error);
@@ -341,7 +324,6 @@ export async function runPuppeteerScript(
       
       // For number inputs, use human-like typing to avoid detection
       if (elementType === 'number') {
-        console.log(`Detected number input for "${selector}", using human-like typing`);
         const element = await page.$(selector);
         if (!element) {
           throw new Error(`Selector "${selector}" not found.`);
@@ -375,7 +357,6 @@ export async function runPuppeteerScript(
           }
         }, selector);
         
-        console.log(`Human-like typed number into "${selector}": "${text}"`);
         return;
       }
       
@@ -394,7 +375,6 @@ export async function runPuppeteerScript(
       }, selector, text);
       
       if (success) {
-        console.log(`Fast input for "${selector}": "${text}"`);
         return;
       }
     } catch (error) {
@@ -413,7 +393,6 @@ export async function runPuppeteerScript(
       await page.keyboard.press('KeyA');
       await page.keyboard.up('Control');
       await element.type(text, { delay: 1 }); // Very fast typing for fallback
-      console.log(`Fallback typed into "${selector}": "${text}"`);
     } catch (fallbackError) {
       emit(uid, 'error', `Error in clearAndType for selector: ${fallbackError}`);
       console.error(`Error in clearAndType for selector "${selector}":`, fallbackError);
@@ -467,7 +446,7 @@ export async function runPuppeteerScript(
       });
 
       if (noTripsAlert.found) {
-        console.log(`Found "no trips" message: "${noTripsAlert.text}"`);
+        //console.log(`Found "no trips" message: "${noTripsAlert.text}"`);
         return;
       }
 
@@ -479,16 +458,14 @@ export async function runPuppeteerScript(
       ]);
 
       if (raceResult === 'table') {
-        console.log('Mileage table found.');
+        //console.log('Mileage table found.');
         const rowSelector = '#data-models-table-body tr';
 
         while (true) {
           const rows = await page.$$(rowSelector);
           if (rows.length === 0) {
-            console.log('No mileage entries found. Exiting deletion loop.');
             break;
           }
-          console.log(`Processing deletion for ${rows.length} remaining row(s).`);
           const row = rows[0];
 
           const dropdownToggle = await row.$('td.min a.dropdown');
@@ -505,7 +482,6 @@ export async function runPuppeteerScript(
             break;
           }
           await deleteButton.click();
-          console.log('Clicked delete for the first row.');
 
           await page.waitForSelector('#confirmationOkButton', { visible: true, timeout: defaultTimeout });
           await sleep(700); // Reduced from 1500ms
@@ -517,11 +493,9 @@ export async function runPuppeteerScript(
             const toastMessage = toastContainer.querySelector(".toast-message");
             return toastMessage && toastMessage.textContent?.includes("Changes saved successfully.");
           }, { timeout: defaultTimeout });
-          console.log('Deletion confirmed via toast message.');
           await sleep(700); // Reduced from 1500ms
         }
       } else if (raceResult === 'message') {
-        console.log('"No trips found" message found. Proceeding to add new mileage.');
         return;
       } else {
         // Timeout occurred, try alternative approaches
@@ -545,7 +519,6 @@ export async function runPuppeteerScript(
             if (element) {
               const text = await page.evaluate(el => el.textContent?.toLowerCase() || '', element);
               if (text.includes('no trips') || text.includes('no data') || text.includes('empty')) {
-                console.log(`Found alternative "no trips" message with selector: ${selector}`);
                 foundAlternative = true;
                 return;
               }
@@ -579,15 +552,15 @@ export async function runPuppeteerScript(
           const newMileageButtonSelector = "#addButton";
           await page.waitForSelector(newMileageButtonSelector, { visible: true, timeout: defaultTimeout });
           await page.click(newMileageButtonSelector);
-          console.log(`Clicked on "New" button to add mileage entry ${i}`);
+          //console.log(`Clicked on "New" button to add mileage entry ${i}`);
           await sleep(1200);
         }
 
         await page.waitForSelector(mileageEndAddressSelector, { visible: true, timeout: defaultTimeout });
-        console.log(`End Address input is present in the DOM for entry (${i}).`);
+        //console.log(`End Address input is present in the DOM for entry (${i}).`);
         await clearAndType(page, mileageEndAddressSelector, endAddress);
         await sleep(200); // Reduced from 1000ms
-        console.log(`Entered End Address (${i}): "${endAddress}"`);
+        //console.log(`Entered End Address (${i}): "${endAddress}"`);
         await sleep(300); // Reduced from 1000ms
 
         const availableOptions = await page.evaluate((selector) => {
@@ -595,7 +568,7 @@ export async function runPuppeteerScript(
           if (!select) throw new Error(`Selector "${selector}" not found.`);
           return Array.from(select.options).map(option => option.textContent?.trim() || '');
         }, additionalDropdownSelector);
-        console.log(`Available options for Purpose of Trip (${i}):`, availableOptions);
+        //console.log(`Available options for Purpose of Trip (${i}):`, availableOptions);
 
         const additionalDropdownSelected = await page.evaluate((selector, value) => {
           const select = document.querySelector(selector) as HTMLSelectElement;
@@ -616,22 +589,22 @@ export async function runPuppeteerScript(
         await sleep(1000);
         
         if (additionalDropdownSelected) {
-          console.log(`Selected additional dropdown value: "${additionalValue}" for End Address (${i})`);
+          //console.log(`Selected additional dropdown value: "${additionalValue}" for End Address (${i})`);
         } else {
-          console.log(`Failed to select additional dropdown value: "${additionalValue}" for End Address (${i})`);
+          //console.log(`Failed to select additional dropdown value: "${additionalValue}" for End Address (${i})`);
         }
 
         const getMapButtonSelector = `#data-models-table-body tr:nth-child(${i + 1}) button.btn.btn-subtle-primary.text-nowrap`;
         await page.waitForSelector(getMapButtonSelector, { visible: true, timeout: defaultTimeout });
         await page.click(getMapButtonSelector);
-        console.log(`Clicked on the "Get Map" button for End Address (${i})`);
+        //console.log(`Clicked on the "Get Map" button for End Address (${i})`);
         // Click the mileage confirmation modal continue button only on the first Get Map attempt
         const mileageContinueSelector = "#getMileageContinueButton";
         if (i === 0) {
           try {
             await page.waitForSelector(mileageContinueSelector, { visible: true, timeout: 2000 });
             await page.click(mileageContinueSelector);
-            console.log("Clicked 'Continue' on mileage confirmation modal");
+            //console.log("Clicked 'Continue' on mileage confirmation modal");
           } catch {
             // Skip if the confirmation button did not appear
           }
@@ -645,7 +618,7 @@ export async function runPuppeteerScript(
             const toastMessage = toastContainer.querySelector(".toast-message");
             return toastMessage && toastMessage.textContent?.includes("Changes saved successfully.");
           }, { timeout: defaultTimeout });
-          console.log("Mileage saved successfully (toast message appeared).");
+          //console.log("Mileage saved successfully (toast message appeared).");
         } catch {
           console.error("Timeout waiting for mileage save confirmation toast message.");
         }
@@ -655,7 +628,7 @@ export async function runPuppeteerScript(
           const endMileageValue = await getLastEndMileageValue(page);
           if (endMileageValue !== null) {
             const captureTimestamp = new Date().toISOString();
-            console.log(`End Mileage value for the last entry is: "${endMileageValue}"`);
+            //console.log(`End Mileage value for the last entry is: "${endMileageValue}"`);
             // Send updated mileage data with date, time, mileage, and capture timestamp for Firebase storage
             emit(uid, 'miles', {
               dateOfService,
@@ -665,7 +638,7 @@ export async function runPuppeteerScript(
               capturedAt: captureTimestamp
             });
           } else {
-            console.log(`End Mileage input not found for the last entry.`);
+            //console.log(`End Mileage input not found for the last entry.`);
           }
         }
       } catch (error) {
@@ -683,8 +656,6 @@ export async function runPuppeteerScript(
 
   // Connect to the existing Browserbase session instead of launching local browser
   try {
-    console.log(`Connecting to Browserbase session: ${sessionId}`);
-    
     // Get the session details from Browserbase
     const bb = new Browserbase({
       apiKey: process.env.BROWSERBASE_API_KEY!,
@@ -701,31 +672,24 @@ export async function runPuppeteerScript(
       browserWSEndpoint: session.connectUrl,
       defaultViewport: null, // Use the session's viewport
     });
-    
-    console.log(`Successfully connected to Browserbase session: ${sessionId}`);
   } catch (error) {
     console.error(`Failed to connect to Browserbase session ${sessionId}:`, error);
     throw new Error(`Failed to connect to browser session: ${error}`);
   }
 
-  console.log("addresses", endAddresses);
-  
   // Get the existing page instead of creating a new one
   const pages = await browser.pages();
   let page: Page;
   
   if (pages.length > 0) {
     page = pages[0];
-    console.log("Using existing page from browser session");
   } else {
     page = await browser.newPage();
-    console.log("Created new page in browser session");
   }
   
   // Verify the page is still active
   try {
     await page.url();
-    console.log("Page is accessible and ready");
   } catch (error) {
     console.error("Page is not accessible:", error);
     throw new Error("Browser page is not accessible");
@@ -737,14 +701,12 @@ export async function runPuppeteerScript(
       
       // Create search string in format: MM/DD/YY h:mmAM to h:mmAM
       const searchString = `${formattedDate} ${formattedStartTime} to ${formattedEndTime}`;
-      console.log(`Searching for existing note with: "${searchString}"`);
+      //console.log(`Searching for existing note with: "${searchString}"`);
       
       // Click on the filter/search input
       const searchInputSelector = '.form-control.search-input.search';
       await page.waitForSelector(searchInputSelector, { visible: true, timeout: shortTimeout });
       await page.click(searchInputSelector);
-      console.log('Clicked on search filter input');
-      
       // Clear the input first
       await page.evaluate((selector) => {
         const input = document.querySelector(selector) as HTMLInputElement;
@@ -756,7 +718,6 @@ export async function runPuppeteerScript(
       
       // Type the search string with no delay for faster input
       await page.type(searchInputSelector, searchString, { delay: 0 });
-      console.log(`Typed search string: "${searchString}"`);
       
       // Trigger search events immediately
       await page.evaluate((selector) => {
@@ -789,7 +750,7 @@ export async function runPuppeteerScript(
         });
         
         if (noteFound) {
-          console.log('Found existing note, clicked on it');
+          //console.log('Found existing note, clicked on it');
           emit(uid, 'success', 'Found existing note!');
           return true;
         }
@@ -817,7 +778,6 @@ export async function runPuppeteerScript(
         });
         
         if (tableEmpty) {
-          console.log('Table is empty or shows no results - no existing note found');
           return false;
         }
         
@@ -825,7 +785,6 @@ export async function runPuppeteerScript(
         await sleep(200);
       }
       
-      console.log('No existing note found after timeout');
       return false;
       
     } catch (error) {
@@ -835,12 +794,11 @@ export async function runPuppeteerScript(
   };
 
   const findAndClickEdit = async (page: Page, targetDate: string, targetTime: string): Promise<boolean> => {
-    console.log(`Searching for Date: "${targetDate}" and Time: "${targetTime}"...`);
+    //console.log(`Searching for Date: "${targetDate}" and Time: "${targetTime}"...`);
     // Attempt to find any data rows; if none appear, click 'New Note' to proceed
     try {
       await page.waitForSelector("#data-models-table-body tr", { timeout: defaultTimeout });
     } catch {
-      console.log("No data rows found, proceeding to create a new note");
       emit(uid, 'progress', 'No existing entries found, will create new note');
       return false;
     }
@@ -871,11 +829,7 @@ export async function runPuppeteerScript(
       return false;
     }, targetDate, targetTime);
 
-    if (found) {
-      console.log(`Successfully clicked the date link for Date: "${targetDate}" and Time: "${targetTime}".`);
-    } else {
-      console.log(`Date link for Date: "${targetDate}" and Time: "${targetTime}" was not found.`);
-    }
+    
     return found;
   };
 
@@ -885,23 +839,19 @@ export async function runPuppeteerScript(
       const saveNoteSelector = "#saveButton";
       await page.waitForSelector(saveNoteSelector, { visible: true, timeout: defaultTimeout });
       await page.click(saveNoteSelector);
-      console.log("Clicked on Save Note");
 
       const saveNoteModalSelector = "#saveNoteConfirmationModal";
       let isSaveNoteModalVisible = false;
       try {
         await page.waitForSelector(saveNoteModalSelector, { visible: true, timeout: 1000 });
         isSaveNoteModalVisible = true;
-        console.log("Save Note modal is visible");
       } catch {
-        console.log("Save Note modal did not appear");
       }
 
       if (isSaveNoteModalVisible) {
         const saveOnlyButtonSelector = "#saveNoteConfirmationModal .btn-subtle-success";
         await page.waitForSelector(saveOnlyButtonSelector, { visible: true, timeout: defaultTimeout });
         await page.click(saveOnlyButtonSelector);
-        console.log("Clicked on 'Save and Ready' button");
       }
 
       try {
@@ -911,11 +861,9 @@ export async function runPuppeteerScript(
           const toastMessage = toastContainer.querySelector(".toast-title");
           return toastMessage && toastMessage.textContent?.includes("Success");
         }, { timeout: defaultTimeout });
-        console.log("Save confirmation received: 'Saved Successfully!'");
         emit(uid, 'success', 'Note Saved Successfully!');
         emit(uid, 'toast', 'Note Saved Successfully!');
       } catch {
-        console.log("Toast message did not appear.");
       }
     } catch (error) {
       emit(uid, 'error', `An error occurred while saving and readying the note: ${error}`);
@@ -927,7 +875,6 @@ export async function runPuppeteerScript(
   };
 
   try {
-    console.log("addresses", endAddresses);
     
     keepAliveInterval = setInterval(async () => {
       try {
@@ -949,13 +896,10 @@ export async function runPuppeteerScript(
     emit(uid, 'success', 'Ecasenotes reached');
     emit(uid, 'progress', 'Signing In...');
     
-    console.log(additionalDropdownValues);
+    //console.log(additionalDropdownValues);
     await page.waitForSelector("#Company", { visible: true, timeout: defaultTimeout });
-    console.log("Company Code input is visible.");
     await page.waitForSelector("#Email", { visible: true, timeout: defaultTimeout });
-    console.log("Email input is visible.");
     await page.waitForSelector("#Password", { visible: true, timeout: defaultTimeout });
-    console.log("Password input is visible.");
     
     await clearAndType(page, "#Company", companyCode);
     await clearAndType(page, "#Email", username);
@@ -964,25 +908,21 @@ export async function runPuppeteerScript(
     await page.click(".btn.btn-subtle-primary.w-100.mb-3");
     
     emit(uid, 'success', 'Login successful!');
-    console.log("Login successful and dashboard loaded");
     emit(uid, 'progress', 'Fetching Notes!');
 
     await page.waitForSelector('a[href="/cases"]', { visible: true, timeout: defaultTimeout });
     await page.click('a[href="/cases"]');
 
-    console.log("Navigated to Cases & Notes");
     await sleep(100); // Reduced from 200ms
     
     await page.waitForSelector('#SearchCriteria_CaseHeaderNumber', { visible: true, timeout: defaultTimeout });
     await page.type('#SearchCriteria_CaseHeaderNumber', caseNumber, { delay: 0 });
 
-    console.log("Cases & Notes page loaded successfully");
+    //console.log("Cases & Notes page loaded successfully");
     await page.click("#searchButton");
-    console.log("Clicked the Search button");
     await sleep(500); // Reduced from 1000ms
     
     await page.waitForSelector(".sort-CaseNumber", { visible: true });
-    console.log("Case results loaded");
     emit(uid, 'success', 'Notes fetched successfully!');
     
     await page.evaluate((caseNumber) => {
@@ -994,7 +934,6 @@ export async function runPuppeteerScript(
       }
     }, caseNumber);
     
-    console.log(`Clicked on case number ${caseNumber}`);
     
     await page.waitForSelector("#pageTabs", { visible: true });
     await page.evaluate(() => {
@@ -1010,7 +949,6 @@ export async function runPuppeteerScript(
       }
     });
     
-    console.log(`Clicked on "Case Notes" link for case number ${caseNumber}`);
 
     // Check for existing note first using the search filter
     const noteExists = await checkForExistingNote(page);
@@ -1020,10 +958,10 @@ export async function runPuppeteerScript(
       const foundInTable = await findAndClickEdit(page, formattedDate, targetServiceTime);
       
       if (foundInTable) {
-        console.log(`Found existing note in table for Date: "${formattedDate}" and Time: "${targetServiceTime}".`);
+        //console.log(`Found existing note in table for Date: "${formattedDate}" and Time: "${targetServiceTime}".`);
         emit(uid, 'progress', 'Found existing note in table!');
       } else {
-        console.log(`No existing note found. Proceeding to create a new note.`);
+        //console.log(`No existing note found. Proceeding to create a new note.`);
         emit(uid, 'progress', 'Creating a new note!');
         await sleep(200);
         emit(uid, 'progress', 'Creating Note!');
@@ -1032,10 +970,10 @@ export async function runPuppeteerScript(
         const addButtonSelector = ".mb-3.me-1.btn.btn-sm.btn-subtle-secondary.btn-floating";
         await page.waitForSelector(addButtonSelector, { visible: true, timeout: defaultTimeout });
         await page.click(addButtonSelector);
-        console.log("Clicked on Add Note button to create a new case note");
+        //console.log("Clicked on Add Note button to create a new case note");
 
         await page.waitForSelector("#DataModel_DateOfService", { visible: true });
-        console.log("New Note modal appeared");
+        //console.log("New Note modal appeared");
 
         await page.evaluate((formattedDate) => {
           const dateInput = document.getElementById("DataModel_DateOfService") as HTMLInputElement;
@@ -1047,22 +985,22 @@ export async function runPuppeteerScript(
           }
         }, dateOfService);
 
-        console.log(`Date of Service set to ${dateOfService}`);
+        //console.log(`Date of Service set to ${dateOfService}`);
         
         await sleep(100);
         const sanitizedStartTime = sanitizeTime(formattedStartTime);
         const sanitizedEndTime = sanitizeTime(formattedEndTime);
         await page.type("#DataModel_StartTime", sanitizedStartTime, { delay: 0 });
-        console.log(`Start Time set to "${sanitizedStartTime}"`);
+        //console.log(`Start Time set to "${sanitizedStartTime}"`);
         await page.type("#DataModel_EndTime", sanitizedEndTime, { delay: 0 });
-        console.log(`End Time set to "${sanitizedEndTime}"`);
+        //console.log(`End Time set to "${sanitizedEndTime}"`);
         
         await page.waitForFunction(() => {
           const selectElement = document.getElementById("DataModel_ServiceTypeId") as HTMLSelectElement;
           return selectElement && selectElement.options.length > 1;
         });
         
-        console.log("Service type options loaded");
+        //console.log("Service type options loaded");
         await page.evaluate((serviceTypeIdentifier) => {
           const selectElement = document.getElementById("DataModel_ServiceTypeId") as HTMLSelectElement;
           const options = Array.from(selectElement.options);
@@ -1077,7 +1015,7 @@ export async function runPuppeteerScript(
             throw new Error(`Service type with identifier "${serviceTypeIdentifier}" not found`);
           }
         }, serviceTypeIdentifier);
-        console.log(`Service type set to option containing identifier "${serviceTypeIdentifier}"`);
+        //console.log(`Service type set to option containing identifier "${serviceTypeIdentifier}"`);
 
         await page.waitForFunction(() => {
           const selectElement = document.getElementById("DataModel_CaseApprovedHourChildId") as HTMLSelectElement;
@@ -1097,7 +1035,7 @@ export async function runPuppeteerScript(
             throw new Error(`Person served "${personServed}" not found`);
           }
         }, personServed);
-        console.log(`Person served set to "${personServed}"`);
+        //console.log(`Person served set to "${personServed}"`);
 
         await page.waitForSelector("#saveButton", { visible: true });
         await page.click("#saveButton");
@@ -1113,18 +1051,18 @@ export async function runPuppeteerScript(
     emit(uid, 'progress', 'Proceeding to edit Note!');
     emit(uid, 'progress', 'Making observations!');
 
-    console.log('original', observationNotes56a);
-    console.log('formatted', observationNotesArray);
+    //console.log('original', observationNotes56a);
+    //console.log('formatted', observationNotesArray);
     
     if (serviceTypeIdentifier.toLowerCase() === "56a") {
-      console.log('Service Type Identifier is "56a". Populating observation notes.');
+      //console.log('Service Type Identifier is "56a". Populating observation notes.');
       for (let i = 0; i <= observationNotesArray.length - 1; i++) {
         const { field, value } = observationNotesArray[i];
         const textareaSelector = `#NewNoteValues_${i}__0_`;
         try {
           await page.waitForSelector(textareaSelector, { visible: true, timeout: defaultTimeout });
           emit(uid, 'progress', `Populating ${field} with content: "${value}"`);
-          console.log(`Populating ${field} with content: "${value}"`);
+          //console.log(`Populating ${field} with content: "${value}"`);
           await clearAndType(page, textareaSelector, value);
         } catch (error) {
           emit(uid, 'error', `Failed to populate ${field} with selector "${textareaSelector}": ${error}`);
@@ -1135,14 +1073,14 @@ export async function runPuppeteerScript(
         }
       }
     } else if (serviceTypeIdentifier.toLowerCase() === "47e") {
-      console.log('Service Type Identifier is "47e". Populating Note Summary.');
+      //console.log('Service Type Identifier is "47e". Populating Note Summary.');
       emit(uid, 'progress', `Populating Note Summary.`);
       const textareaSelector = `#NewNoteValues_0__0_`;
       const noteContent = noteSummary47e || '';
       try {
         await page.waitForSelector(textareaSelector, { visible: true, timeout: defaultTimeout });
         await clearAndType(page, textareaSelector, noteContent);
-        console.log(`Populated Note Summary: "${noteContent}"`);
+        //console.log(`Populated Note Summary: "${noteContent}"`);
       } catch (error) {
         emit(uid, 'error', `Failed to populate Note Summary with selector "${textareaSelector}": ${error}`);
         console.error(`Failed to populate Note Summary with selector "${textareaSelector}":`, error);
@@ -1151,11 +1089,11 @@ export async function runPuppeteerScript(
         throw error;
       }
     } else {
-      console.log('Service Type Identifier is neither "56a" nor "47e". Skipping observation notes population.');
+      //console.log('Service Type Identifier is neither "56a" nor "47e". Skipping observation notes population.');
     }
 
     emit(uid, 'success', 'Observations completed!');
-    console.log("ready to save the note");
+    //console.log("ready to save the note");
     await saveAndReadyNote();
 
     if (mileageStartAddress && mileageStartAddress.trim() !== '') {
@@ -1163,7 +1101,7 @@ export async function runPuppeteerScript(
       const mileageTabSelector = 'a[href*="/dfcs/notes/trips"]';
       await page.waitForSelector(mileageTabSelector, { visible: true, timeout: defaultTimeout });
       await page.click(mileageTabSelector);
-      console.log('Clicked on the "Mileage" tab');
+      //console.log('Clicked on the "Mileage" tab');
 
       await processMileageTable(page);
 
@@ -1171,18 +1109,18 @@ export async function runPuppeteerScript(
       const mileageStartMileageSelector = "#DataModels_0__StartMileage";
       await populateStartDetails(page, mileageStartAddress, mileageStartMileage || '', mileageStartAddressSelector, mileageStartMileageSelector);
       
-      console.log("entering end addresses");
+      //console.log("entering end addresses");
       await sleep(300); // Reduced from 1000ms
       await populateMileageEntries(page, endAddresses, additionalDropdownValues);
       await saveAndReadyNote();
       
-      console.log("Mileage Successfully Saved!");
+      //console.log("Mileage Successfully Saved!");
       emit(uid, 'success', 'Mileage Saved Successfully!');
       emit(uid, 'toast', 'Mileage Saved Successfully!');
       emit(uid, 'finished', 'Process Completed!');
       emit(uid, 'toast', 'Process Completed!');
     } else {
-      console.log('Include Mileage is false. Skipping mileage processing.');
+      //console.log('Include Mileage is false. Skipping mileage processing.');
       // Emit note data without mileage for history tracking, but preserve existing endMileage values
       const noteData = {
         dateOfService,
@@ -1191,7 +1129,7 @@ export async function runPuppeteerScript(
         capturedAt: new Date().toISOString()
       };
       emit(uid, 'noteProcessed', noteData);
-      console.log("Note data emitted for history update (no mileage):", noteData);
+      //console.log("Note data emitted for history update (no mileage):", noteData);
       
       emit(uid, 'finished', 'Process Completed!');
       emit(uid, 'toast', 'Process Completed!');
@@ -1224,7 +1162,7 @@ export async function runPuppeteerScript(
     if (browser && !isBrowserClosed) {
       await closeSessionOnly(sessionId);
     }
-    console.log("Session closed");
+    //console.log("Session closed");
   }
 }
 

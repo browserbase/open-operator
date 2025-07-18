@@ -20,9 +20,6 @@ export const checkSubscriptionStatus = async (user: User): Promise<SubscriptionS
       }),
     });
 
-    console.log('📡 API Response status:', response.status);
-    console.log('📡 API Response ok:', response.ok);
-
     if (!response.ok) {
       console.error('❌ API response not ok:', response.status, response.statusText);
       throw new Error('Failed to check subscription status');
