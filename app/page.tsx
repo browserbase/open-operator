@@ -323,24 +323,6 @@ export default function Home() {
           </span>
         </div>
         <div className="flex items-center gap-4">
-          {user && subscriptionStatus && hasActiveSubscription(subscriptionStatus) && (
-            <button
-              onClick={() => setShowQueueManager(true)}
-              className={`relative px-3 py-2 text-sm rounded-md transition-colors font-medium ${
-                jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3
-                  ? 'bg-warning text-warning-foreground'
-                  : 'bg-background-secondary text-text-secondary hover:bg-secondary/80'
-              }`}
-              title={jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3 ? 'Queue is full (3/3 active jobs)' : 'View job queue'}
-            >
-              Queue
-              {jobs.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
-                  {jobs.filter(job => job.status === 'running' || job.status === 'pending').length}
-                </span>
-              )}
-            </button>
-          )}
           <ThemeToggle />
           {user && (
             <div className="flex items-center gap-3">
