@@ -170,7 +170,6 @@ export default function NoteGeniusModal({
             style={{ 
               backgroundColor: 'var(--bg-secondary)',
               borderColor: 'var(--border)',
-              border: '1px solid'
             }}
           >
             {originalText}
@@ -187,7 +186,7 @@ export default function NoteGeniusModal({
             style={{ 
               backgroundColor: 'var(--bg-secondary)',
               borderColor: 'var(--border)',
-              border: '1px solid'
+           
             }}
           >
             {isStreaming && (

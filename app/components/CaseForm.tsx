@@ -54,6 +54,10 @@ interface CaseFormProps {
   onLoginRequested?: () => void;
   isExecuting?: boolean;
   onStopAutomation?: () => void;
+  toast?: {
+    showError: (message: string) => void;
+    showSuccess: (message: string) => void;
+  };
 }
 
 interface SavedCredentials {
@@ -82,7 +86,7 @@ export interface FormTemplate {
   showMileage?: boolean; // Only at root level
 }
 
-export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation }: CaseFormProps) {
+export default function CaseForm({ onSubmit, isLoading, readOnly = false, initialFormData, isLoggedIn = false, userId, onLoginRequested, isExecuting = false, onStopAutomation, toast }: CaseFormProps) {
   const [saveCredentials, setSaveCredentials] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<FormTemplate[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -578,7 +582,12 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
     }
 
     if (missingFields.length > 0) {
-      setRequiredError(`Please fill out all required fields: ${missingFields.join(", ")}`);
+      const errorMessage = `Please fill out all required fields: ${missingFields.join(", ")}`;
+      if (toast) {
+        toast.showError(errorMessage);
+      } else {
+        setRequiredError(errorMessage);
+      }
       return;
     } else {
       setRequiredError("");
@@ -761,7 +770,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   
   return (
     <div className="h-full overflow-y-auto">
-      {requiredError && (
+      {!toast && requiredError && (
         <div className="mb-4 p-3 bg-error-bg border border-error-border rounded-md">
           <p className="text-sm text-error">{requiredError}</p>
         </div>

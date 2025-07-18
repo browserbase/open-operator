@@ -250,7 +250,7 @@ export default function ThemedModal({
                         backgroundColor: 'var(--button-secondary)',
                         color: 'var(--text-primary)',
                         borderColor: 'var(--border)',
-                        border: '1px solid'
+                       
                       }}
                     >
                       {cancelText}
