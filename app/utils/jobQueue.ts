@@ -231,7 +231,7 @@ class JobQueue {
     try {
       // Call the automation function directly instead of making HTTP requests
       const { startAutomation } = await import('./automation');
-      const result = await startAutomation(job.formData, undefined, job.userId);
+      const result = await startAutomation(job.formData);
 
       if (result.success) {
         // Update job with session information immediately
@@ -300,36 +300,5 @@ class JobQueue {
   }
 }
 
-// User-specific job queue manager
-class JobQueueManager {
-  private static instance: JobQueueManager;
-  private userQueues = new Map<string, JobQueue>();
-
-  static getInstance(): JobQueueManager {
-    if (!JobQueueManager.instance) {
-      JobQueueManager.instance = new JobQueueManager();
-    }
-    return JobQueueManager.instance;
-  }
-
-  getOrCreateQueue(userId: string): JobQueue {
-    if (!this.userQueues.has(userId)) {
-      this.userQueues.set(userId, new JobQueue(userId));
-    }
-    return this.userQueues.get(userId)!;
-  }
-
-  getUserQueue(userId: string): JobQueue | undefined {
-    return this.userQueues.get(userId);
-  }
-
-  removeUserQueue(userId: string): void {
-    this.userQueues.delete(userId);
-  }
-}
-
-// Export the manager instance
-export const jobQueueManager = JobQueueManager.getInstance();
-
-// Legacy compatibility - default to anonymous user for backwards compatibility
-export const jobQueue = jobQueueManager.getOrCreateQueue('anonymous');
+// Singleton instance
+export const jobQueue = new JobQueue();
