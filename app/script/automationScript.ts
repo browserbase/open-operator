@@ -18,6 +18,7 @@ export interface FormData {
   endAddresses: string[];
   additionalDropdownValues: string[];
   noteSummary47e?: string;
+  jobId?: string; // Added for local job queue tracking
 }
 
 export interface ObservationNotes {

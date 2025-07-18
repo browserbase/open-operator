@@ -19,8 +19,10 @@ import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/f
 import { User } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
-import { makeAuthenticatedRequest } from "./utils/apiClient";
+import { makeAuthenticatedRequest, getUserId } from "./utils/apiClient";
 import { checkSubscriptionStatus, hasActiveSubscription, SubscriptionStatus } from "./utils/subscription";
+import { getLocalJobQueue } from "./utils/localJobQueue";
+import { setupJobEventListener } from "./utils/jobEventListener";
 
 export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -225,36 +227,34 @@ export default function Home() {
     setSubmittedFormData(formData); // Store the form data
     
     try {
-      // Always add jobs to the queue for consistent tracking
-      const response = await makeAuthenticatedRequest("/api/queue", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: 'add', formData }),
-      }, user);
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Check if this is the first job (will start immediately)
-        const queueResponse = await makeAuthenticatedRequest("/api/queue", {}, user);
-        const queueData = await queueResponse.json();
-        const runningJobs = queueData.success ? queueData.jobs.filter((job: any) => job.status === 'running') : [];
-
+      // Use the local job queue instead of API
+      const localQueue = getLocalJobQueue();
+      if (!localQueue) {
+        throw new Error("Local job queue not available");
+      }
+      
+      const userId = getUserId(user || null);
+      const job = await localQueue.addJob(formData, userId, user);
+      
+      if (job) {
+        // Check if there are any running jobs
+        const userJobs = localQueue.getJobs(userId);
+        const runningJobs = userJobs.filter(j => j.status === 'running');
+        
         if (runningJobs.length > 0) {
           // If a job is already running, show success message
-          toast.showSuccess(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
+          toast.showSuccess(`Job queued successfully! Job ID: ${job.id.slice(-8)}`);
         } else {
           // If this is the first job, it will start running soon
-          toast.showSuccess(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
+          toast.showSuccess(`Job added to queue! Job ID: ${job.id.slice(-8)}`);
+          
+          // Set up event listener for this job if it has an execution ID
+          if (job.executionId) {
+            setupJobEventListener(job.executionId);
+          }
         }
       } else {
-        if (response.status === 429) {
-          toast.showError("Queue is full! You can only have 3 active jobs at a time. Please wait for some jobs to complete or remove some jobs first.");
-        } else {
-          throw new Error(result.error || "Failed to queue job");
-        }
+        toast.showError("Queue is full! You can only have 3 active jobs at a time. Please wait for some jobs to complete or remove some jobs first.");
       }
     } catch (error) {
       console.error("Error submitting job:", error);
