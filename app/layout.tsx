@@ -23,11 +23,11 @@ const ppSupply = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Open Operator",
-  description: "Watch AI browse the web, for free",
+  title: "Node v2",
+  description: "Automation is here",
   openGraph: {
     images: ["/og.png"],
-    title: "Open Operator",
+    title: "Node v2",
     description: "Watch AI browse the web, for free",
     url: "https://operator.browserbase.com",
   },
