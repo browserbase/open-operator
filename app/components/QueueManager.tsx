@@ -316,14 +316,14 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
                           {(job.status === 'completed' || job.status === 'failed') && (
                             <button
                               onClick={(e) => {
-                                e.stopPropagation();
-                                rerunJob(job.id);
+                              e.stopPropagation();
+                              rerunJob(job.id);
                               }}
                               disabled={loading || jobs.filter(j => j.status === 'pending' || j.status === 'running').length >= 3}
-                              className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors"
+                              className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors hover:opacity-70"
                               style={{
-                                backgroundColor: 'var(--primary)',
-                                color: 'var(--text-inverse)'
+                              backgroundColor: 'var(--primary)',
+                              color: 'white'
                               }}
                               title={jobs.filter(j => j.status === 'pending' || j.status === 'running').length >= 3 ? 'Queue is full (3 active jobs maximum)' : 'Rerun this job'}
                             >
@@ -337,10 +337,10 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
                                 removeJob(job.id);
                               }}
                               disabled={loading}
-                              className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors"
+                              className="px-3 py-1 text-sm rounded disabled:opacity-50 transition-colors hover:opacity-70"
                               style={{
                                 backgroundColor: 'var(--error)',
-                                color: 'var(--text-inverse)'
+                                color: 'white'
                               }}
                             >
                               Remove
