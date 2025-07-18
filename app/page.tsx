@@ -165,6 +165,19 @@ export default function Home() {
   }, [isExecuting, sessionId, user]); // Add user dependency
 
   const handleLogin = async () => {
+    // Validate that both email and password are provided
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setAuthError("Please enter both email and password");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(loginEmail.trim())) {
+      setAuthError("Please enter a valid email address");
+      return;
+    }
+
     setAuthLoading(true);
     setAuthError("");
     
@@ -306,7 +319,7 @@ export default function Home() {
           {/* Animated Cube Icon */}
           <AnimatedCubeIcon size={32} />
           <span className="font-ppsupply text-foreground">
-            {isExecuting ? "E-Automate" : "E-Automate"}
+            {isExecuting ? "Node V2" : "Node v2"}
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -427,7 +440,7 @@ export default function Home() {
               <div className="bg-modal rounded-lg shadow-theme-lg p-8 border border-border">
                 <div className="text-center mb-6">
                   <AnimatedCubeIcon size={48} />
-                  <h1 className="text-2xl font-bold text-text-primary mt-4 mb-2">Welcome to E-Automate</h1>
+                  <h1 className="text-2xl font-bold text-text-primary mt-4 mb-2">Welcome to Node v2</h1>
                   <p className="text-text-secondary">Please sign in to access your automation tools</p>
                 </div>
                 
@@ -448,7 +461,7 @@ export default function Home() {
                       value={loginPassword}
                       onChange={e => setLoginPassword(e.target.value)}
                       onKeyDown={e => {
-                        if (e.key === 'Enter' && !authLoading) {
+                        if (e.key === 'Enter' && !authLoading && loginEmail.trim() && loginPassword.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim())) {
                           handleLogin();
                         }
                       }}
@@ -466,9 +479,9 @@ export default function Home() {
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={handleLogin}
-                      disabled={authLoading}
+                      disabled={authLoading || !loginEmail.trim() || !loginPassword.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim())}
                       className={`w-full px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50 flex items-center justify-center gap-2 ${
-                        !authLoading ? "hover:bg-primary-hover transition-colors" : ""
+                        !authLoading && loginEmail.trim() && loginPassword.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim()) ? "hover:bg-primary-hover transition-colors" : ""
                       }`}
                     >
                       {authLoading ? (
@@ -511,7 +524,7 @@ export default function Home() {
                   <AnimatedCubeIcon size={48} />
                   <h1 className="text-2xl font-bold text-text-primary mt-4 mb-2">Subscription Required</h1>
                   <p className="text-text-secondary mb-4">
-                    Hello {user.email}! To access E-Automate features, you need an active subscription.
+                    Hello {user.email}! To access Node features, you need an active subscription.
                   </p>
                   
                   {subscriptionStatus?.status === 'past_due' && (
