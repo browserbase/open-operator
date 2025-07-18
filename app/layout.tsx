@@ -26,10 +26,10 @@ export const metadata: Metadata = {
   title: "Node v2",
   description: "Automation is here",
   openGraph: {
-    images: ["/og.png"],
+    images: ["/ogpng"],
     title: "Node v2",
     description: "Watch AI browse the web, for free",
-    url: "https://operator.browserbase.com",
+    url: "https://Nodev2.bawebtools.com",
   },
   icons: {
     icon: [
