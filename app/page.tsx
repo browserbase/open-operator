@@ -221,7 +221,7 @@ export default function Home() {
 
       const result = await response.json();
 
-      if (result.success) {
+      if (response.ok && result.success) {
         // Check if this is the first job (will start immediately)
         const queueResponse = await makeAuthenticatedRequest("/api/queue", {}, user);
         const queueData = await queueResponse.json();
@@ -235,7 +235,11 @@ export default function Home() {
           toast.showSuccess(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
         }
       } else {
-        throw new Error(result.error || "Failed to queue job");
+        if (response.status === 429) {
+          toast.showError("Queue is full! You can only have 3 active jobs at a time. Please wait for some jobs to complete or remove some jobs first.");
+        } else {
+          throw new Error(result.error || "Failed to queue job");
+        }
       }
     } catch (error) {
       console.error("Error submitting job:", error);
@@ -298,12 +302,17 @@ export default function Home() {
           {user && subscriptionStatus && hasActiveSubscription(subscriptionStatus) && (
             <button
               onClick={() => setShowQueueManager(true)}
-              className="relative px-3 py-2 text-sm bg-secondary text-text-secondary rounded-md hover:bg-secondary/80 transition-colors font-medium"
+              className={`relative px-3 py-2 text-sm rounded-md transition-colors font-medium ${
+                jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3
+                  ? 'bg-warning text-warning-foreground'
+                  : 'bg-secondary text-text-secondary hover:bg-secondary/80'
+              }`}
+              title={jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3 ? 'Queue is full (3/3 active jobs)' : 'View job queue'}
             >
               Queue
               {jobs.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
-                  {jobs.filter(job => job.status === 'running' || job.status === 'queued').length}
+                  {jobs.filter(job => job.status === 'running' || job.status === 'pending').length}
                 </span>
               )}
             </button>
@@ -654,7 +663,7 @@ export default function Home() {
         <AnimatePresence>
           {isExecuting && (
             <motion.div 
-              className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-background border-l border-border flex flex-col z-30 shadow-theme-lg"
+              className="fixed top-[73px] right-0 w-80 h-[calc(100vh-73px)] bg-modal border-l border-border flex flex-col z-30 shadow-theme-lg"
               initial={{ x: 320, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 320, opacity: 0 }}

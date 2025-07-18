@@ -49,17 +49,18 @@ const CustomTimeInput: React.FC<CustomTimeInputProps> = ({
   }, [value]);
 
   // Format time input and handle military time conversion
-  const formatTimeInput = (input: string): { formatted: string, period: 'AM' | 'PM' } => {
-    if (!input.trim()) return { formatted: '', period: 'AM' };
+  const formatTimeInput = (input: string): { formatted: string, period: 'AM' | 'PM', shouldUpdatePeriod: boolean } => {
+    if (!input.trim()) return { formatted: '', period: 'AM', shouldUpdatePeriod: false };
     
     // Remove all non-digit characters
     const digitsOnly = input.replace(/\D/g, '');
     
-    if (digitsOnly.length === 0) return { formatted: '', period: 'AM' };
+    if (digitsOnly.length === 0) return { formatted: '', period: 'AM', shouldUpdatePeriod: false };
     
     let hours = 0;
     let minutes = 0;
-    let detectedPeriod: 'AM' | 'PM' = 'AM';
+    let detectedPeriod: 'AM' | 'PM' = period; // Default to current period
+    let shouldUpdatePeriod = false;
     
     // Handle different input lengths
     if (digitsOnly.length === 1 || digitsOnly.length === 2) {
@@ -76,22 +77,23 @@ const CustomTimeInput: React.FC<CustomTimeInputProps> = ({
       minutes = parseInt(digitsOnly.slice(2), 10);
     }
     
-    // Handle military time (24-hour format)
+    // Handle military time (24-hour format) - only auto-switch for actual military time
     if (hours >= 13 && hours <= 23) {
       // Military time - convert to 12-hour and set PM
       hours = hours - 12;
       detectedPeriod = 'PM';
+      shouldUpdatePeriod = true;
     } else if (hours === 0) {
       // Midnight - convert to 12 AM
       hours = 12;
       detectedPeriod = 'AM';
+      shouldUpdatePeriod = true;
     } else if (hours === 12) {
       // Noon - keep as 12 PM
       detectedPeriod = 'PM';
-    } else if (hours >= 1 && hours <= 11) {
-      // Regular morning/afternoon hours
-      detectedPeriod = 'AM';
+      shouldUpdatePeriod = true;
     }
+    // For hours 1-11, don't auto-change the period - keep whatever was selected
     
     // Validate and fix ranges
     if (hours < 1 || hours > 12) hours = 12;
@@ -99,7 +101,7 @@ const CustomTimeInput: React.FC<CustomTimeInputProps> = ({
     
     const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}`;
     
-    return { formatted: formattedTime, period: detectedPeriod };
+    return { formatted: formattedTime, period: detectedPeriod, shouldUpdatePeriod };
   };
 
   // Convert display format to 24-hour format
@@ -138,14 +140,19 @@ const CustomTimeInput: React.FC<CustomTimeInputProps> = ({
   };
 
   const handleBlur = () => {
-    const { formatted, period: detectedPeriod } = formatTimeInput(displayValue);
+    const { formatted, period: detectedPeriod, shouldUpdatePeriod } = formatTimeInput(displayValue);
     
     if (formatted) {
       setDisplayValue(formatted);
-      setPeriod(detectedPeriod);
+      
+      // Only update period if we detected actual military time or special cases
+      if (shouldUpdatePeriod) {
+        setPeriod(detectedPeriod);
+      }
       
       // Convert to 24-hour format and update
-      const parsed24Hour = convertTo24Hour(formatted, detectedPeriod === 'PM');
+      const finalPeriod = shouldUpdatePeriod ? detectedPeriod : period;
+      const parsed24Hour = convertTo24Hour(formatted, finalPeriod === 'PM');
       onChange(parsed24Hour);
     }
   };

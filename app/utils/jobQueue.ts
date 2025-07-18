@@ -10,7 +10,14 @@ class JobQueue {
   private executionToJobMap = new Map<string, string>(); // Maps executionId to jobId
   private userQueues = new Map<string, QueuedJob[]>(); // User-specific job queues
 
-  addJob(formData: any, userId: string = 'anonymous'): QueuedJob {
+  addJob(formData: any, userId: string = 'anonymous'): QueuedJob | null {
+    // Check if user already has 3 or more active jobs (pending + running)
+    const activeJobs = this.getActiveJobsForUser(userId);
+    if (activeJobs >= 3) {
+      console.log(`User ${userId} already has ${activeJobs} active jobs. Cannot add more.`);
+      return null;
+    }
+
     const job: QueuedJob = {
       id: this.generateId(),
       formData,
@@ -54,6 +61,14 @@ class JobQueue {
   // Get jobs for a specific user
   getJobsForUser(userId: string): QueuedJob[] {
     return this.jobs.filter(job => job.userId === userId);
+  }
+
+  // Get count of active jobs (pending + running) for a specific user
+  getActiveJobsForUser(userId: string): number {
+    return this.jobs.filter(job => 
+      job.userId === userId && 
+      (job.status === 'pending' || job.status === 'running')
+    ).length;
   }
 
   getJob(id: string): QueuedJob | undefined {
@@ -111,6 +126,14 @@ class JobQueue {
   rerunJob(id: string): QueuedJob | null {
     const existingJob = this.jobs.find(job => job.id === id);
     if (!existingJob) return null;
+
+    // Check if user already has 3 or more active jobs (pending + running)
+    const userId = existingJob.userId || 'anonymous';
+    const activeJobs = this.getActiveJobsForUser(userId);
+    if (activeJobs >= 3) {
+      console.log(`User ${userId} already has ${activeJobs} active jobs. Cannot rerun job.`);
+      return null;
+    }
 
     // Create a new job with the same form data and userId
     const newJob: QueuedJob = {
