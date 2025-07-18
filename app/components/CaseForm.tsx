@@ -14,6 +14,7 @@ import { db } from "../firebaseConfig";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import MileageWarningModal from "./MileageWarningModal";
 import NoteGeniusModal from "./NoteGeniusModal";
+import ThemedModal from "./ThemedModal";
 
 // Utility function to format time from 24-hour to 12-hour format with AM/PM
 const formatTimeToAMPM = (time24: string): string => {
@@ -129,6 +130,11 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   const [lastProcessedMileage, setLastProcessedMileage] = useState<string | null>(null);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
   const [showMileageConfirmation, setShowMileageConfirmation] = useState(false);
+  const [showOverlapWarning, setShowOverlapWarning] = useState(false);
+  const [overlapWarningData, setOverlapWarningData] = useState<{
+    conflictingEntry?: MileageHistoryEntry;
+    currentDateTime?: Date;
+  }>({});
   const [showNoteGeniusModal, setShowNoteGeniusModal] = useState(false);
   const [isLoadingMileage, setIsLoadingMileage] = useState(false);
   const [mileageHistory, setMileageHistory] = useState<MileageHistoryEntry[]>([]);
@@ -193,6 +199,80 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       setIsLoadingMileageHistory(false);
     }
   }, [isLoggedIn, userId]);
+
+  // Function to check for overlapping entries
+  const checkForOverlappingEntries = useCallback((dateOfService: string, startTime: string, endTime: string) => {
+    if (!dateOfService || !startTime || !endTime || mileageHistory.length === 0) {
+      return null;
+    }
+
+    // Parse the current form data into a date/time
+    const currentDate = parseLocalDate(dateOfService);
+    const currentStartTime = parseTimeString(startTime);
+    const currentEndTime = parseTimeString(endTime);
+    
+    // Create datetime objects for comparison
+    const currentStartDateTime = new Date(currentDate);
+    currentStartDateTime.setHours(currentStartTime.hours, currentStartTime.minutes, 0, 0);
+    
+    const currentEndDateTime = new Date(currentDate);
+    currentEndDateTime.setHours(currentEndTime.hours, currentEndTime.minutes, 0, 0);
+    
+    // Check against recent entries (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    for (const entry of mileageHistory) {
+      const entryDate = parseLocalDate(entry.dateOfService);
+      const entryStartTime = parseTimeString(entry.startTime);
+      const entryEndTime = parseTimeString(entry.endTime);
+      
+      // Skip entries older than 30 days
+      if (entryDate < thirtyDaysAgo) continue;
+      
+      // Create datetime objects for the history entry
+      const entryStartDateTime = new Date(entryDate);
+      entryStartDateTime.setHours(entryStartTime.hours, entryStartTime.minutes, 0, 0);
+      
+      const entryEndDateTime = new Date(entryDate);
+      entryEndDateTime.setHours(entryEndTime.hours, entryEndTime.minutes, 0, 0);
+      
+      // Check if current entry overlaps with or is before this history entry
+      const isOverlapping = (
+        (currentStartDateTime < entryEndDateTime && currentEndDateTime > entryStartDateTime) ||
+        (currentStartDateTime < entryStartDateTime)
+      );
+      
+      if (isOverlapping) {
+        return {
+          conflictingEntry: entry,
+          currentDateTime: currentStartDateTime
+        };
+      }
+    }
+    
+    return null;
+  }, [mileageHistory]);
+
+  // Helper function to parse time string into hours and minutes
+  const parseTimeString = (timeStr: string): { hours: number; minutes: number } => {
+    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!match) {
+      return { hours: 0, minutes: 0 };
+    }
+    
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3]?.toUpperCase();
+    
+    if (period === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    return { hours, minutes };
+  };
 
   // Function to check for mileage warning
   const checkMileageWarning = useCallback(() => {
@@ -516,15 +596,73 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
   };
 
   const handleSetCurrentMileage = () => {
-    // Set the current mileage to the last processed mileage
-    if (lastProcessedMileage) {
-      setFormData(prev => ({
-        ...prev,
-        mileageStartMileage: lastProcessedMileage
-      }));
-    }
     setShowMileageConfirmation(false);
-    // Don't submit the form - just update the field and close the modal
+    
+    // Set the current mileage to the last processed mileage and proceed with submission
+    if (lastProcessedMileage) {
+      const updatedFormData = {
+        ...formData,
+        mileageStartMileage: lastProcessedMileage
+      };
+      
+      // Update the form data
+      setFormData(updatedFormData);
+      
+      // Proceed with form submission using the updated data
+      proceedWithFormSubmissionWithData(updatedFormData);
+    } else {
+      // If no last processed mileage, just proceed with current data
+      proceedWithFormSubmission();
+    }
+  };
+
+  // Helper function to proceed with form submission using specific form data
+  const proceedWithFormSubmissionWithData = (formDataToSubmit: FormData) => {
+    // Clean up form data before submission based on mileage checkbox state
+    const cleanedFormData = { ...formDataToSubmit };
+    if (!showMileage) {
+      // Remove mileage-related data when mileage is disabled
+      cleanedFormData.mileageStartAddress = "";
+      cleanedFormData.mileageStartMileage = "";
+      // Reset addresses to just one empty address when mileage is disabled
+      cleanedFormData.endAddresses = [""];
+      cleanedFormData.additionalDropdownValues = [""];
+    }
+
+    onSubmit(cleanedFormData);
+  };
+
+  // Handlers for overlap warning modal
+  const handleOverlapConfirm = () => {
+    setShowOverlapWarning(false);
+    // Continue with the normal submission flow (check mileage warnings next)
+    proceedWithFormSubmission();
+  };
+
+  const handleOverlapCancel = () => {
+    setShowOverlapWarning(false);
+  };
+
+  // Function to proceed with form submission after overlap check
+  const proceedWithFormSubmission = () => {
+    // Check for mileage warning and confirm with user
+    if (showMileageWarning) {
+      setShowMileageConfirmation(true);
+      return;
+    }
+
+    // Clean up form data before submission based on mileage checkbox state
+    const cleanedFormData = { ...formData };
+    if (!showMileage) {
+      // Remove mileage-related data when mileage is disabled
+      cleanedFormData.mileageStartAddress = "";
+      cleanedFormData.mileageStartMileage = "";
+      // Reset addresses to just one empty address when mileage is disabled
+      cleanedFormData.endAddresses = [""];
+      cleanedFormData.additionalDropdownValues = [""];
+    }
+
+    onSubmit(cleanedFormData);
   };
 
   // Handler for Note Genius modal
@@ -600,24 +738,16 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
       setRequiredError("");
     }
 
-    // Check for mileage warning and confirm with user
-    if (showMileageWarning) {
-      setShowMileageConfirmation(true);
+    // Check for overlapping entries first
+    const overlapCheck = checkForOverlappingEntries(formData.dateOfService, formData.startTime, formData.endTime);
+    if (overlapCheck) {
+      setOverlapWarningData(overlapCheck);
+      setShowOverlapWarning(true);
       return;
     }
 
-    // Clean up form data before submission based on mileage checkbox state
-    const cleanedFormData = { ...formData };
-    if (!showMileage) {
-      // Remove mileage-related data when mileage is disabled
-      cleanedFormData.mileageStartAddress = "";
-      cleanedFormData.mileageStartMileage = "";
-      // Reset addresses to just one empty address when mileage is disabled
-      cleanedFormData.endAddresses = [""];
-      cleanedFormData.additionalDropdownValues = [""];
-    }
-
-    onSubmit(cleanedFormData);
+    // If no overlap, proceed with normal submission flow
+    proceedWithFormSubmission();
   };
 
   const clearSavedCredentials = () => {
@@ -1583,7 +1713,7 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
                     color: 'var(--text-primary)',
                     borderColor: 'var(--border)',
                     '--tw-ring-color': 'var(--primary)'
-                  }}
+                  } as React.CSSProperties}
                   placeholder="Enter template name"
                   autoFocus
                 />
@@ -1873,6 +2003,65 @@ export default function CaseForm({ onSubmit, isLoading, readOnly = false, initia
         currentMileage={formData.mileageStartMileage ? parseInt(formData.mileageStartMileage.replace(/,/g, '')) : undefined}
         lastMileage={lastProcessedMileage ? parseInt(lastProcessedMileage.replace(/,/g, '')) : undefined}
       />
+
+      {/* Overlap Warning Modal */}
+      {showOverlapWarning && (
+        <ThemedModal
+          isVisible={showOverlapWarning}
+          onClose={handleOverlapCancel}
+          title="Potential Overlap Detected"
+          type="warning"
+          showCancel={false}
+          showConfirm={false}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              This case appears to overlap with an existing entry:
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="font-medium text-black">Existing Entry:</p>
+              <p className="text-sm text-black">
+                <strong>Date:</strong> {overlapWarningData?.conflictingEntry?.dateOfService}
+              </p>
+              <p className="text-sm text-black">
+                <strong>Time:</strong> {overlapWarningData?.conflictingEntry?.startTime} - {overlapWarningData?.conflictingEntry?.endTime}
+              </p>
+              <p className="text-sm text-black">
+                <strong>Execution ID:</strong> {overlapWarningData?.conflictingEntry?.executionId}
+              </p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="font-medium text-black">New Entry:</p>
+              <p className="text-sm text-black">
+                <strong>Date:</strong> {formData.dateOfService}
+              </p>
+              <p className="text-sm text-black">
+                <strong>Time:</strong> {formData.startTime} - {formData.endTime}
+              </p>
+              <p className="text-sm text-black">
+                <strong>Addresses:</strong> {formData.endAddresses.filter(addr => addr.trim()).join(', ')}
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              Do you want to continue with this potentially overlapping entry?
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={handleOverlapCancel}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleOverlapConfirm}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
+        </ThemedModal>
+      )}
 
       {/* Note Genius Modal */}
       <NoteGeniusModal

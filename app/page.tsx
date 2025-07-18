@@ -467,7 +467,9 @@ export default function Home() {
                     <button
                       onClick={handleLogin}
                       disabled={authLoading}
-                      className="w-full px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50 hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
+                      className={`w-full px-4 py-2 bg-primary text-white rounded-md font-medium disabled:opacity-50 flex items-center justify-center gap-2 ${
+                        !authLoading ? "hover:bg-primary-hover transition-colors" : ""
+                      }`}
                     >
                       {authLoading ? (
                         <>
@@ -1002,7 +1004,7 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
               <div className="flex-1 min-w-0">
                 <span className={`text-sm block ${
                   progressMessage.type === 'success' ? 'text-green-700 dark:text-green-400' : 
-                  progressMessage.type === 'progress' ? 'text-blue-600 dark:text-blue-400' :
+                  progressMessage.type === 'progress' ? 'text-primary-color' :
                   progressMessage.type === 'error' ? 'text-red-600 dark:text-red-400' : 
                   'text-gray-500 dark:text-gray-400'
                 }`}>

@@ -67,7 +67,7 @@
 }
 
 .dark {
-  --background: #030a03;
+  --background: #0a0703;
   --foreground: #ffffff;
   --background-transparent: rgba(0, 0, 0, 0);
   /* Background variations - Next.js style */
@@ -75,8 +75,8 @@
   --bg-tertiary: #1a1a1a;
   --bg-modal: rgba(26, 26, 26, 0.8);
   --bg-overlay: rgba(0, 0, 0, 0.8);
-    --primary: #5dc12f;
-  --primary-hover: #69e644;
+    --primary: #e66022;
+  --primary-hover: #cf5319d0;
   /* Border colors - Next.js style */
   --border: #333333;
   --border-light: #2a2a2a;
