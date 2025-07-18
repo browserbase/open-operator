@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export interface ToastMessage {
   id: string;
@@ -13,28 +13,79 @@ interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose(message.id);
-    }, message.duration || 5000);
+  const [progress, setProgress] = useState(100);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const remainingTimeRef = useRef<number>(message.duration || 5000);
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    // Animate in
+    const showTimer = setTimeout(() => {
+      setIsVisible(true);
+    }, 50);
+
+    const startTimer = () => {
+      const updateInterval = 50; // Update every 50ms
+      const totalDuration = message.duration || 5000;
+      
+      timerRef.current = setInterval(() => {
+        if (!isPaused) {
+          remainingTimeRef.current -= updateInterval;
+          const newProgress = (remainingTimeRef.current / totalDuration) * 100;
+          setProgress(Math.max(0, newProgress));
+          
+          if (remainingTimeRef.current <= 0) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            // Start exit animation
+            setIsExiting(true);
+            setTimeout(() => {
+              onClose(message.id);
+            }, 300); // Wait for exit animation
+          }
+        }
+      }, updateInterval);
+    };
+
+    startTimer();
+
+    return () => {
+      clearTimeout(showTimer);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [message.id, message.duration, onClose]);
 
+  // Handle pause state changes
+  useEffect(() => {
+    // Timer logic is handled in the main useEffect above
+    // isPaused state is checked in the interval callback
+  }, [isPaused]);
+
   const getToastStyles = () => {
-    const baseStyles = "max-w-sm w-full bg-white dark:bg-gray-800 border-l-4 p-4 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform translate-x-0";
+    const baseStyles = "max-w-sm w-full border-l-4 p-4 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform relative overflow-hidden";
+    const animationStyles = isVisible 
+      ? (isExiting ? "translate-x-[-120%] opacity-0" : "translate-x-0 opacity-100") 
+      : "translate-x-[-120%] opacity-0";
     
+    let colorStyles = "";
     switch (message.type) {
       case 'success':
-        return `${baseStyles} border-green-500 text-green-800 dark:text-green-200`;
+        colorStyles = "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-800 dark:text-green-200";
+        break;
       case 'error':
-        return `${baseStyles} border-red-500 text-red-800 dark:text-red-200`;
+        colorStyles = "bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200";
+        break;
       case 'warning':
-        return `${baseStyles} border-yellow-500 text-yellow-800 dark:text-yellow-200`;
+        colorStyles = "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 text-yellow-800 dark:text-yellow-200";
+        break;
       case 'info':
       default:
-        return `${baseStyles} border-blue-500 text-blue-800 dark:text-blue-200`;
+        colorStyles = "bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200";
+        break;
     }
+    
+    return `${baseStyles} ${animationStyles} ${colorStyles}`;
   };
 
   const getIconStyles = () => {
@@ -81,8 +132,33 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
     }
   };
 
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose(message.id);
+    }, 300);
+  };
+
+  const getProgressBarColor = () => {
+    switch (message.type) {
+      case 'success':
+        return 'bg-green-500';
+      case 'error':
+        return 'bg-red-500';
+      case 'warning':
+        return 'bg-yellow-500';
+      case 'info':
+      default:
+        return 'bg-blue-500';
+    }
+  };
+
   return (
-    <div className={getToastStyles()}>
+    <div 
+      className={getToastStyles()}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
       <div className="flex items-start">
         <div className={`flex-shrink-0 ${getIconStyles()}`}>
           {getIcon()}
@@ -92,7 +168,7 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
         </div>
         <div className="ml-4 flex-shrink-0 flex">
           <button
-            onClick={() => onClose(message.id)}
+            onClick={handleClose}
             className="inline-flex text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 focus:outline-none focus:text-gray-500 dark:focus:text-gray-400 transition-colors duration-150"
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -100,6 +176,14 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
             </svg>
           </button>
         </div>
+      </div>
+      
+      {/* Progress bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700">
+        <div 
+          className={`h-full transition-all duration-75 ease-linear ${getProgressBarColor()}`}
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   );
@@ -112,9 +196,17 @@ interface ToastContainerProps {
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onClose }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {messages.map((message) => (
-        <Toast key={message.id} message={message} onClose={onClose} />
+    <div className="fixed top-4 left-4 z-50 space-y-2 bg-modal w-96 max-w-[calc(100vw-2rem)]">
+      {messages.map((message, index) => (
+        <div 
+          key={message.id} 
+          style={{ 
+            animationDelay: `${index * 100}ms`,
+            zIndex: 1000 - index
+          }}
+        >
+          <Toast message={message} onClose={onClose} />
+        </div>
       ))}
     </div>
   );
@@ -128,17 +220,27 @@ export const useToast = () => {
     const id = Math.random().toString(36).substring(2, 15);
     const newMessage: ToastMessage = { id, message, type, duration };
     
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => {
+      // Add a slight delay for staggered animations
+      const newMessages = [...prev, newMessage];
+      return newMessages;
+    });
   };
 
   const removeToast = (id: string) => {
     setMessages((prev) => prev.filter((message) => message.id !== id));
   };
 
+  // Clear all toasts
+  const clearAll = () => {
+    setMessages([]);
+  };
+
   return {
     messages,
     addToast,
     removeToast,
+    clearAll,
     showSuccess: (message: string, duration?: number) => addToast(message, 'success', duration),
     showError: (message: string, duration?: number) => addToast(message, 'error', duration),
     showWarning: (message: string, duration?: number) => addToast(message, 'warning', duration),

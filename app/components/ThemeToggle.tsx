@@ -7,14 +7,14 @@ export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   const themes = [
-    { value: "light", label: "Light", icon: "☀️" },
-    { value: "dark", label: "Dark", icon: "🌙" },
-    { value: "system", label: "System", icon: "💻" }
+    { value: "light", label: "Light", icon: "" },
+    { value: "dark", label: "Dark", icon: "" },
+  
   ] as const;
 
   return (
     <div className="relative">
-      <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 space-x-1">
+      <div className="flex items-center bg-background-secondary rounded-lg p-1 space-x-1">
         {themes.map((themeOption) => (
           <button
             key={themeOption.value}
@@ -28,7 +28,7 @@ export default function ThemeToggle() {
             {theme === themeOption.value && (
               <motion.div
                 layoutId="theme-toggle-bg"
-                className="absolute inset-0 bg-[#FF3B00] rounded-md"
+                className="absolute inset-0 bg-primary rounded-md"
                 transition={{ type: "spring", duration: 0.5 }}
               />
             )}

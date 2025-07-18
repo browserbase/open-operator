@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AddressAutocomplete from "./AddressAutocomplete";
-
-interface AutoSetData {
-  homeAddress: string;
-  officeAddress: string;
-}
+import { saveAutoSetDataToFirebase, getAutoSetDataFromFirebase, AutoSetData } from "./firebaseAutoSetService";
 
 interface AutoSetProps {
   isLoggedIn: boolean;
@@ -21,13 +17,26 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
-  // Load saved auto-set data from localStorage
+  // Load auto-set data from Firebase when user logs in
   useEffect(() => {
-    const savedData = localStorage.getItem('autoSetData');
-    if (savedData) {
-      setAutoSetData(JSON.parse(savedData));
-    }
-  }, []);
+    const loadAutoSetData = async () => {
+      if (isLoggedIn && userId) {
+        try {
+          const data = await getAutoSetDataFromFirebase(userId);
+          if (data) {
+            setAutoSetData(data);
+          }
+        } catch (error) {
+          console.error('Failed to load auto set data:', error);
+        }
+      } else {
+        // Reset data when user logs out
+        setAutoSetData({ homeAddress: "", officeAddress: "" });
+      }
+    };
+
+    loadAutoSetData();
+  }, [isLoggedIn, userId]);
 
   const handleAddressChange = (field: keyof AutoSetData, value: string) => {
     setAutoSetData(prev => ({
@@ -37,17 +46,15 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
   };
 
   const saveData = async () => {
+    if (!isLoggedIn || !userId) {
+      setSaveMessage("Please log in to save auto-set data");
+      setTimeout(() => setSaveMessage(""), 3000);
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('autoSetData', JSON.stringify(autoSetData));
-      
-      // TODO: Save to Firebase when logged in
-      if (isLoggedIn && userId) {
-        // Firebase save logic can be added here
-        console.log('Would save to Firebase for user:', userId);
-      }
-      
+      await saveAutoSetDataToFirebase(autoSetData, userId);
       setSaveMessage("Auto-set addresses saved successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (error) {
@@ -63,9 +70,9 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
     <div className="h-full overflow-y-auto">
       <div className="p-6">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+          <div className="bg-background-primary rounded-lg shadow-sm  border-border p-8">
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-2">
                 Auto-Set Addresses
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
@@ -74,7 +81,7 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
               {!isLoggedIn && (
                 <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    <strong>Note:</strong> You must be logged in to access this feature. Addresses will only be saved locally until you log in.
+                    <strong>Note:</strong> You must be logged in to save and access auto-set addresses. Please log in to use this feature.
                   </p>
                 </div>
               )}
@@ -111,11 +118,11 @@ export default function AutoSet({ isLoggedIn, userId }: AutoSetProps) {
                 />
               </div>
 
-              <div className="flex justify-end pt-6 border-t">
+              <div className="flex justify-end pt-6 ">
                 <button
                   onClick={saveData}
                   disabled={isSaving || (!autoSetData.homeAddress && !autoSetData.officeAddress)}
-                  className="px-8 py-3 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="px-8 py-3 bg-primary text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {isSaving ? "Saving..." : "Save Addresses"}
                 </button>

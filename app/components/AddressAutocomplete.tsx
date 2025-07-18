@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 
 // Declare the custom element for TypeScript
@@ -28,7 +29,6 @@ interface AddressAutocompleteProps {
 export default function AddressAutocomplete({
   value,
   onChange,
-  placeholder,
   label,
   readOnly = false,
   className = "",
@@ -42,6 +42,78 @@ export default function AddressAutocomplete({
   const [inputValue, setInputValue] = useState(value);
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [isClient, setIsClient] = useState(false);
+
+  // Calculate dropdown position based on input position
+  const updateDropdownPosition = useCallback(() => {
+    if (autocompleteElementRef.current) {
+      const rect = autocompleteElementRef.current.getBoundingClientRect();
+      const viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+      
+      // Dropdown dimensions (estimated)
+      const dropdownHeight = Math.min(240, suggestions.length * 56); // max-h-60 = 240px, each item ~56px
+      const dropdownWidth = rect.width;
+      
+      // Calculate initial position (below input)
+      let top = rect.bottom + window.scrollY + 4; // 4px margin
+      let left = rect.left + window.scrollX;
+      
+      // Check if dropdown would go off the right edge
+      if (left + dropdownWidth > viewport.width) {
+        left = viewport.width - dropdownWidth - 8; // 8px padding from edge
+      }
+      
+      // Check if dropdown would go off the left edge
+      if (left < 8) {
+        left = 8; // 8px padding from edge
+      }
+      
+      // Check if dropdown would go off the bottom edge
+      if (rect.bottom + dropdownHeight + 4 > viewport.height) {
+        // Position above the input instead
+        top = rect.top + window.scrollY - dropdownHeight - 4;
+        
+        // If it still doesn't fit above, position at the top of the viewport
+        if (top < window.scrollY + 8) {
+          top = window.scrollY + 8;
+        }
+      }
+      
+      setDropdownPosition({
+        top,
+        left,
+        width: dropdownWidth
+      });
+    }
+  }, [suggestions.length]);
+
+  // Ensure we're on the client side for portal rendering
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Handle window resize and scroll to reposition dropdown
+  useEffect(() => {
+    const handleReposition = () => {
+      if (showSuggestions) {
+        updateDropdownPosition();
+      }
+    };
+
+    if (showSuggestions) {
+      window.addEventListener('resize', handleReposition);
+      window.addEventListener('scroll', handleReposition);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition);
+    };
+  }, [showSuggestions, updateDropdownPosition]);
 
   // Sync internal input value with external value prop
   useEffect(() => {
@@ -94,6 +166,7 @@ export default function AddressAutocomplete({
       }, (predictions, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
           setSuggestions(predictions);
+          updateDropdownPosition();
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
@@ -118,9 +191,27 @@ export default function AddressAutocomplete({
     }
   };
 
+  // Position dropdown when suggestions change or window resizes
+  useEffect(() => {
+    updateDropdownPosition();
+    
+    const handleResize = () => {
+      updateDropdownPosition();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', updateDropdownPosition);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', updateDropdownPosition);
+    };
+  }, [suggestions, updateDropdownPosition]);
+
   const handleInputFocus = () => {
     // Show suggestions when input is focused if there's text
     if (inputValue.length > 2 && suggestions.length > 0) {
+      updateDropdownPosition();
       setShowSuggestions(true);
     }
   };
@@ -132,19 +223,63 @@ export default function AddressAutocomplete({
     }, 150);
   };
 
-  const baseInputClassName = `w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent ${readOnly ? 'read-only:bg-gray-50 read-only:dark:bg-gray-800 read-only:cursor-default' : ''}`;
+  // Dropdown portal component
+  const DropdownPortal = () => {
+    if (!isClient || !showSuggestions || suggestions.length === 0) return null;
+
+    return createPortal(
+      <div 
+        className="fixed z-[9999] backdrop-blur-md border rounded-md shadow-lg max-h-60 overflow-auto"
+        style={{
+          top: `${dropdownPosition.top}px`,
+          left: `${dropdownPosition.left}px`,
+          width: `${dropdownPosition.width}px`,
+          marginTop: '4px',
+          backgroundColor: 'var(--bg-modal)',
+          borderColor: 'var(--border)',
+          boxShadow: 'var(--shadow-lg)'
+        }}
+      >
+        {suggestions.map((suggestion) => (
+          <button
+            key={suggestion.place_id}
+            type="button"
+            className="w-full px-3 py-2 text-left transition-colors focus:outline-none"
+            style={{
+              color: 'var(--text-primary)',
+              backgroundColor: 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            onClick={() => handleSuggestionClick(suggestion)}
+          >
+            <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{suggestion.structured_formatting.secondary_text}</div>
+          </button>
+        ))}
+      </div>,
+      document.body
+    );
+  };
+
+  const baseInputClassName = `input-underline ${readOnly ? 'read-only:opacity-50 read-only:cursor-default' : ''}`;
 
   const combinedClassName = className ? `${baseInputClassName} ${className}` : baseInputClassName;
 
   if (error) {
     // Fallback to regular input if Google Maps fails to load
     return (
-      <div>
-        {label && (
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {label} {required && <span className="text-red-500">*</span>}
-          </label>
-        )}
+      <div className="input-group">
         <input
           type="text"
           value={inputValue}
@@ -152,8 +287,11 @@ export default function AddressAutocomplete({
           onFocus={handleInputFocus}
           readOnly={readOnly}
           className={combinedClassName}
-          placeholder={placeholder}
+          placeholder=" "
         />
+        <label className="input-label">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
         <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
           Address autocomplete unavailable - using text input
         </p>
@@ -162,12 +300,7 @@ export default function AddressAutocomplete({
   }
 
   return (
-    <div>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-      )}
+    <div className="input-group">
       <div className="relative">
         <input
           ref={autocompleteElementRef}
@@ -178,29 +311,18 @@ export default function AddressAutocomplete({
           onBlur={handleInputBlur}
           readOnly={readOnly}
           className={combinedClassName}
-          placeholder={placeholder || `Enter ${label?.toLowerCase() || 'address'}`}
+          placeholder=" "
         />
+        <label className="input-label">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
         {!isLoaded && !readOnly && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-[#FF3B00] rounded-full animate-spin"></div>
-          </div>
-        )}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion.place_id}
-                type="button"
-                className="w-full px-3 py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none"
-                onClick={() => handleSuggestionClick(suggestion)}
-              >
-                <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">{suggestion.structured_formatting.secondary_text}</div>
-              </button>
-            ))}
+            <div className="w-4 h-4 border-2 border-border border-t-primary rounded-full animate-spin"></div>
           </div>
         )}
       </div>
+      <DropdownPortal />
     </div>
   );
 }

@@ -10,7 +10,7 @@ interface LottieLoadingProps {
   color?: string; // optional color override for animation
 }
 
-export default function LottieLoading({ size = 32, className = "", color = "rgb(96 165 250 / var(--tw-text-opacity, 1))" }: LottieLoadingProps) {
+export default function LottieLoading({ size = 32, className = "", color = "var(--primary)" }: LottieLoadingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { FormData } from "../script/automationScript";
+import AnimatedCheckmark from "./AnimatedCheckmark";
 
 interface ExecutionViewProps {
   onClose: () => void;
@@ -143,10 +144,8 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
         );
       case "completed":
         return (
-          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-            <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
+          <div className="w-4 h-4 text-green-500 flex items-center justify-center">
+            <AnimatedCheckmark size={16} strokeWidth={2} />
           </div>
         );
       case "error":
@@ -316,7 +315,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h4 className="text-md font-medium text-gray-900 mb-3">Automation Progress</h4>
           <div className="space-y-2">
-            {progressSteps.map((step, index) => (
+            {progressSteps.map((step) => (
               <div key={step.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 {getStepIcon(step.status)}
                 <span className={`text-sm ${getStepColor(step.status)}`}>
@@ -364,7 +363,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
                   onClick={() => setActiveTab('browser')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'browser'
-                      ? 'border-[#FF3B00] text-[#FF3B00]'
+                      ? 'border-primary text-primary-color'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -374,7 +373,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
                   onClick={() => setActiveTab('form')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'form'
-                      ? 'border-[#FF3B00] text-[#FF3B00]'
+                      ? 'border-primary text-primary-color'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -444,7 +443,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
         </div>
 
         {/* Progress Sidebar */}
-        <div className="w-full lg:w-96 p-6 bg-white border-t lg:border-t-0 lg:border-l border-gray-200">
+        <div className="w-full lg:w-96 p-6 bg-white lg:border-t-0 lg:border-l border-gray-200">
           <div className="h-full flex flex-col">
             <div className="mb-6">
               <h2 className="text-xl font-ppneue text-gray-900 mb-2">
@@ -526,7 +525,7 @@ export default function ExecutionView({ onClose, sessionUrl, executionId, formDa
                   </p>
                   <button
                     onClick={onClose}
-                    className="px-6 py-2 bg-[#FF3B00] text-white rounded-md hover:bg-[#E63400] transition-colors"
+                    className="px-6 py-2 bg-primary text-white rounded-md transition-colors"
                   >
                     Close
                   </button>

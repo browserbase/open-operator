@@ -48,6 +48,34 @@ export interface ProgressEmitter {
   emit: (uid: string, event: string, data: unknown) => void;
 }
 
+// Helper function to close Browserbase session
+async function closeBrowserbaseSession(sessionId: string): Promise<void> {
+  try {
+    console.log(`Attempting to close Browserbase session: ${sessionId}`);
+    const response = await fetch('/api/session', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sessionId }),
+    });
+    
+    if (response.ok) {
+      console.log(`Successfully closed Browserbase session: ${sessionId}`);
+    } else {
+      console.warn(`Failed to close Browserbase session: ${sessionId}`, await response.text());
+    }
+  } catch (error) {
+    console.error(`Error closing Browserbase session: ${sessionId}`, error);
+  }
+}
+
+// Helper function to close only the Browserbase session (not the browser)
+async function closeSessionOnly(sessionId: string): Promise<void> {
+  console.log("Closing Browserbase session only (keeping browser alive)");
+  await closeBrowserbaseSession(sessionId);
+}
+
 export async function runPuppeteerScript(
   formData: FormData, 
   uid: string,
@@ -98,7 +126,9 @@ export async function runPuppeteerScript(
     return ordered;
   };
 
-  const defaultTimeout = 30000;
+  const defaultTimeout = 15000; // Reduced from 30s to 15s
+  const shortTimeout = 4000; // For quick operations
+  const mediumTimeout = 10000; // For medium operations
   const orderedObservationNotes56a = reorderObjectKeys(observationNotes56a, desiredOrder);
   const observationNotesArray: ObservationNotesEntry[] = Object.entries(orderedObservationNotes56a).map(
     ([field, value]) => ({ field, value: value || '' })
@@ -107,6 +137,73 @@ export async function runPuppeteerScript(
   // Simple sleep function
   const sleep = (milliseconds: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+  // Human-like typing function for sensitive inputs
+  const humanLikeType = async (page: Page, selector: string, text: string): Promise<void> => {
+    const element = await page.$(selector);
+    if (!element) {
+      throw new Error(`Selector "${selector}" not found.`);
+    }
+    
+    await element.focus();
+    
+    // Clear existing content
+    await page.keyboard.down('Control');
+    await page.keyboard.press('KeyA');
+    await page.keyboard.up('Control');
+    await sleep(30);
+    await page.keyboard.press('Backspace');
+    
+    // Type each character with human-like timing
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      await page.keyboard.type(char, { delay: 0 });
+      
+      // Vary typing speed: 
+      // - Faster for common characters
+      // - Slower for numbers/special characters
+      // - Occasional longer pauses to simulate thinking
+      let delay;
+      if (/[a-z]/i.test(char)) {
+        delay = Math.floor(Math.random() * 50) + 25; // 25-75ms for letters
+      } else if (/[0-9]/.test(char)) {
+        delay = Math.floor(Math.random() * 80) + 40; // 40-120ms for numbers
+      } else {
+        delay = Math.floor(Math.random() * 100) + 60; // 60-160ms for special chars
+      }
+      
+      // Occasional longer pauses (simulate thinking/checking)
+      if (Math.random() < 0.1) {
+        delay += Math.floor(Math.random() * 200) + 100; // Add 100-300ms occasionally
+      }
+      
+      await sleep(delay);
+    }
+    
+    // Trigger events
+    await page.evaluate((selector) => {
+      const element = document.querySelector(selector) as HTMLInputElement;
+      if (element) {
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        element.blur();
+      }
+    }, selector);
+  };
+
+  // Optimized selector validation - checks multiple selectors in parallel
+  const waitForAnySelector = async (page: Page, selectors: string[], timeout: number = shortTimeout): Promise<string | null> => {
+    try {
+      const promises = selectors.map(selector => 
+        page.waitForSelector(selector, { visible: true, timeout }).then(() => selector).catch(() => null)
+      );
+      const results = await Promise.allSettled(promises);
+      const found = results.find(result => result.status === 'fulfilled' && result.value);
+      return found?.status === 'fulfilled' ? found.value : null;
+    } catch {
+      return null;
+    }
+  };
 
   // Format date to MM/DD/YY format
   const formatDateOutput = (dateStr: string): string => {
@@ -147,6 +244,21 @@ export async function runPuppeteerScript(
 
   // Format time to "h:mm AM/PM" format
   const formatTime = (timeStr: string): string => {
+    console.log(`Converting time: "${timeStr}"`);
+    // Handle both 24-hour format (HH:MM) and existing formats with AM/PM
+    const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (time24Match) {
+      // Convert 24-hour format to 12-hour format with AM/PM
+      const [, hours, minutes] = time24Match;
+      const hour24 = parseInt(hours, 10);
+      const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+      const period = hour24 >= 12 ? 'PM' : 'AM';
+      const converted = `${hour12}:${minutes} ${period}`;
+      console.log(`Converted 24-hour time "${timeStr}" to "${converted}"`);
+      return converted;
+    }
+    
+    // Handle existing format with AM/PM
     const match = timeStr.match(/(\d{1,2})(:?)(\d{0,2})\s*(AM|PM)?/i);
     if (!match) {
       throw new Error(`Invalid time format: ${timeStr}`);
@@ -154,11 +266,14 @@ export async function runPuppeteerScript(
     const [, hours, , minutes = "00", period] = match;
     const hoursNum = parseInt(hours, 10);
     const finalPeriod = period ? period.toUpperCase() : (hoursNum >= 5 && hoursNum <= 11 ? "AM" : "PM");
-    return `${hoursNum}:${minutes.padStart(2, '0')} ${finalPeriod}`;
+    const result = `${hoursNum}:${minutes.padStart(2, '0')} ${finalPeriod}`;
+    console.log(`Formatted time "${timeStr}" to "${result}"`);
+    return result;
   };
 
   const formattedStartTime = formatTime(startTime);
   const formattedEndTime = formatTime(endTime);
+  console.log(`Final formatted times - Start: "${formattedStartTime}", End: "${formattedEndTime}"`);
   const targetServiceTime = `${formattedStartTime} to ${formattedEndTime}`;
 
   // Selector templates for mileage fields
@@ -177,20 +292,20 @@ export async function runPuppeteerScript(
     mileageStartMileageSelector: string
   ): Promise<void> => {
     try {
-      await sleep(1000);
+      await sleep(200); // Reduced from 1000ms
       await page.click('#addButton');
 
       await page.waitForSelector(mileageStartAddressSelector);
       await clearAndType(page, mileageStartAddressSelector, address);
       console.log(`Entered Start Address: "${address}"`);
       await page.waitForSelector(mileageStartMileageSelector);
-      await clearAndType(page, mileageStartMileageSelector, mileage);
+      await humanLikeType(page, mileageStartMileageSelector, mileage);
       console.log(`Entered Start Mileage: "${mileage}"`);
     } catch (error) {
       emit(uid, 'error', `Error populating Start Address and Start Mileage: ${error}`);
       console.error("Error populating Start Address and Start Mileage:", error);
       isBrowserClosed = true;
-      await browser.close();
+      await closeSessionOnly(sessionId);
       throw error;
     }
   };
@@ -213,105 +328,96 @@ export async function runPuppeteerScript(
     }
   };
 
+  // Optimized clearAndType function with human-like typing for number inputs
   const clearAndType = async (page: Page, selector: string, text: string): Promise<void> => {
-    let retries = 3;
-    while (retries > 0) {
-      try {
+    try {
+      await page.waitForSelector(selector, { visible: true, timeout: shortTimeout });
+      
+      // Check if it's a number input field
+      const elementType = await page.evaluate((selector) => {
+        const el = document.querySelector(selector) as HTMLInputElement;
+        return el ? el.type : null;
+      }, selector);
+      
+      // For number inputs, use human-like typing to avoid detection
+      if (elementType === 'number') {
+        console.log(`Detected number input for "${selector}", using human-like typing`);
         const element = await page.$(selector);
         if (!element) {
           throw new Error(`Selector "${selector}" not found.`);
         }
         
-        // Check if it's a number input field
-        const elementType = await page.evaluate((selector) => {
-          const el = document.querySelector(selector) as HTMLInputElement;
-          return el ? el.type : null;
-        }, selector);
+        await element.focus();
         
-        // For number inputs, always use keyboard typing
-        if (elementType === 'number') {
-          console.log(`Detected number input for "${selector}", using keyboard typing`);
-          await element.focus();
-          
-          // Clear existing content
-          await page.keyboard.down('Control');
-          await page.keyboard.press('KeyA');
-          await page.keyboard.up('Control');
-          await page.keyboard.press('Backspace');
-          
-          // Type the number
-          await element.type(text, { delay: 50 });
-          console.log(`Typed number into "${selector}": "${text}"`);
-          
-          // Trigger change event
-          await page.evaluate((selector) => {
-            const el = document.querySelector(selector) as HTMLInputElement;
-            if (el) {
-              el.dispatchEvent(new Event('change', { bubbles: true }));
-              el.blur();
-            }
-          }, selector);
-          
-          return;
+        // Clear existing content with human-like selection
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await sleep(10); // Small pause like a human
+        await page.keyboard.press('Backspace');
+        
+        // Type each character with human-like variations in timing
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          await page.keyboard.type(char, { delay: 0 });
+          // Random delays between 30-120ms to simulate human typing
+          const randomDelay = Math.floor(Math.random() * 90) + 30;
+          await sleep(randomDelay);
         }
         
-        // For non-number inputs, try the fast method first
-        await page.evaluate((selector, text) => {
-          const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
+        // Trigger events to ensure proper form handling
+        await page.evaluate((selector) => {
+          const element = document.querySelector(selector) as HTMLInputElement;
           if (element) {
-            element.focus();
-            element.select(); // Select all existing text
-            element.value = ''; // Clear the value
-            element.value = text; // Set new value
-            // Trigger events to notify the page
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
-            element.blur(); // Remove focus
+            element.blur();
           }
-        }, selector, text);
+        }, selector);
         
-        console.log(`Cleared and set value for "${selector}": "${text}"`);
-        return; // Success, exit the retry loop
-      } catch (error) {
-        retries--;
-        if (error instanceof Error && error.message.includes('Target closed')) {
-          console.warn(`Target closed error for selector "${selector}", retries left: ${retries}`);
-          if (retries > 0) {
-            await sleep(2000); // Wait before retry
-            continue;
-          }
-        }
-        
-        // Fallback to keyboard-based clearing and typing if direct setting fails
-        try {
-          const textArea = await page.$(selector);
-          if (!textArea) {
-            throw new Error(`Selector "${selector}" not found.`);
-          }
-          await textArea.focus();
-          const isMac = await page.evaluate(() => navigator.platform.includes('Mac'));
-          if (isMac) {
-            await page.keyboard.down('Meta');
-          } else {
-            await page.keyboard.down('Control');
-          }
-          await page.keyboard.press('A');
-          await page.keyboard.up(isMac ? 'Meta' : 'Control');
-          await page.keyboard.press('Backspace');
-          console.log(`Cleared existing text in "${selector}".`);
-          
-          // Use faster typing with minimal delay
-          await textArea.type(text, { delay: 0 });
-          console.log(`Typed into "${selector}": "${text}"`);
-          return;
-        } catch (fallbackError) {
-          emit(uid, 'error', `Error in clearAndType for selector: ${fallbackError}`);
-          console.error(`Error in clearAndType for selector "${selector}":`, fallbackError);
-          isBrowserClosed = true;
-          await browser.close();
-          throw fallbackError;
-        }
+        console.log(`Human-like typed number into "${selector}": "${text}"`);
+        return;
       }
+      
+      // For non-number inputs, use the fastest method: direct value setting
+      const success = await page.evaluate((selector, text) => {
+        const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
+        if (element) {
+          element.focus();
+          element.value = text;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          element.blur();
+          return true;
+        }
+        return false;
+      }, selector, text);
+      
+      if (success) {
+        console.log(`Fast input for "${selector}": "${text}"`);
+        return;
+      }
+    } catch (error) {
+      console.warn(`Fast method failed for "${selector}", using fallback`);
+    }
+    
+    // Fallback to keyboard method only if needed
+    try {
+      const element = await page.$(selector);
+      if (!element) {
+        throw new Error(`Selector "${selector}" not found.`);
+      }
+      
+      await element.focus();
+      await page.keyboard.down('Control');
+      await page.keyboard.press('KeyA');
+      await page.keyboard.up('Control');
+      await element.type(text, { delay: 1 }); // Very fast typing for fallback
+      console.log(`Fallback typed into "${selector}": "${text}"`);
+    } catch (fallbackError) {
+      emit(uid, 'error', `Error in clearAndType for selector: ${fallbackError}`);
+      console.error(`Error in clearAndType for selector "${selector}":`, fallbackError);
+      throw fallbackError;
     }
   };
 
@@ -325,7 +431,7 @@ export async function runPuppeteerScript(
     emit(uid, 'progress', 'Processing Mileage Table...');
 
     try {
-      await sleep(4500);
+      await sleep(2000); // Reduced from 4500ms
 
       // Debug: Check what elements are actually present on the page
       const pageContent = await page.evaluate(() => {
@@ -402,7 +508,7 @@ export async function runPuppeteerScript(
           console.log('Clicked delete for the first row.');
 
           await page.waitForSelector('#confirmationOkButton', { visible: true, timeout: defaultTimeout });
-          await sleep(1500);
+          await sleep(700); // Reduced from 1500ms
           await page.click('#confirmationOkButton');
 
           await page.waitForFunction(() => {
@@ -412,7 +518,7 @@ export async function runPuppeteerScript(
             return toastMessage && toastMessage.textContent?.includes("Changes saved successfully.");
           }, { timeout: defaultTimeout });
           console.log('Deletion confirmed via toast message.');
-          await sleep(1500);
+          await sleep(700); // Reduced from 1500ms
         }
       } else if (raceResult === 'message') {
         console.log('"No trips found" message found. Proceeding to add new mileage.');
@@ -480,8 +586,9 @@ export async function runPuppeteerScript(
         await page.waitForSelector(mileageEndAddressSelector, { visible: true, timeout: defaultTimeout });
         console.log(`End Address input is present in the DOM for entry (${i}).`);
         await clearAndType(page, mileageEndAddressSelector, endAddress);
+        await sleep(200); // Reduced from 1000ms
         console.log(`Entered End Address (${i}): "${endAddress}"`);
-        await sleep(1000);
+        await sleep(300); // Reduced from 1000ms
 
         const availableOptions = await page.evaluate((selector) => {
           const select = document.querySelector(selector) as HTMLSelectElement;
@@ -530,7 +637,7 @@ export async function runPuppeteerScript(
           }
         }
 
-        await sleep(1500);
+        await sleep(800); // Reduced from 1500ms
         try {
           await page.waitForFunction(() => {
             const toastContainer = document.getElementById("toast-container");
@@ -542,14 +649,14 @@ export async function runPuppeteerScript(
         } catch {
           console.error("Timeout waiting for mileage save confirmation toast message.");
         }
-        await sleep(100);
+        await sleep(50); // Reduced from 100ms
         
         if (i === endAddresses.length - 1) {
           const endMileageValue = await getLastEndMileageValue(page);
           if (endMileageValue !== null) {
             const captureTimestamp = new Date().toISOString();
             console.log(`End Mileage value for the last entry is: "${endMileageValue}"`);
-            // Send mileage data with date, time, and capture timestamp for Firebase storage
+            // Send updated mileage data with date, time, mileage, and capture timestamp for Firebase storage
             emit(uid, 'miles', {
               dateOfService,
               startTime,
@@ -564,7 +671,7 @@ export async function runPuppeteerScript(
       } catch (error) {
         console.error(`Error populating mileage entry (${i}):`, error);
         isBrowserClosed = true;
-        await browser.close();
+        await closeSessionOnly(sessionId);
         throw error;
       }
     }
@@ -634,7 +741,7 @@ export async function runPuppeteerScript(
       
       // Click on the filter/search input
       const searchInputSelector = '.form-control.search-input.search';
-      await page.waitForSelector(searchInputSelector, { visible: true, timeout: defaultTimeout });
+      await page.waitForSelector(searchInputSelector, { visible: true, timeout: shortTimeout });
       await page.click(searchInputSelector);
       console.log('Clicked on search filter input');
       
@@ -647,11 +754,11 @@ export async function runPuppeteerScript(
         }
       }, searchInputSelector);
       
-      // Type the search string character by character to trigger proper events
+      // Type the search string with no delay for faster input
       await page.type(searchInputSelector, searchString, { delay: 0 });
       console.log(`Typed search string: "${searchString}"`);
       
-      // Trigger additional events that might be needed for the filter
+      // Trigger search events immediately
       await page.evaluate((selector) => {
         const input = document.querySelector(selector) as HTMLInputElement;
         if (input) {
@@ -663,28 +770,63 @@ export async function runPuppeteerScript(
         }
       }, searchInputSelector);
       
-      // Wait for the table to load after filtering
-      await sleep(1500);
+      // Wait for the table to update with filtered results (much faster than before)
+      await sleep(100); // Short wait for table to update
       
-      // Look for the first note link matching the pattern href="/DFCS/Notes/Note?id=..."
-      const noteFound = await page.evaluate(() => {
-        const noteLinks = document.querySelectorAll('a[href*="/DFCS/Notes/Note?id="]');
-        if (noteLinks.length > 0) {
-          const firstLink = noteLinks[0] as HTMLElement;
-          firstLink.click();
+      // Check for note links with a timeout approach
+      const checkStartTime = Date.now();
+      const maxWaitTime = 2000; // Max 2 seconds to wait for results
+      
+      while (Date.now() - checkStartTime < maxWaitTime) {
+        const noteFound = await page.evaluate(() => {
+          const noteLinks = document.querySelectorAll('a[href*="/DFCS/Notes/Note?id="]');
+          if (noteLinks.length > 0) {
+            const firstLink = noteLinks[0] as HTMLElement;
+            firstLink.click();
+            return true;
+          }
+          return false;
+        });
+        
+        if (noteFound) {
+          console.log('Found existing note, clicked on it');
+          emit(uid, 'success', 'Found existing note!');
           return true;
         }
-        return false;
-      });
-      
-      if (noteFound) {
-        console.log('Found existing note, clicked on it');
-        emit(uid, 'success', 'Found existing note!');
-        return true;
-      } else {
-        console.log('No existing note found');
-        return false;
+        
+        // Check if table shows "no results" or is empty
+        const tableEmpty = await page.evaluate(() => {
+          const tableBody = document.querySelector('#data-models-table-body');
+          if (!tableBody) return true;
+          
+          const rows = tableBody.querySelectorAll('tr');
+          // Check if table is empty or shows no results message
+          if (rows.length === 0) return true;
+          
+          // Check for "no results" or similar messages
+          const noResultsMessages = [
+            'no results',
+            'no data',
+            'no records',
+            'no notes found',
+            'no entries'
+          ];
+          
+          const tableText = tableBody.textContent?.toLowerCase() || '';
+          return noResultsMessages.some(msg => tableText.includes(msg));
+        });
+        
+        if (tableEmpty) {
+          console.log('Table is empty or shows no results - no existing note found');
+          return false;
+        }
+        
+        // Short pause before checking again
+        await sleep(200);
       }
+      
+      console.log('No existing note found after timeout');
+      return false;
       
     } catch (error) {
       console.error('Error checking for existing note:', error);
@@ -779,7 +921,7 @@ export async function runPuppeteerScript(
       emit(uid, 'error', `An error occurred while saving and readying the note: ${error}`);
       console.error("An error occurred while saving and readying the note:", error);
       isBrowserClosed = true;
-      await browser.close();
+      await closeSessionOnly(sessionId);
       throw error;
     }
   };
@@ -795,10 +937,14 @@ export async function runPuppeteerScript(
       } catch (error) {
         console.warn("Keep-alive check failed:", error);
       }
-    }, 30000); // Every 30 seconds
+    }, 20000); // Reduced from 30s to 20s for better responsiveness
     
     emit(uid, 'progress', 'Connecting to Ecasenotes...');
-    await page.goto("https://portal.ecasenotes.com", { waitUntil: "networkidle2" });
+    // Use faster loading strategy
+    await page.goto("https://portal.ecasenotes.com", { 
+      waitUntil: "domcontentloaded", // Faster than networkidle2
+      timeout: defaultTimeout 
+    });
 
     emit(uid, 'success', 'Ecasenotes reached');
     emit(uid, 'progress', 'Signing In...');
@@ -825,7 +971,7 @@ export async function runPuppeteerScript(
     await page.click('a[href="/cases"]');
 
     console.log("Navigated to Cases & Notes");
-    await sleep(200);
+    await sleep(100); // Reduced from 200ms
     
     await page.waitForSelector('#SearchCriteria_CaseHeaderNumber', { visible: true, timeout: defaultTimeout });
     await page.type('#SearchCriteria_CaseHeaderNumber', caseNumber, { delay: 0 });
@@ -833,7 +979,7 @@ export async function runPuppeteerScript(
     console.log("Cases & Notes page loaded successfully");
     await page.click("#searchButton");
     console.log("Clicked the Search button");
-    await sleep(1000);
+    await sleep(500); // Reduced from 1000ms
     
     await page.waitForSelector(".sort-CaseNumber", { visible: true });
     console.log("Case results loaded");
@@ -984,7 +1130,7 @@ export async function runPuppeteerScript(
           emit(uid, 'error', `Failed to populate ${field} with selector "${textareaSelector}": ${error}`);
           console.error(`Failed to populate ${field} with selector "${textareaSelector}":`, error);
           isBrowserClosed = true;
-          await browser.close();
+          await closeSessionOnly(sessionId);
           throw error;
         }
       }
@@ -1001,7 +1147,7 @@ export async function runPuppeteerScript(
         emit(uid, 'error', `Failed to populate Note Summary with selector "${textareaSelector}": ${error}`);
         console.error(`Failed to populate Note Summary with selector "${textareaSelector}":`, error);
         isBrowserClosed = true;
-        await browser.close();
+        await closeSessionOnly(sessionId);
         throw error;
       }
     } else {
@@ -1026,11 +1172,10 @@ export async function runPuppeteerScript(
       await populateStartDetails(page, mileageStartAddress, mileageStartMileage || '', mileageStartAddressSelector, mileageStartMileageSelector);
       
       console.log("entering end addresses");
-      await sleep(1000);
+      await sleep(300); // Reduced from 1000ms
       await populateMileageEntries(page, endAddresses, additionalDropdownValues);
       await saveAndReadyNote();
       
-      await page.waitForSelector("#ctl00_UpdateProgressDisplay", { hidden: true, timeout: defaultTimeout });
       console.log("Mileage Successfully Saved!");
       emit(uid, 'success', 'Mileage Saved Successfully!');
       emit(uid, 'toast', 'Mileage Saved Successfully!');
@@ -1038,11 +1183,21 @@ export async function runPuppeteerScript(
       emit(uid, 'toast', 'Process Completed!');
     } else {
       console.log('Include Mileage is false. Skipping mileage processing.');
+      // Emit note data without mileage for history tracking, but preserve existing endMileage values
+      const noteData = {
+        dateOfService,
+        startTime,
+        endTime,
+        capturedAt: new Date().toISOString()
+      };
+      emit(uid, 'noteProcessed', noteData);
+      console.log("Note data emitted for history update (no mileage):", noteData);
+      
       emit(uid, 'finished', 'Process Completed!');
       emit(uid, 'toast', 'Process Completed!');
     }
     
-    await browser.close();
+    await closeSessionOnly(sessionId);
 
   } catch (error) {
     // Clear the keep-alive interval
@@ -1056,7 +1211,7 @@ export async function runPuppeteerScript(
    
     
     isBrowserClosed = true;
-    await browser.close();
+    await closeSessionOnly(sessionId);
     throw error;
 
   } finally {
@@ -1067,9 +1222,9 @@ export async function runPuppeteerScript(
     
     isBrowserClosed = true;
     if (browser && !isBrowserClosed) {
-      await browser.close();
+      await closeSessionOnly(sessionId);
     }
-    console.log("Browser closed");
+    console.log("Session closed");
   }
 }
 
