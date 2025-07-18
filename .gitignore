@@ -79,3 +79,4 @@ target/
 *.temp
 .env
 .env.local
+apphosting.config.json
