@@ -596,6 +596,7 @@ export default function Home() {
                     userId={user?.uid}
                     isExecuting={isExecuting}
                     onStopAutomation={handleClose}
+                    toast={toast}
                   />
                 </div>
               </div>

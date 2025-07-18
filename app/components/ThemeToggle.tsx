@@ -7,9 +7,9 @@ export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   const themes = [
-    { value: "light", label: "Light", icon: "☀️" },
-    { value: "dark", label: "Dark", icon: "🌙" },
-    { value: "system", label: "System", icon: "💻" }
+    { value: "light", label: "Light", icon: "" },
+    { value: "dark", label: "Dark", icon: "" },
+  
   ] as const;
 
   return (
