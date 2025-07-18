@@ -1,34 +1,7 @@
 import { NextRequest } from "next/server";
-import { adminDb } from "../../../firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
 import { getUserIdFromRequest } from "../../../utils/auth";
 
 export const runtime = "nodejs";
-
-// TODO: Implement Firebase Authentication
-// The current Firebase Firestore rules require authentication for write operations.
-// To enable Firebase writes, you need to:
-// 1. Set up Firebase Authentication in your app
-// 2. Authenticate users before making Firestore writes
-// 3. Or update Firestore rules to allow writes for specific conditions
-// For now, Firebase writes will fail gracefully and data will be logged locally.
-
-// Interface for mileage data
-interface MileageData {
-  dateOfService: string;
-  startTime: string;
-  endTime: string;
-  endMileage: string;
-  capturedAt: string;
-}
-
-// Interface for note data (without mileage)
-interface NoteData {
-  dateOfService: string;
-  startTime: string;
-  endTime: string;
-  capturedAt: string;
-}
 
 // Store active event streams with user context
 const eventStreams = new Map<string, { controller: ReadableStreamDefaultController; userId?: string }>();
@@ -78,80 +51,6 @@ export function GET(request: NextRequest) {
   });
 }
 
-// Function to save mileage data to Firebase
-async function saveMileageToFirebase(executionId: string, mileageData: MileageData, userId?: string) {
-  try {
-    console.log('Attempting to save mileage data to Firebase...');
-    const docId = userId || executionId;
-
-    // Update the user's main document with the mileage data in the mileageHistory array
-    const userDocRef = adminDb.collection('users').doc(docId);
-    
-    // Prepare the history entry with mileage data
-    const historyEntry = {
-      executionId,
-      dateOfService: mileageData.dateOfService,
-      startTime: mileageData.startTime,
-      endTime: mileageData.endTime,
-      capturedAt: mileageData.capturedAt,
-      savedAt: new Date().toISOString(),
-      endMileage: mileageData.endMileage,
-    };
-
-    // Add the entry to the mileageHistory array and update lastProcessedMileage
-    await userDocRef.set({
-      mileageHistory: FieldValue.arrayUnion(historyEntry),
-      lastProcessedMileage: mileageData.endMileage,
-      lastMileageUpdate: FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    console.log('Mileage data saved to Firebase successfully');
-  } catch (error) {
-    console.log('Firebase write failed (this is expected without authentication):', error instanceof Error ? error.message : error);
-    console.log('Storing mileage data in memory as fallback:', {
-      executionId,
-      ...mileageData,
-      savedAt: new Date().toISOString()
-    });
-  }
-}
-
-// Function to save note data to Firebase (without mileage)
-async function saveNoteToFirebase(executionId: string, noteData: NoteData, userId?: string) {
-  try {
-    console.log('Attempting to save note data to Firebase...');
-    const docId = userId || executionId;
-
-    // Update the user's main document with the note data in the mileageHistory array
-    const userDocRef = adminDb.collection('users').doc(docId);
-    
-    // Prepare the history entry without mileage data
-    const historyEntry = {
-      executionId,
-      dateOfService: noteData.dateOfService,
-      startTime: noteData.startTime,
-      endTime: noteData.endTime,
-      capturedAt: noteData.capturedAt,
-      savedAt: new Date().toISOString(),
-      // Don't include endMileage to preserve existing mileage data
-    };
-
-    // Add the entry to the mileageHistory array
-    await userDocRef.set({
-      mileageHistory: FieldValue.arrayUnion(historyEntry)
-    }, { merge: true });
-
-    console.log('Note data saved to Firebase successfully');
-  } catch (error) {
-    console.log('Firebase write failed (this is expected without authentication):', error instanceof Error ? error.message : error);
-    console.log('Storing note data in memory as fallback:', {
-      executionId,
-      ...noteData,
-      savedAt: new Date().toISOString()
-    });
-  }
-}
-
 // Function to send events to a specific execution
 export function sendEventToExecution(executionId: string, event: string, data: unknown) {
   console.log(`sendEventToExecution called - ExecutionId: ${executionId}, Event: ${event}, Data:`, data);
@@ -159,22 +58,6 @@ export function sendEventToExecution(executionId: string, event: string, data: u
   
   // Get the stream context (controller + userId)
   const streamContext = eventStreams.get(executionId);
-  
-  // Handle mileage data specially
-  if (event === 'miles' && typeof data === 'object' && data !== null) {
-    // Type guard to check if data has the required MileageData properties
-    if ('dateOfService' in data && 'startTime' in data && 'endTime' in data && 'endMileage' in data && 'capturedAt' in data) {
-      saveMileageToFirebase(executionId, data as MileageData, streamContext?.userId);
-    }
-  }
-  
-  // Handle note data (without mileage) for history tracking
-  if (event === 'noteProcessed' && typeof data === 'object' && data !== null) {
-    // Type guard to check if data has the required NoteData properties
-    if ('dateOfService' in data && 'startTime' in data && 'endTime' in data && 'capturedAt' in data) {
-      saveNoteToFirebase(executionId, data as NoteData, streamContext?.userId);
-    }
-  }
   
   // Handle job completion events
   if (event === 'finished') {

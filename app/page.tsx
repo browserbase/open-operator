@@ -850,9 +850,10 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
             }
           ]);
         } else if (eventData.type === 'miles') {
-          // Handle note data - save to Firebase if user is logged in
-          console.log('Received note data:', eventData.data);
+          // Handle note data with mileage - save to Firebase if user is logged in
+          console.log('Received miles data:', eventData.data);
           if (eventData.data && typeof eventData.data === 'object') {
+            console.log('Saving miles data to Firebase:', eventData.data);
             saveProcessedNoteDataToFirebase(eventData.data, user);
             if (eventData.data.endMileage) {
               setProgressMessages(prev => [
@@ -873,6 +874,36 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
                 }
               ]);
             }
+          } else {
+            console.log('Miles event data is invalid:', eventData.data);
+          }
+        } else if (eventData.type === 'noteProcessed') {
+          // Handle note processed event (without mileage) - save to Firebase if user is logged in
+          console.log('Received noteprocessed data:', eventData.data);
+          if (eventData.data && typeof eventData.data === 'object') {
+            console.log('Saving noteprocessed data to Firebase:', eventData.data);
+            saveProcessedNoteDataToFirebase(eventData.data, user);
+            if (eventData.data.endMileage) {
+              setProgressMessages(prev => [
+                ...prev.filter(msg => msg.type !== 'progress'),
+                {
+                  message: `Note processed with mileage: ${eventData.data.endMileage} miles`,
+                  type: 'success',
+                  timestamp: Date.now()
+                }
+              ]);
+            } else {
+              setProgressMessages(prev => [
+                ...prev.filter(msg => msg.type !== 'progress'),
+                {
+                  message: `Note processed successfully`,
+                  type: 'success',
+                  timestamp: Date.now()
+                }
+              ]);
+            }
+          } else {
+            console.log('Noteprocessed event data is invalid:', eventData.data);
           }
         } else if (eventData.type === 'success') {
           // On success, keep previous success/error messages but clear progress messages
