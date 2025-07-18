@@ -14,7 +14,6 @@ import QueueManager from "./components/QueueManager";
 import MileageWarningModal from "./components/MileageWarningModal";
 import MiniJobStatus from "./components/MiniJobStatus";
 import { ToastContainer, useToast } from "./components/Toast";
-import { makeAuthenticatedRequest } from "./utils/apiClient";
 import { FormData as CaseFormData } from "./script/automationScript";
 import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/firebaseAuth";
 import { User } from "firebase/auth";
@@ -229,6 +228,9 @@ export default function Home() {
       // Always add jobs to the queue for consistent tracking
       const response = await makeAuthenticatedRequest("/api/queue", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ action: 'add', formData }),
       }, user);
 
@@ -838,37 +840,17 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
 
   useEffect(() => {
     console.log('Setting up EventSource for executionId:', executionId);
+    const eventSource = new EventSource(`/api/automation/events?executionId=${executionId}`);
     
-    // Create SSE URL with user authentication
-    const createSSEUrl = async () => {
-      let sseUrl = `/api/automation/events?executionId=${executionId}`;
-      
-      // Add user authentication if available
-      if (user) {
-        try {
-          const idToken = await user.getIdToken();
-          sseUrl += `&token=${encodeURIComponent(idToken)}`;
-        } catch (error) {
-          console.error('Failed to get ID token for SSE:', error);
-        }
-      }
-      
-      return sseUrl;
+    eventSource.onopen = () => {
+      console.log('EventSource connection opened');
     };
     
-    const setupEventSource = async () => {
-      const sseUrl = await createSSEUrl();
-      const eventSource = new EventSource(sseUrl);
-    
-      eventSource.onopen = () => {
-        console.log('EventSource connection opened');
-      };
-      
-      eventSource.onmessage = (event) => {
-        console.log('Raw event received:', event);
-        try {
-          const eventData = JSON.parse(event.data);
-          console.log('Parsed event data:', eventData);
+    eventSource.onmessage = (event) => {
+      console.log('Raw event received:', event);
+      try {
+        const eventData = JSON.parse(event.data);
+        console.log('Parsed event data:', eventData);
 
         // Update progress messages based on events
         if (eventData.type === 'progress') {
@@ -967,30 +949,19 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
       }
     };
 
-      eventSource.onerror = (error) => {
-        console.error('EventSource failed:', error);
-        console.log('EventSource readyState:', eventSource.readyState);
-        setProgressMessages(prev => [...prev, {
-          message: 'Connection error - retrying...',
-          type: 'error',
-          timestamp: Date.now()
-        }]);
-      };
-
-      return eventSource;
+    eventSource.onerror = (error) => {
+      console.error('EventSource failed:', error);
+      console.log('EventSource readyState:', eventSource.readyState);
+      setProgressMessages(prev => [...prev, {
+        message: 'Connection error - retrying...',
+        type: 'error',
+        timestamp: Date.now()
+      }]);
     };
-    
-    let eventSource: EventSource;
-    
-    setupEventSource().then(es => {
-      eventSource = es;
-    });
 
     return () => {
-      if (eventSource) {
-        console.log('Closing EventSource connection');
-        eventSource.close();
-      }
+      console.log('Closing EventSource connection');
+      eventSource.close();
     };
   }, [executionId]);
 
