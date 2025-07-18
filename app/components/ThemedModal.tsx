@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useResponsive } from '../utils/useResponsive';
 
 export type ModalType = 'info' | 'warning' | 'error' | 'success';
 
@@ -99,10 +100,10 @@ const typeStyles = {
 };
 
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl'
+  sm: 'max-w-xs sm:max-w-sm',
+  md: 'max-w-xs sm:max-w-md',
+  lg: 'max-w-sm sm:max-w-lg',
+  xl: 'max-w-md sm:max-w-xl'
 };
 
 export default function ThemedModal({
@@ -122,6 +123,7 @@ export default function ThemedModal({
 }: ThemedModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const typeStyle = typeStyles[type];
+  const { isMobile } = useResponsive();
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
@@ -164,7 +166,7 @@ export default function ThemedModal({
   return (
     <AnimatePresence>
       {(isVisible || isClosing) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-0">
           {/* Backdrop */}
           <motion.div
             className={`fixed inset-0 ${typeStyle.backdropClass}`}
@@ -178,7 +180,7 @@ export default function ThemedModal({
           
           {/* Modal */}
           <motion.div
-            className={`relative w-full ${sizeClasses[size]} mx-4`}
+            className={`relative w-full ${sizeClasses[size]} mx-auto`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ 
               opacity: isClosing ? 0 : 1, 
@@ -198,9 +200,9 @@ export default function ThemedModal({
               style={typeStyle.containerStyle}
             >
               {/* Header */}
-              <div className="flex items-center gap-3 p-6 pb-4">
+              <div className="flex items-center gap-2 sm:gap-3 p-4 sm:p-6 sm:pb-4">
                 <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center"
+                  className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-full flex items-center justify-center`}
                   style={{
                     backgroundColor: `var(${typeStyle.bgVar})`,
                     borderColor: `var(${typeStyle.borderVar})`,
@@ -212,31 +214,30 @@ export default function ThemedModal({
                 </div>
                 <div>
                   <h3 
-                    className="text-lg font-semibold"
+                    className="text-base sm:text-lg font-semibold"
                     style={{ color: 'var(--text-primary)' }}
                   >
                     {title}
                   </h3>
                   {subtitle && (
                     <p 
-                      className="text-sm"
+                      className="text-xs sm:text-sm"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {subtitle}
                     </p>
                   )}
-                </div>
               </div>
 
               {/* Content */}
-              <div className="px-6 pb-4">
+              <div className="px-4 sm:px-6 pb-3 sm:pb-4">
                 {children}
               </div>
 
               {/* Actions */}
               {(showCancel || showConfirm) && (
                 <div 
-                  className="flex gap-3 px-6 py-4 border-t"
+                  className="flex gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t"
                   style={{ 
                     backgroundColor: 'var(--bg-secondary)',
                     borderColor: 'var(--border)'
@@ -245,7 +246,7 @@ export default function ThemedModal({
                   {showCancel && (
                     <button
                       onClick={handleClose}
-                      className="flex-1 px-4 py-2 text-sm font-medium rounded-md btn-secondary"
+                      className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md btn-secondary"
                       style={{
                         backgroundColor: 'var(--button-secondary)',
                         color: 'var(--text-primary)',
@@ -260,7 +261,7 @@ export default function ThemedModal({
                     <button
                       onClick={confirmDisabled ? undefined : handleConfirm}
                       disabled={confirmDisabled}
-                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-md btn-primary flex items-center justify-center gap-2 ${
+                      className={`flex-1 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md btn-primary flex items-center justify-center gap-2 ${
                         confirmDisabled ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                       style={{
@@ -269,7 +270,7 @@ export default function ThemedModal({
                       }}
                     >
                       {confirmDisabled && (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent"></div>
                       )}
                       {confirmText}
                     </button>
