@@ -1,0 +1,42 @@
+runConfig:
+  # Runtime configuration for the app
+  cpu: 1
+  memory: 1GB
+  concurrency: 80
+  maxInstances: 100
+  minInstances: 0
+
+env:
+  # Environment variables - these should be set in Google Cloud Console
+  # Do NOT put actual secrets here, use Secret Manager or Cloud Console
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+  BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY}
+  BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID}
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+  FIREBASE_SERVICE_ACCOUNT_KEY: ${FIREBASE_SERVICE_ACCOUNT_KEY}
+  
+  # Public environment variables (safe to commit)
+  NODE_ENV: production
+  NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyCH14TadxaW2dyaCL4jCn0Ng1XgkUjGOVk
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: dfcs-webtools.firebaseapp.com
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: dfcs-webtools
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: dfcs-webtools.firebasestorage.app
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: 85424081578
+  NEXT_PUBLIC_FIREBASE_APP_ID: 1:85424081578:web:c2c5817df3394b11555ed3
+  NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: G-CJVW7YYDFV
+
+# Build configuration
+build:
+  commands:
+    - npm ci
+    - npm run build
+  
+# Health check configuration
+healthCheck:
+  path: /api/health
+  
+# Static file serving
+staticAssets:
+  - source: public
+    glob: "**/*"
