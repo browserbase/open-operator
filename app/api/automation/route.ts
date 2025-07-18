@@ -10,23 +10,13 @@ export async function POST(request: NextRequest) {
     const formData: FormData = await request.json();
     const userId = await getUserIdFromRequest(request);
     
-    // Get jobId from the form data if it exists (added by client-side code)
-    const jobId = formData.jobId;
-    
     // Use the shared automation function
     const result = await startAutomation(formData, request.nextUrl.origin, userId);
     
     if (result.success) {
-      // Return the jobId in the response so client can associate it
-      return NextResponse.json({
-        ...result,
-        jobId
-      });
+      return NextResponse.json(result);
     } else {
-      return NextResponse.json({
-        ...result,
-        jobId
-      }, { status: 500 });
+      return NextResponse.json(result, { status: 500 });
     }
 
   } catch (error) {

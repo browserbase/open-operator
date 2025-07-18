@@ -1,55 +1,50 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { QueuedJob } from '../types/jobQueue';
 import { User } from 'firebase/auth';
-import { getUserId } from '../utils/apiClient';
-import { getLocalJobQueue } from '../utils/localJobQueue';
-import { FormData as CaseFormData } from '../script/automationScript';
+import { makeAuthenticatedRequest } from '../utils/apiClient';
 
 interface QueueManagerProps {
   isVisible: boolean;
   onClose: () => void;
-  onRerunJob?: (formData: CaseFormData) => void;
+  onRerunJob?: (formData: any) => void;
   user?: User | null; // Add user prop for authentication
 }
 
 export default function QueueManager({ isVisible, onClose, onRerunJob, user }: QueueManagerProps) {
   const [jobs, setJobs] = useState<QueuedJob[]>([]);
   const [loading, setLoading] = useState(false);
-  const userId = getUserId(user || null);
-  
-  const fetchJobs = useCallback(() => {
-    const localQueue = getLocalJobQueue();
-    if (localQueue) {
-      const userJobs = localQueue.getJobs(userId);
-      setJobs(userJobs);
-    }
-  }, [userId]);
 
   useEffect(() => {
     if (isVisible) {
-      // Initial fetch
       fetchJobs();
-      
-      // Subscribe to job queue changes
-      const localQueue = getLocalJobQueue();
-      const unsubscribe = localQueue?.subscribe((allJobs) => {
-        const userJobs = allJobs.filter(job => job.userId === userId);
-        setJobs(userJobs);
-      });
-      
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
+      // Set up polling to update job status
+      const interval = setInterval(fetchJobs, 2000);
+      return () => clearInterval(interval);
     }
-  }, [isVisible, userId, fetchJobs]);
+  }, [isVisible]);
 
-  const clearCompleted = () => {
+  const fetchJobs = async () => {
+    try {
+      const response = await makeAuthenticatedRequest('/api/queue', {}, user);
+      const data = await response.json();
+      if (data.success) {
+        setJobs(data.jobs);
+      }
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    }
+  };
+
+  const clearCompleted = async () => {
     setLoading(true);
     try {
-      const localQueue = getLocalJobQueue();
-      if (localQueue) {
-        localQueue.removeCompletedJobsForUser(userId);
-        fetchJobs();
+      const response = await makeAuthenticatedRequest('/api/queue', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'clear-completed' })
+      }, user);
+      
+      if (response.ok) {
+        await fetchJobs();
       }
     } catch (error) {
       console.error('Error clearing completed jobs:', error);
@@ -58,13 +53,16 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
     }
   };
 
-  const removeJob = (jobId: string) => {
+  const removeJob = async (jobId: string) => {
     setLoading(true);
     try {
-      const localQueue = getLocalJobQueue();
-      if (localQueue) {
-        localQueue.removeJob(jobId);
-        fetchJobs();
+      const response = await makeAuthenticatedRequest('/api/queue', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'remove', jobId })
+      }, user);
+      
+      if (response.ok) {
+        await fetchJobs();
       }
     } catch (error) {
       console.error('Error removing job:', error);
@@ -76,18 +74,26 @@ export default function QueueManager({ isVisible, onClose, onRerunJob, user }: Q
   const rerunJob = async (jobId: string) => {
     setLoading(true);
     try {
-      const localQueue = getLocalJobQueue();
-      if (localQueue) {
-        const newJob = await localQueue.rerunJob(jobId, user);
-        if (newJob) {
-          fetchJobs();
-          
+      const response = await makeAuthenticatedRequest('/api/queue', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'rerun', jobId })
+      }, user);
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          await fetchJobs();
           // Optionally call the callback to update form
-          if (onRerunJob) {
-            onRerunJob(newJob.formData);
+          if (onRerunJob && result.job) {
+            onRerunJob(result.job.formData);
           }
-        } else {
+        }
+      } else {
+        const errorData = await response.json();
+        if (response.status === 429) {
           alert('Cannot rerun job: You already have 3 active jobs in the queue. Please wait for some jobs to complete or remove some jobs first.');
+        } else {
+          alert(`Error: ${errorData.error || 'Failed to rerun job'}`);
         }
       }
     } catch (error) {

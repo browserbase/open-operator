@@ -19,12 +19,8 @@ import { signInUser, signUpUser, logoutUser, onAuthChange } from "./components/f
 import { User } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
-import { makeAuthenticatedRequest, getUserId } from "./utils/apiClient";
+import { makeAuthenticatedRequest } from "./utils/apiClient";
 import { checkSubscriptionStatus, hasActiveSubscription, SubscriptionStatus } from "./utils/subscription";
-import { getLocalJobQueue } from "./utils/localJobQueue";
-import { setupJobEventListener } from "./utils/jobEventListener";
-
-import { useResponsive } from "./utils/useResponsive";
 
 export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -50,8 +46,6 @@ export default function Home() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [showMileageWarning, setShowMileageWarning] = useState(false);
   const [isExecutionExpanded, setIsExecutionExpanded] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isMobile } = useResponsive();
   const [mileageData, setMileageData] = useState<{
     current?: number;
     last?: number;
@@ -231,34 +225,36 @@ export default function Home() {
     setSubmittedFormData(formData); // Store the form data
     
     try {
-      // Use the local job queue instead of API
-      const localQueue = getLocalJobQueue();
-      if (!localQueue) {
-        throw new Error("Local job queue not available");
-      }
-      
-      const userId = getUserId(user || null);
-      const job = await localQueue.addJob(formData, userId, user);
-      
-      if (job) {
-        // Check if there are any running jobs
-        const userJobs = localQueue.getJobs(userId);
-        const runningJobs = userJobs.filter(j => j.status === 'running');
-        
+      // Always add jobs to the queue for consistent tracking
+      const response = await makeAuthenticatedRequest("/api/queue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: 'add', formData }),
+      }, user);
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Check if this is the first job (will start immediately)
+        const queueResponse = await makeAuthenticatedRequest("/api/queue", {}, user);
+        const queueData = await queueResponse.json();
+        const runningJobs = queueData.success ? queueData.jobs.filter((job: any) => job.status === 'running') : [];
+
         if (runningJobs.length > 0) {
           // If a job is already running, show success message
-          toast.showSuccess(`Job queued successfully! Job ID: ${job.id.slice(-8)}`);
+          toast.showSuccess(`Job queued successfully! Job ID: ${result.job.id.slice(-8)}`);
         } else {
           // If this is the first job, it will start running soon
-          toast.showSuccess(`Job added to queue! Job ID: ${job.id.slice(-8)}`);
-          
-          // Set up event listener for this job if it has an execution ID
-          if (job.executionId) {
-            setupJobEventListener(job.executionId);
-          }
+          toast.showSuccess(`Job added to queue! Job ID: ${result.job.id.slice(-8)}`);
         }
       } else {
-        toast.showError("Queue is full! You can only have 3 active jobs at a time. Please wait for some jobs to complete or remove some jobs first.");
+        if (response.status === 429) {
+          toast.showError("Queue is full! You can only have 3 active jobs at a time. Please wait for some jobs to complete or remove some jobs first.");
+        } else {
+          throw new Error(result.error || "Failed to queue job");
+        }
       }
     } catch (error) {
       console.error("Error submitting job:", error);
@@ -318,19 +314,19 @@ export default function Home() {
   return (
     <div className="min-h-screen background-transparent flex flex-col">
       {/* Top Navigation */}
-      <nav className="flex justify-between items-center px-4 sm:px-8 py-3 sm:py-4 bg-background-form border-b border-border">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <nav className="flex justify-between items-center px-8 py-4 bg-background-form border-b border-border">
+        <div className="flex items-center gap-3">
           {/* Animated Cube Icon */}
-          <AnimatedCubeIcon size={isMobile ? 24 : 32} />
-          <span className="font-ppsupply text-foreground text-sm sm:text-base">
+          <AnimatedCubeIcon size={32} />
+          <span className="font-ppsupply text-foreground">
             {isExecuting ? "Node V2" : "Node v2"}
           </span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-4">
           {user && subscriptionStatus && hasActiveSubscription(subscriptionStatus) && (
             <button
               onClick={() => setShowQueueManager(true)}
-              className={`relative px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm rounded-md transition-colors font-medium ${
+              className={`relative px-3 py-2 text-sm rounded-md transition-colors font-medium ${
                 jobs.filter(job => job.status === 'running' || job.status === 'pending').length >= 3
                   ? 'bg-warning text-warning-foreground'
                   : 'bg-background-secondary text-text-secondary hover:bg-secondary/80'
@@ -573,14 +569,14 @@ export default function Home() {
           </div>
         ) : (
           /* Content Area with Tabs - displayed when user is logged in with active subscription */
-          <div className={`flex-1 p-3 sm:p-6 transition-all duration-300 ease-out ${isExecuting && isExecutionExpanded ? 'sm:pr-[336px]' : ''}`}>
+          <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting && isExecutionExpanded ? 'pr-[336px]' : ''}`}>
             {/* Tab Navigation */}
-            <div className="mb-2 sm:mb-4">
+            <div className="mb-4">
               <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="-mb-px flex space-x-2 sm:space-x-8 overflow-x-auto pb-1 sm:pb-0">
+                <nav className="-mb-px flex space-x-8">
                   <button
                     onClick={() => setActiveTab('form')}
-                    className={`whitespace-nowrap py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'form'
                         ? 'border-primary text-primary-color'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
@@ -590,7 +586,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={() => setActiveTab('autoset')}
-                    className={`whitespace-nowrap py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'autoset'
                         ? 'border-primary text-primary-color'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
@@ -600,7 +596,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={() => setActiveTab('browser')}
-                    className={`whitespace-nowrap py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'browser'
                         ? 'border-primary text-primary-color'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
