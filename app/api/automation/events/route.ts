@@ -94,7 +94,7 @@ async function saveMileageToFirebase(executionId: string, mileageData: MileageDa
       startTime: mileageData.startTime,
       endTime: mileageData.endTime,
       capturedAt: mileageData.capturedAt,
-      savedAt: FieldValue.serverTimestamp(),
+      savedAt: new Date().toISOString(),
       endMileage: mileageData.endMileage,
     };
 
@@ -132,7 +132,7 @@ async function saveNoteToFirebase(executionId: string, noteData: NoteData, userI
       startTime: noteData.startTime,
       endTime: noteData.endTime,
       capturedAt: noteData.capturedAt,
-      savedAt: FieldValue.serverTimestamp(),
+      savedAt: new Date().toISOString(),
       // Don't include endMileage to preserve existing mileage data
     };
 
