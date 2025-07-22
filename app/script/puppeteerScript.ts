@@ -975,17 +975,9 @@ export async function runPuppeteerScript(
         await page.waitForSelector("#DataModel_DateOfService", { visible: true });
         //console.log("New Note modal appeared");
 
-        await page.evaluate((formattedDate) => {
-          const dateInput = document.getElementById("DataModel_DateOfService") as HTMLInputElement;
-          if (dateInput) {
-            dateInput.value = formattedDate;
-            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-          } else {
-            throw new Error("Date of Service input not found");
-          }
-        }, dateOfService);
+        await clearAndType(page, "#DataModel_DateOfService", formattedDate);
 
-        //console.log(`Date of Service set to ${dateOfService}`);
+        //console.log(`Date of Service set to ${formattedDate}`);
         
         await sleep(100);
         const sanitizedStartTime = sanitizeTime(formattedStartTime);
