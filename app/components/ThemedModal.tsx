@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '../utils/useResponsive';
 
@@ -100,10 +101,10 @@ const typeStyles = {
 };
 
 const sizeClasses = {
-  sm: 'max-w-xs sm:max-w-sm',
-  md: 'max-w-xs sm:max-w-md',
-  lg: 'max-w-sm sm:max-w-lg',
-  xl: 'max-w-md sm:max-w-xl'
+  sm: 'w-full max-w-xs sm:max-w-sm',
+  md: 'w-full max-w-sm sm:max-w-md md:max-w-lg',
+  lg: 'w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl',
+  xl: 'w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
 };
 
 export default function ThemedModal({
@@ -122,8 +123,15 @@ export default function ThemedModal({
   size = 'md'
 }: ThemedModalProps) {
   const [isClosing, setIsClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const typeStyle = typeStyles[type];
   const { isMobile } = useResponsive();
+
+  // Handle mounting for portal
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
@@ -163,10 +171,10 @@ export default function ThemedModal({
 
   if (!isVisible && !isClosing) return null;
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {(isVisible || isClosing) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           {/* Backdrop */}
           <motion.div
             className={`fixed inset-0 ${typeStyle.backdropClass}`}
@@ -178,9 +186,14 @@ export default function ThemedModal({
             onClick={handleClose}
           />
           
-          {/* Modal */}
+          {/* Modal Container with proper viewport constraints */}
           <motion.div
-            className={`relative w-full ${sizeClasses[size]} mx-auto`}
+            className={`relative ${sizeClasses[size]} mx-auto`}
+            style={{
+              maxHeight: isMobile ? '95vh' : '90vh', // Ensure it fits in viewport
+              display: 'flex',
+              flexDirection: 'column'
+            }}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ 
               opacity: isClosing ? 0 : 1, 
@@ -196,13 +209,17 @@ export default function ThemedModal({
             }}
           >
             <div 
-              className="rounded-lg overflow-hidden border"
-              style={typeStyle.containerStyle}
+              className="rounded-lg overflow-hidden border flex flex-col"
+              style={{
+                ...typeStyle.containerStyle,
+                height: '100%',
+                maxHeight: 'inherit'
+              }}
             >
-              {/* Header */}
-              <div className="flex items-center gap-2 sm:gap-3 p-4 sm:p-6 sm:pb-4">
+              {/* Header - Fixed */}
+              <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-6 flex-shrink-0">
                 <div 
-                  className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-full flex items-center justify-center`}
+                  className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-full flex items-center justify-center flex-shrink-0`}
                   style={{
                     backgroundColor: `var(${typeStyle.bgVar})`,
                     borderColor: `var(${typeStyle.borderVar})`,
@@ -210,18 +227,20 @@ export default function ThemedModal({
                     color: `var(${typeStyle.colorVar})`
                   }}
                 >
-                  {typeStyle.icon}
+                  <div className={isMobile ? 'scale-75' : ''}>
+                    {typeStyle.icon}
+                  </div>
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <h3 
-                    className="text-base sm:text-lg font-semibold"
+                    className={`${isMobile ? 'text-sm' : 'text-base sm:text-lg'} font-semibold truncate`}
                     style={{ color: 'var(--text-primary)' }}
                   >
                     {title}
                   </h3>
                   {subtitle && (
                     <p 
-                      className="text-xs sm:text-sm"
+                      className={`${isMobile ? 'text-xs' : 'text-xs sm:text-sm'} line-clamp-2`}
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {subtitle}
@@ -230,15 +249,23 @@ export default function ThemedModal({
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="px-4 sm:px-6 pb-3 sm:pb-4">
+              {/* Content - Scrollable */}
+              <div 
+                className="px-3 sm:px-4 lg:px-6 flex-1 overflow-y-auto"
+                style={{
+                  minHeight: 0, // Important for flex child to be scrollable
+                  maxHeight: '100%'
+                }}
+              >
                 {children}
               </div>
 
-              {/* Actions */}
+              {/* Actions - Fixed */}
               {(showCancel || showConfirm) && (
                 <div 
-                  className="flex gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t"
+                  className={`flex gap-2 sm:gap-3 p-3 sm:p-4 border-t flex-shrink-0 ${
+                    isMobile ? 'flex-col-reverse' : 'flex-row'
+                  }`}
                   style={{ 
                     backgroundColor: 'var(--bg-secondary)',
                     borderColor: 'var(--border)'
@@ -247,12 +274,12 @@ export default function ThemedModal({
                   {showCancel && (
                     <button
                       onClick={handleClose}
-                      className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md btn-secondary"
+                      className={`${isMobile ? 'w-full' : 'flex-1'} px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-md transition-colors duration-200`}
                       style={{
                         backgroundColor: 'var(--button-secondary)',
                         color: 'var(--text-primary)',
                         borderColor: 'var(--border)',
-                       
+                        border: '1px solid'
                       }}
                     >
                       {cancelText}
@@ -262,8 +289,8 @@ export default function ThemedModal({
                     <button
                       onClick={confirmDisabled ? undefined : handleConfirm}
                       disabled={confirmDisabled}
-                      className={`flex-1 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md btn-primary flex items-center justify-center gap-2 ${
-                        confirmDisabled ? 'opacity-50 cursor-not-allowed' : ''
+                      className={`${isMobile ? 'w-full' : 'flex-1'} px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all duration-200 ${
+                        confirmDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
                       }`}
                       style={{
                         backgroundColor: 'var(--primary)',
@@ -284,4 +311,11 @@ export default function ThemedModal({
       )}
     </AnimatePresence>
   );
+
+  // Use portal if mounted and available, otherwise render normally
+  if (mounted && typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 }

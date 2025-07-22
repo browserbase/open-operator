@@ -146,7 +146,7 @@ export default function NoteGeniusModal({
       title="Note Genius - AI Optimization"
       subtitle="Optimizing your note with professional formatting and structure"
       type="info"
-      size="lg"
+      size="xl" // Changed to xl for better content display
       confirmText={
         isStreaming 
           ? "Generating..." 
@@ -159,46 +159,51 @@ export default function NoteGeniusModal({
       confirmDisabled={isStreaming}
       showConfirm={isStreaming || !!streamedContent}
     >
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4 h-full flex flex-col">
         {/* Original Text Preview */}
-        <div>
-          <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex-shrink-0">
+          <h4 className="text-xs sm:text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
             Original Text:
           </h4>
           <div 
-            className="p-3 rounded-md text-sm max-h-32 overflow-y-auto"
+            className="p-2 sm:p-3 rounded-md text-xs sm:text-sm overflow-y-auto"
             style={{ 
               backgroundColor: 'var(--bg-secondary)',
               borderColor: 'var(--border)',
+              border: '1px solid',
+              maxHeight: '8rem' // Limit height to save space
             }}
           >
-            {originalText}
+            <div className="whitespace-pre-wrap break-words">
+              {originalText}
+            </div>
           </div>
         </div>
 
         {/* Optimized Text */}
-        <div>
-          <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex-1 flex flex-col min-h-0">
+          <h4 className="text-xs sm:text-sm font-medium mb-2 flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>
             Optimized Note:
           </h4>
           <div 
-            className="p-3 rounded-md text-sm min-h-64 max-h-96 overflow-y-auto"
+            className="p-2 sm:p-3 rounded-md text-xs sm:text-sm flex-1 overflow-y-auto"
             style={{ 
               backgroundColor: 'var(--bg-secondary)',
               borderColor: 'var(--border)',
-           
+              border: '1px solid',
+              minHeight: '12rem' // Minimum height for content
             }}
           >
             {isStreaming && (
               <div className="flex items-center gap-2 mb-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
-                <span style={{ color: 'var(--text-secondary)' }}>Generating optimized note...</span>
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-blue-500 border-t-transparent"></div>
+                <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Generating optimized note...</span>
               </div>
             )}
             
             {error && (
               <div 
-                className="p-2 rounded text-sm"
+                className="p-2 rounded text-xs sm:text-sm"
                 style={{ 
                   backgroundColor: 'var(--error-bg)',
                   color: 'var(--error)'
@@ -209,14 +214,22 @@ export default function NoteGeniusModal({
             )}
             
             {streamedContent && (
-              <div className="whitespace-pre-line text-sm leading-relaxed" style={{ color: 'var(--text-primary)', fontFamily: 'inherit' }}>
+              <div 
+                className="whitespace-pre-line text-xs sm:text-sm leading-relaxed break-words" 
+                style={{ 
+                  color: 'var(--text-primary)', 
+                  fontFamily: 'inherit' 
+                }}
+              >
                 {cleanFormatting(streamedContent)}
               </div>
             )}
             
             {!isStreaming && !streamedContent && !error && (
-              <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
-                Click optimize to generate an improved version of your note
+              <div className="text-center py-4 sm:py-8" style={{ color: 'var(--text-secondary)' }}>
+                <div className="text-xs sm:text-sm">
+                  Click optimize to generate an improved version of your note
+                </div>
               </div>
             )}
           </div>
@@ -224,7 +237,7 @@ export default function NoteGeniusModal({
 
         {/* Character count info */}
         {streamedContent && (
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div className="text-xs flex-shrink-0 text-center" style={{ color: 'var(--text-muted)' }}>
             Optimized note: {cleanFormatting(streamedContent).length} characters (formatted)
           </div>
         )}
