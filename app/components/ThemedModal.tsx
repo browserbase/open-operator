@@ -103,8 +103,8 @@ const typeStyles = {
 const sizeClasses = {
   sm: 'w-full max-w-xs sm:max-w-sm',
   md: 'w-full max-w-sm sm:max-w-md md:max-w-lg',
-  lg: 'w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl',
-  xl: 'w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
+  lg: 'w-full max-w-sm sm:max-w-lg md:max-w-xl lg:max-w-2xl',
+  xl: 'w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
 };
 
 export default function ThemedModal({
@@ -174,7 +174,7 @@ export default function ThemedModal({
   const modalContent = (
     <AnimatePresence>
       {(isVisible || isClosing) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
           {/* Backdrop */}
           <motion.div
             className={`fixed inset-0 ${typeStyle.backdropClass}`}
@@ -191,8 +191,10 @@ export default function ThemedModal({
             className={`relative ${sizeClasses[size]} mx-auto`}
             style={{
               maxHeight: isMobile ? '95vh' : '90vh', // Ensure it fits in viewport
+              maxWidth: isMobile ? 'calc(100vw - 16px)' : 'calc(100vw - 32px)', // Prevent horizontal overflow
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              overflow: 'hidden' // Prevent content from breaking out
             }}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ 
@@ -213,11 +215,13 @@ export default function ThemedModal({
               style={{
                 ...typeStyle.containerStyle,
                 height: '100%',
-                maxHeight: 'inherit'
+                maxHeight: 'inherit',
+                width: '100%',
+                minWidth: 0 // Allow shrinking
               }}
             >
               {/* Header - Fixed */}
-              <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-6 flex-shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-6 flex-shrink-0 min-w-0">
                 <div 
                   className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-full flex items-center justify-center flex-shrink-0`}
                   style={{
@@ -231,7 +235,7 @@ export default function ThemedModal({
                     {typeStyle.icon}
                   </div>
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 overflow-hidden">
                   <h3 
                     className={`${isMobile ? 'text-sm' : 'text-base sm:text-lg'} font-semibold truncate`}
                     style={{ color: 'var(--text-primary)' }}
@@ -240,7 +244,7 @@ export default function ThemedModal({
                   </h3>
                   {subtitle && (
                     <p 
-                      className={`${isMobile ? 'text-xs' : 'text-xs sm:text-sm'} line-clamp-2`}
+                      className={`${isMobile ? 'text-xs' : 'text-xs sm:text-sm'} line-clamp-2 break-words`}
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {subtitle}
@@ -251,10 +255,11 @@ export default function ThemedModal({
 
               {/* Content - Scrollable */}
               <div 
-                className="px-3 sm:px-4 lg:px-6 flex-1 overflow-y-auto"
+                className="px-3 sm:px-4 lg:px-6 flex-1 overflow-y-auto overflow-x-hidden"
                 style={{
                   minHeight: 0, // Important for flex child to be scrollable
-                  maxHeight: '100%'
+                  maxHeight: '100%',
+                  minWidth: 0 // Allow content to shrink
                 }}
               >
                 {children}

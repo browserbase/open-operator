@@ -326,9 +326,6 @@ export default function Home() {
           <ThemeToggle />
           {user && (
             <div className="flex items-center gap-3">
-              <span className="text-green-600 font-medium">
-                {user.email}
-              </span>
               <button
                 onClick={handleLogout}
                 className="px-3 py-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
@@ -551,7 +548,7 @@ export default function Home() {
           </div>
         ) : (
           /* Content Area with Tabs - displayed when user is logged in with active subscription */
-          <div className={`flex-1 p-6 transition-all duration-300 ease-out ${isExecuting && isExecutionExpanded ? 'pr-[336px]' : ''}`}>
+          <div className={`flex-1 transition-all duration-300 ease-out ${isExecuting && isExecutionExpanded ? 'pr-[336px]' : ''}`}>
             {/* Tab Navigation */}
             <div className="mb-4">
               <div className="border-b border-gray-200 dark:border-gray-700">

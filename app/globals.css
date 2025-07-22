@@ -714,6 +714,7 @@ body {
   z-index: -1;
   pointer-events: none;
   filter: blur(0.5px);
+  overflow: hidden;
 }
 
 .grid-line {
