@@ -974,6 +974,7 @@ export async function runPuppeteerScript(
 
         await page.waitForSelector("#DataModel_DateOfService", { visible: true });
         //console.log("New Note modal appeared");
+         await sleep(3000);
         await page.evaluate((formattedDate) => {
           const dateInput = document.getElementById("DataModel_DateOfService") as HTMLInputElement;
           if (dateInput) {
@@ -986,7 +987,7 @@ export async function runPuppeteerScript(
 
         //console.log(`Date of Service set to ${formattedDate}`);
         
-        await sleep(2000);
+       
         const sanitizedStartTime = sanitizeTime(formattedStartTime);
         const sanitizedEndTime = sanitizeTime(formattedEndTime);
         await page.type("#DataModel_StartTime", sanitizedStartTime, { delay: 0 });
