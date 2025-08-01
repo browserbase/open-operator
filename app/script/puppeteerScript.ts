@@ -279,7 +279,7 @@ export async function runPuppeteerScript(
     try {
       await sleep(200); // Reduced from 1000ms
       await page.click('#addButton');
-
+      await sleep(300); 
       await page.waitForSelector(mileageStartAddressSelector);
       await clearAndType(page, mileageStartAddressSelector, address);
       await page.waitForSelector(mileageStartMileageSelector);
@@ -602,6 +602,7 @@ export async function runPuppeteerScript(
         const mileageContinueSelector = "#getMileageContinueButton";
         if (i === 0) {
           try {
+             await sleep(1000); 
             await page.waitForSelector(mileageContinueSelector, { visible: true, timeout: 2000 });
             await page.click(mileageContinueSelector);
             //console.log("Clicked 'Continue' on mileage confirmation modal");
