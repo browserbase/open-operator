@@ -3,7 +3,6 @@
 import AnimatedCubeIcon from "./components/AnimatedCubeIcon";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import CaseForm from "./components/CaseForm";
 import ThemeToggle from "./components/ThemeToggle";
