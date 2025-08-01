@@ -161,7 +161,7 @@ export default function AddressAutocomplete({
       // Get autocomplete predictions
       autocompleteServiceRef.current.getPlacePredictions({
         input: newValue,
-        types: ['address'],
+        types: ['geocode'], // Changed from 'address' to 'geocode' for better results
         componentRestrictions: { country: 'us' }
       }, (predictions, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -181,78 +181,29 @@ export default function AddressAutocomplete({
 
   // Handle suggestion selection
   const handleSuggestionClick = (prediction: google.maps.places.AutocompletePrediction) => {
-    // Get detailed place information including zip code
+    // Use the full description which should include zip code
+    const fullAddress = prediction.description;
+    setInputValue(fullAddress);
+    onChange(fullAddress);
+    setShowSuggestions(false);
+    
+    // Optional: Get detailed place information including formatted address
     if (placesServiceRef.current) {
-      placesServiceRef.current.getDetails({
+      const request = {
         placeId: prediction.place_id,
-        fields: ['address_components', 'formatted_address', 'name']
-      }, (place, status) => {
+        fields: ['formatted_address', 'address_components']
+      };
+      
+      placesServiceRef.current.getDetails(request, (place, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-          // Extract address components
-          let streetNumber = '';
-          let route = '';
-          let city = '';
-          let state = '';
-          let zipCode = '';
-          
-          place.address_components?.forEach(component => {
-            const types = component.types;
-            if (types.includes('street_number')) {
-              streetNumber = component.long_name;
-            } else if (types.includes('route')) {
-              route = component.long_name;
-            } else if (types.includes('locality')) {
-              city = component.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-              state = component.short_name;
-            } else if (types.includes('postal_code')) {
-              zipCode = component.long_name;
-            }
-          });
-          
-          // Build complete address with zip code
-          let completeAddress = '';
-          if (streetNumber && route) {
-            completeAddress = `${streetNumber} ${route}`;
-          } else if (route) {
-            completeAddress = route;
-          } else {
-            completeAddress = place.formatted_address || prediction.description;
+          // Use the formatted_address which includes zip code
+          if (place.formatted_address) {
+            setInputValue(place.formatted_address);
+            onChange(place.formatted_address);
           }
-          
-          // Add city, state, zip if available and not already included
-          const addressParts = [];
-          if (city) addressParts.push(city);
-          if (state) addressParts.push(state);
-          if (zipCode) addressParts.push(zipCode);
-          
-          if (addressParts.length > 0) {
-            // Check if the formatted address already includes these components
-            const formattedLower = completeAddress.toLowerCase();
-            const missingParts = addressParts.filter(part => 
-              !formattedLower.includes(part.toLowerCase())
-            );
-            
-            if (missingParts.length > 0) {
-              completeAddress += `, ${missingParts.join(', ')}`;
-            }
-          }
-          
-          setInputValue(completeAddress);
-          onChange(completeAddress);
-        } else {
-          // Fallback to original description if details request fails
-          setInputValue(prediction.description);
-          onChange(prediction.description);
         }
       });
-    } else {
-      // Fallback if places service is not available
-      setInputValue(prediction.description);
-      onChange(prediction.description);
     }
-    
-    setShowSuggestions(false);
     
     // Focus the input after selection
     if (autocompleteElementRef.current) {
@@ -333,7 +284,13 @@ export default function AddressAutocomplete({
             onClick={() => handleSuggestionClick(suggestion)}
           >
             <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{suggestion.structured_formatting.secondary_text}</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {suggestion.structured_formatting.secondary_text}
+            </div>
+            {/* Debug: Show full description to see if zip is included */}
+            <div className="text-xs opacity-75" style={{ color: 'var(--text-muted)' }}>
+              {suggestion.description}
+            </div>
           </button>
         ))}
       </div>,

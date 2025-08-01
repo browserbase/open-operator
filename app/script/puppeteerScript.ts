@@ -182,19 +182,7 @@ export async function runPuppeteerScript(
     }, selector);
   };
 
-  // Optimized selector validation - checks multiple selectors in parallel
-  const waitForAnySelector = async (page: Page, selectors: string[], timeout: number = shortTimeout): Promise<string | null> => {
-    try {
-      const promises = selectors.map(selector => 
-        page.waitForSelector(selector, { visible: true, timeout }).then(() => selector).catch(() => null)
-      );
-      const results = await Promise.allSettled(promises);
-      const found = results.find(result => result.status === 'fulfilled' && result.value);
-      return found?.status === 'fulfilled' ? found.value : null;
-    } catch {
-      return null;
-    }
-  };
+
 
   // Format date to MM/DD/YY format
   const formatDateOutput = (dateStr: string): string => {
@@ -295,6 +283,7 @@ export async function runPuppeteerScript(
 
   const getLastEndMileageValue = async (page: Page): Promise<string | null> => {
     try {
+         await sleep(500)
       const endMileageSelector = "#data-models-table-body input[id*='__EndMileage']";
       await page.waitForSelector(endMileageSelector, { visible: true, timeout: defaultTimeout });
       const endMileageElements = await page.$$(endMileageSelector);
@@ -482,7 +471,7 @@ export async function runPuppeteerScript(
             break;
           }
           await deleteButton.click();
-
+          await sleep(500);
           await page.waitForSelector('#confirmationOkButton', { visible: true, timeout: defaultTimeout });
           await sleep(700); // Reduced from 1500ms
           await page.click('#confirmationOkButton');
@@ -550,11 +539,12 @@ export async function runPuppeteerScript(
       try {
         if (i > 0) {
           const newMileageButtonSelector = "#addButton";
+                  await sleep(500)
           await page.waitForSelector(newMileageButtonSelector, { visible: true, timeout: defaultTimeout });
           await page.click(newMileageButtonSelector);
           //console.log(`Clicked on "New" button to add mileage entry ${i}`);
-          await sleep(1200);
         }
+        await sleep(500)
 
         await page.waitForSelector(mileageEndAddressSelector, { visible: true, timeout: defaultTimeout });
         //console.log(`End Address input is present in the DOM for entry (${i}).`);
@@ -595,6 +585,7 @@ export async function runPuppeteerScript(
         }
 
         const getMapButtonSelector = `#data-models-table-body tr:nth-child(${i + 1}) button.btn.btn-subtle-primary.text-nowrap`;
+        await sleep(500)
         await page.waitForSelector(getMapButtonSelector, { visible: true, timeout: defaultTimeout });
         await page.click(getMapButtonSelector);
         //console.log(`Clicked on the "Get Map" button for End Address (${i})`);
@@ -838,6 +829,7 @@ export async function runPuppeteerScript(
     try {
       emit(uid, 'progress', 'Saving Note');
       const saveNoteSelector = "#saveButton";
+         await sleep(1000)
       await page.waitForSelector(saveNoteSelector, { visible: true, timeout: defaultTimeout });
       await page.click(saveNoteSelector);
 
@@ -935,7 +927,7 @@ export async function runPuppeteerScript(
       }
     }, caseNumber);
     
-    
+       await sleep(500)
     await page.waitForSelector("#pageTabs", { visible: true });
     await page.evaluate(() => {
       const pageTabs = document.querySelector('#pageTabs');
@@ -966,7 +958,7 @@ export async function runPuppeteerScript(
         emit(uid, 'progress', 'Creating a new note!');
         await sleep(200);
         emit(uid, 'progress', 'Creating Note!');
-
+   await sleep(500)
         // Create new note
         const addButtonSelector = ".mb-3.me-1.btn.btn-sm.btn-subtle-secondary.btn-floating";
         await page.waitForSelector(addButtonSelector, { visible: true, timeout: defaultTimeout });
