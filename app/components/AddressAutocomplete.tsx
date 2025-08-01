@@ -181,8 +181,77 @@ export default function AddressAutocomplete({
 
   // Handle suggestion selection
   const handleSuggestionClick = (prediction: google.maps.places.AutocompletePrediction) => {
-    setInputValue(prediction.description);
-    onChange(prediction.description);
+    // Get detailed place information including zip code
+    if (placesServiceRef.current) {
+      placesServiceRef.current.getDetails({
+        placeId: prediction.place_id,
+        fields: ['address_components', 'formatted_address', 'name']
+      }, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+          // Extract address components
+          let streetNumber = '';
+          let route = '';
+          let city = '';
+          let state = '';
+          let zipCode = '';
+          
+          place.address_components?.forEach(component => {
+            const types = component.types;
+            if (types.includes('street_number')) {
+              streetNumber = component.long_name;
+            } else if (types.includes('route')) {
+              route = component.long_name;
+            } else if (types.includes('locality')) {
+              city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            } else if (types.includes('postal_code')) {
+              zipCode = component.long_name;
+            }
+          });
+          
+          // Build complete address with zip code
+          let completeAddress = '';
+          if (streetNumber && route) {
+            completeAddress = `${streetNumber} ${route}`;
+          } else if (route) {
+            completeAddress = route;
+          } else {
+            completeAddress = place.formatted_address || prediction.description;
+          }
+          
+          // Add city, state, zip if available and not already included
+          const addressParts = [];
+          if (city) addressParts.push(city);
+          if (state) addressParts.push(state);
+          if (zipCode) addressParts.push(zipCode);
+          
+          if (addressParts.length > 0) {
+            // Check if the formatted address already includes these components
+            const formattedLower = completeAddress.toLowerCase();
+            const missingParts = addressParts.filter(part => 
+              !formattedLower.includes(part.toLowerCase())
+            );
+            
+            if (missingParts.length > 0) {
+              completeAddress += `, ${missingParts.join(', ')}`;
+            }
+          }
+          
+          setInputValue(completeAddress);
+          onChange(completeAddress);
+        } else {
+          // Fallback to original description if details request fails
+          setInputValue(prediction.description);
+          onChange(prediction.description);
+        }
+      });
+    } else {
+      // Fallback if places service is not available
+      setInputValue(prediction.description);
+      onChange(prediction.description);
+    }
+    
     setShowSuggestions(false);
     
     // Focus the input after selection
