@@ -1017,5 +1017,6 @@ function ExecutionProgressSidebar({ executionId, onStop, user }: ExecutionProgre
       </div>
     </>
   );
-}
+} 
 
+ 
