@@ -596,6 +596,7 @@ export async function runPuppeteerScript(
           try {
              await sleep(500); 
             await page.waitForSelector(mileageContinueSelector, { visible: true, timeout: 1000 });
+             await sleep(3500); 
             await page.click(mileageContinueSelector);
             //console.log("Clicked 'Continue' on mileage confirmation modal");
           } catch {
@@ -832,6 +833,7 @@ export async function runPuppeteerScript(
       const saveNoteSelector = "#saveButton";
          await sleep(1000)
       await page.waitForSelector(saveNoteSelector, { visible: true, timeout: defaultTimeout });
+         await sleep(1000)
       await page.click(saveNoteSelector);
 
       const saveNoteModalSelector = "#saveNoteConfirmationModal";
