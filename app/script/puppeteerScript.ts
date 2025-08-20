@@ -451,6 +451,7 @@ export async function runPuppeteerScript(
         const rowSelector = '#data-models-table-body tr';
 
         while (true) {
+          await sleep(1500)
           const rows = await page.$$(rowSelector);
           if (rows.length === 0) {
             break;
@@ -473,9 +474,9 @@ export async function runPuppeteerScript(
           await deleteButton.click();
           await sleep(500);
           await page.waitForSelector('#confirmationOkButton', { visible: true, timeout: defaultTimeout });
-          await sleep(700); // Reduced from 1500ms
+           await sleep(1500) // Reduced from 1500ms
           await page.click('#confirmationOkButton');
-
+          
           await page.waitForFunction(() => {
             const toastContainer = document.getElementById("toast-container");
             if (!toastContainer) return false;
@@ -591,18 +592,18 @@ export async function runPuppeteerScript(
         //console.log(`Clicked on the "Get Map" button for End Address (${i})`);
         // Click the mileage confirmation modal continue button only on the first Get Map attempt
         const mileageContinueSelector = "#getMileageContinueButton";
-        if (i === 0) {
+       
           try {
-             await sleep(1000); 
-            await page.waitForSelector(mileageContinueSelector, { visible: true, timeout: 2000 });
+             await sleep(500); 
+            await page.waitForSelector(mileageContinueSelector, { visible: true, timeout: 1000 });
             await page.click(mileageContinueSelector);
             //console.log("Clicked 'Continue' on mileage confirmation modal");
           } catch {
             // Skip if the confirmation button did not appear
           }
-        }
+        
 
-        await sleep(800); // Reduced from 1500ms
+        await sleep(500); // Reduced from 1500ms
         try {
           await page.waitForFunction(() => {
             const toastContainer = document.getElementById("toast-container");
