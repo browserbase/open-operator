@@ -560,7 +560,7 @@ export async function runPuppeteerScript(
           return Array.from(select.options).map(option => option.textContent?.trim() || '');
         }, additionalDropdownSelector);
         //console.log(`Available options for Purpose of Trip (${i}):`, availableOptions);
-
+       await sleep(1500)
         const additionalDropdownSelected = await page.evaluate((selector, value) => {
           const select = document.querySelector(selector) as HTMLSelectElement;
           if (!select) throw new Error(`Selector "${selector}" not found.`);
@@ -569,7 +569,7 @@ export async function runPuppeteerScript(
             option.textContent?.trim().toLowerCase().includes(normalizedValue)
           );
           if (matchingOption) {
-            await sleep(1500)
+           
             select.value = matchingOption.value;
             select.dispatchEvent(new Event('change', { bubbles: true }));
             return true;
