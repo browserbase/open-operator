@@ -569,6 +569,7 @@ export async function runPuppeteerScript(
             option.textContent?.trim().toLowerCase().includes(normalizedValue)
           );
           if (matchingOption) {
+            await sleep(1500)
             select.value = matchingOption.value;
             select.dispatchEvent(new Event('change', { bubbles: true }));
             return true;
