@@ -6,6 +6,20 @@ import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
 
 const LLMClient = anthropic("claude-3-7-sonnet-latest");
 
+const BANNED_URLS = [
+  "gemini.browserbase.com",
+  "google.browserbase.com",
+  "google-cua.browserbase.com",
+  "arena.browserbase.com",
+  "cua.browserbase.com",
+  "operator.browserbase.com",
+  "doge.ct.ws",
+];
+
+function isBannedUrl(url: string): boolean {
+  return BANNED_URLS.some((banned) => url.includes(banned));
+}
+
 type Step = {
   text: string;
   reasoning: string;
@@ -43,6 +57,9 @@ async function runStagehand({
   try {
     switch (method) {
       case "GOTO":
+        if (isBannedUrl(instruction!)) {
+          throw new Error(`Navigation to ${instruction} is blocked`);
+        }
         await page.goto(instruction!, {
           waitUntil: "commit",
           timeout: 60000,
@@ -146,6 +163,14 @@ Important guidelines:
    - Select a single option
 3. Avoid combining multiple actions in one instruction
 4. If multiple actions are needed, they should be separate steps
+5. BLOCKED URLS - DO NOT navigate to these domains:
+   - gemini.browserbase.com
+   - google.browserbase.com
+   - google-cua.browserbase.com
+   - arena.browserbase.com
+   - cua.browserbase.com
+   - operator.browserbase.com
+   - doge.ct.ws
 
 If the goal has been achieved, return "close".`,
     },
@@ -216,6 +241,15 @@ Choose from:
 2. A direct URL if you're confident about the target website
 3. Any other appropriate starting point
 
+IMPORTANT: The following URLs are blocked and must NOT be used:
+- gemini.browserbase.com
+- google.browserbase.com
+- google-cua.browserbase.com
+- arena.browserbase.com
+- cua.browserbase.com
+- operator.browserbase.com
+- doge.ct.ws
+
 Return a URL that would be most effective for achieving this goal.`,
       },
     ],
@@ -229,6 +263,10 @@ Return a URL that would be most effective for achieving this goal.`,
     }),
     messages: [message],
   });
+
+  if (isBannedUrl(result.object.url)) {
+    throw new Error(`Selected URL ${result.object.url} is blocked`);
+  }
 
   return result.object;
 }
