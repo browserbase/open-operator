@@ -17,7 +17,7 @@
     "framer-motion": "^11.0.3",
     "jotai": "^2.11.1",
     "motion": "^12.0.3",
-    "next": "15.2.6",
+    "next": "15.2.8",
     "playwright": "^1.50.0",
     "playwright-core": "^1.50.0",
     "posthog-js": "1.300.0",
