@@ -4,7 +4,9 @@ import { CoreMessage, generateObject, LanguageModelV1, UserContent } from "ai";
 import { z } from "zod";
 import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
 
-const LLMClient = anthropic("claude-3-7-sonnet-latest");
+const ANTHROPIC_MODEL =
+  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+const LLMClient = anthropic(ANTHROPIC_MODEL);
 
 const BANNED_URLS = [
   "gemini.browserbase.com",
