@@ -80,7 +80,12 @@ async function createSession(timezone?: string, contextId?: string) {
   const bb = new Browserbase({
     apiKey: process.env.BROWSERBASE_API_KEY!,
   });
-  const browserSettings: { context?: { id: string; persist: boolean } } = {};
+  const browserSettings: {
+    advancedStealth: boolean;
+    context?: { id: string; persist: boolean };
+  } = {
+    advancedStealth: true,
+  };
   if (contextId) {
     browserSettings.context = {
       id: contextId,
