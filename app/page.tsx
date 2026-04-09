@@ -152,7 +152,7 @@ export default function Home() {
                       name="message"
                       type="text"
                       placeholder="What's the price of NVIDIA stock?"
-                      className="w-full px-4 py-3 pr-[100px] border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF3B00] focus:border-transparent font-ppsupply"
+                      className="w-full px-4 py-3 pr-[100px] border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF4500] focus:border-transparent font-ppsupply"
                     />
                     <AnimatedButton type="submit">Run</AnimatedButton>
                   </div>
@@ -164,7 +164,7 @@ export default function Home() {
                         "Who is the top GitHub contributor to Stagehand by Browserbase?"
                       )
                     }
-                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF4500] hover:text-[#FF4500] transition-colors font-ppsupply text-left"
                   >
                     Who is the top contributor to Stagehand?
                   </button>
@@ -172,19 +172,19 @@ export default function Home() {
                     onClick={() =>
                       startChat("How many wins do the 49ers have?")
                     }
-                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF4500] hover:text-[#FF4500] transition-colors font-ppsupply text-left"
                   >
                     How many wins do the 49ers have?
                   </button>
                   <button
                     onClick={() => startChat("What is Stephen Curry's PPG?")}
-                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF4500] hover:text-[#FF4500] transition-colors font-ppsupply text-left"
                   >
                     What is Stephen Curry&apos;s PPG?
                   </button>
                   <button
                     onClick={() => startChat("How much is NVIDIA stock?")}
-                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF3B00] hover:text-[#FF3B00] transition-colors font-ppsupply text-left"
+                    className="p-3 text-sm text-gray-600 border border-gray-200 hover:border-[#FF4500] hover:text-[#FF4500] transition-colors font-ppsupply text-left"
                   >
                     How much is NVIDIA stock?
                   </button>
@@ -202,7 +202,7 @@ export default function Home() {
               on{" "}
               <a
                 href="https://browserbase.com"
-                className="text-[#FF3B00] hover:underline"
+                className="text-[#FF4500] hover:underline"
               >
                 🅱️ Browserbase
               </a>
