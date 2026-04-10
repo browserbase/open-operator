@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:regression": "vitest run tests/regression",
+    "test:integration": "vitest run tests/integration",
+    "test:smoke": "playwright test",
+    "test": "pnpm test:regression && pnpm test:integration && pnpm test:smoke"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.11",
@@ -28,6 +32,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -36,6 +41,7 @@
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.8"
   }
 }

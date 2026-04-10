@@ -4,9 +4,24 @@ import { CoreMessage, generateObject, LanguageModelV1, UserContent } from "ai";
 import { z } from "zod";
 import { ObserveResult, Stagehand } from "@browserbasehq/stagehand";
 
-const ANTHROPIC_MODEL =
-  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
-const LLMClient = anthropic(ANTHROPIC_MODEL);
+export const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6";
+
+const ANTHROPIC_MODEL_PATTERN = /^claude[-\w.]*$/i;
+
+export function resolveAnthropicModel(rawModel?: string): string {
+  if (!rawModel) {
+    return DEFAULT_ANTHROPIC_MODEL;
+  }
+
+  const normalizedModel = rawModel.trim();
+  if (!normalizedModel || !ANTHROPIC_MODEL_PATTERN.test(normalizedModel)) {
+    return DEFAULT_ANTHROPIC_MODEL;
+  }
+
+  return normalizedModel;
+}
+
+const LLMClient = anthropic(resolveAnthropicModel(process.env.ANTHROPIC_MODEL));
 
 const BANNED_URLS = [
   "gemini.browserbase.com",
