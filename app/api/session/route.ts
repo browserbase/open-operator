@@ -40,7 +40,7 @@ const offsetRanges: {
   { min: 5, max: 24, region: "ap-southeast-1" }, // UTC+5 to UTC+24
 ];
 
-function getClosestRegion(timezone?: string): BrowserbaseRegion {
+export function getClosestRegion(timezone?: string): BrowserbaseRegion {
   try {
     if (!timezone) {
       return "us-west-2"; // Default if no timezone provided
@@ -76,42 +76,61 @@ function getClosestRegion(timezone?: string): BrowserbaseRegion {
   }
 }
 
+export function buildBrowserSettings(contextId: string): {
+  advancedStealth: boolean;
+  context: { id: string; persist: boolean };
+} {
+  return {
+    advancedStealth: true,
+    context: {
+      id: contextId,
+      persist: true,
+    },
+  };
+}
+
+export function buildSessionCreateParams({
+  projectId,
+  timezone,
+  contextId,
+}: {
+  projectId: string;
+  timezone?: string;
+  contextId: string;
+}) {
+  return {
+    projectId,
+    browserSettings: buildBrowserSettings(contextId),
+    keepAlive: true,
+    region: getClosestRegion(timezone),
+  } as const;
+}
+
 async function createSession(timezone?: string, contextId?: string) {
   const bb = new Browserbase({
     apiKey: process.env.BROWSERBASE_API_KEY!,
   });
-  const browserSettings: {
-    advancedStealth: boolean;
-    context?: { id: string; persist: boolean };
-  } = {
-    advancedStealth: true,
-  };
-  if (contextId) {
-    browserSettings.context = {
-      id: contextId,
-      persist: true,
-    };
-  } else {
+  let sessionContextId = contextId;
+
+  if (!sessionContextId) {
     const context = await bb.contexts.create({
       projectId: process.env.BROWSERBASE_PROJECT_ID!,
     });
-    browserSettings.context = {
-      id: context.id,
-      persist: true,
-    };
+    sessionContextId = context.id;
   }
 
   console.log("timezone ", timezone);
   console.log("getClosestRegion(timezone)", getClosestRegion(timezone));
-  const session = await bb.sessions.create({
-    projectId: process.env.BROWSERBASE_PROJECT_ID!,
-    browserSettings,
-    keepAlive: true,
-    region: getClosestRegion(timezone),
-  });
+  const session = await bb.sessions.create(
+    buildSessionCreateParams({
+      projectId: process.env.BROWSERBASE_PROJECT_ID!,
+      timezone,
+      contextId: sessionContextId!,
+    })
+  );
   return {
     session,
-    contextId: browserSettings.context?.id,
+    contextId: sessionContextId,
   };
 }
 
