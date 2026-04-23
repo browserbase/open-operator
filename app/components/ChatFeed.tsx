@@ -302,7 +302,7 @@ export default function ChatFeed({ initialMessage, onClose }: ChatFeedProps) {
             width={32}
             height={32}
           />
-          <span className="font-ppneue text-gray-900">Open Operator</span>
+          <span className="font-ppsupply text-gray-900">Open Operator</span>
         </div>
         <motion.button
           onClick={onClose}

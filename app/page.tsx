@@ -10,10 +10,10 @@ import posthog from "posthog-js";
 const Tooltip = ({ children, text }: { children: React.ReactNode; text: string }) => {
   return (
     <div className="relative group">
-      {children}
-      <span className="absolute hidden group-hover:block w-auto px-3 py-2 min-w-max left-1/2 -translate-x-1/2 translate-y-3 bg-gray-900 text-white text-xs rounded-md font-ppsupply">
+      <span className="absolute hidden group-hover:block w-auto px-3 py-2 min-w-max left-1/2 -translate-x-1/2 -translate-y-full -mt-1 bg-gray-900 text-white text-xs rounded-md font-ppsupply">
         {text}
       </span>
+      {children}
     </div>
   );
 };
