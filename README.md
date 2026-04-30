@@ -43,6 +43,53 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see Open Operator in action.
 
+## Docker Deployment
+
+You can run Open Operator using Docker in both development and production environments.
+
+### Prerequisites
+
+- Docker
+- Docker Compose
+
+### Running with Docker
+
+1. First, copy the example environment variables:
+
+```bash
+cp .env.example .env
+```
+
+2. Update the `.env` file with your API keys as described in the Getting Started section, and add these variables:
+```
+# For development
+TARGET=deps
+NODE_ENV=development
+
+# For production
+# TARGET=runner
+# NODE_ENV=production
+```
+
+3. Run the application:
+```bash
+docker compose up --build
+```
+
+The application will be available at `http://localhost:3000`.
+
+### Environment Variables for Docker
+
+The following environment variables can be set in your `.env` file:
+
+- `TARGET`: Build target ('runner' for production, 'deps' for development)
+- `NODE_ENV`: Node environment ('production' or 'development')
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `BROWSERBASE_API_KEY`: Your Browserbase API key
+- `BROWSERBASE_PROJECT_ID`: Your Browserbase project ID
+- `NEXT_PUBLIC_POSTHOG_KEY`: (Optional) PostHog API key
+- `NEXT_PUBLIC_POSTHOG_HOST`: (Optional) PostHog host URL
+
 ## How It Works
 
 Building a web agent is a complex task. You need to understand the user's intent, convert it into headless browser operations, and execute actions, each of which can be incredibly complex on their own.
